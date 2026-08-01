@@ -67,6 +67,49 @@
     --card:#1a1722;
     --border:#2b2538;
   }
+  /* Paid themes (unlocked in the Theme Shop). These restyle more than the
+     accent — whole-surface palettes, tinted glows, and light mode. */
+  [data-theme="nocturne"]{
+    --accent:#c9b458;
+    --bg:#0d1220;
+    --card:#141b2e;
+    --border:#25304d;
+  }
+  [data-theme="nocturne"] body{
+    background:
+      radial-gradient(1px 1px at 18% 28%, rgba(255,255,255,.55), transparent 2px),
+      radial-gradient(1px 1px at 72% 58%, rgba(255,255,255,.4), transparent 2px),
+      radial-gradient(1px 1px at 86% 18%, rgba(255,255,255,.45), transparent 2px),
+      radial-gradient(1px 1px at 40% 82%, rgba(255,255,255,.3), transparent 2px),
+      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  [data-theme="parchment"]{
+    --accent:#8a5a2b;
+    --bg:#ece4d2;
+    --card:#f6efe1;
+    --border:#d6c9ab;
+    --text:#2b241a;
+    --dim:#8a7d63;
+  }
+  [data-theme="parchment"] h1{color:#2b241a;}
+  [data-theme="parchment"] .xp-track{background:#d6c9ab;border-color:#c2b38d;}
+  [data-theme="parchment"] .lvup-overlay{background:rgba(240,234,220,.85);}
+  [data-theme="parchment"] .lvup-num.old{color:#a99c80;}
+  [data-theme="neon"]{
+    --accent:#ff2d78;
+    --bg:#0a0a12;
+    --card:#131320;
+    --border:#26263c;
+  }
+  [data-theme="neon"] body{
+    background:
+      radial-gradient(600px 320px at 12% -60px, rgba(255,45,120,.16), transparent 70%),
+      radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%),
+      var(--bg);
+    background-attachment:fixed;
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
   html,body{
@@ -1306,6 +1349,19 @@
     75%{opacity:1; transform:scale(1.15) rotate(0deg);}
     100%{opacity:1; transform:scale(1) rotate(0deg);}
   }
+  .lvup-unit{
+    margin-top:14px;
+    font-family:'Cinzel', Georgia, serif;
+    font-size:15px;
+    font-weight:600;
+    letter-spacing:2px;
+    color:var(--accent);
+    text-transform:uppercase;
+    opacity:0;
+  }
+  .lvup-overlay.active .lvup-unit{
+    animation:tagIn .5s ease 1.05s forwards;
+  }
 
   /* ---- floating add button ---- */
   .fab-add{
@@ -1672,6 +1728,141 @@
     align-items:center;
     justify-content:center;
   }
+
+  /* ---- theme shop sheet ---- */
+  .shop-overlay{
+    position:fixed;
+    inset:0;
+    z-index:72;
+    background:rgba(0,0,0,.6);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .shop-overlay.active{opacity:1;pointer-events:auto;}
+  .shop-panel{
+    position:absolute;
+    top:0;right:0;bottom:0;
+    width:min(480px, 100%);
+    background:var(--bg);
+    border-left:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .28s ease;
+  }
+  .shop-overlay.active .shop-panel{transform:translateX(0);}
+  .shop-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    padding-top:calc(14px + env(safe-area-inset-top));
+    border-bottom:1px solid var(--border);
+    flex:0 0 auto;
+  }
+  .shop-title{
+    font-family:'Cinzel', Georgia, serif;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:.8px;
+  }
+  .shop-scroll{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:12px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .shop-balance{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:14px;
+    color:var(--text);
+  }
+  .hex-mini{
+    position:relative;
+    width:18px;height:20px;
+    flex:0 0 auto;
+  }
+  .hex-mini svg{width:100%;height:100%;}
+  .hex-mini polygon{
+    fill:color-mix(in srgb, var(--accent) 20%, var(--card));
+    stroke:var(--accent);
+    stroke-width:2;
+  }
+  .hex-mini span{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:800;
+    color:var(--accent);
+  }
+  .shop-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    margin-top:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+  }
+  .shop-item-preview{
+    width:56px;height:56px;
+    flex:0 0 auto;
+    border-radius:10px;
+    border:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+  }
+  .shop-item-preview .dot{
+    width:18px;height:18px;
+    border-radius:50%;
+  }
+  .shop-item-preview .line{
+    width:28px;height:3px;
+    border-radius:2px;
+  }
+  .shop-item-info{flex:1;min-width:0;}
+  .shop-item-name{
+    font-size:14px;
+    font-weight:600;
+    color:var(--text);
+  }
+  .shop-item-desc{
+    font-size:11.5px;
+    color:var(--dim);
+    margin-top:2px;
+    line-height:1.35;
+  }
+  .shop-item-btn{
+    flex:0 0 auto;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--bg);
+    color:var(--text);
+    font-size:12.5px;
+    font-weight:600;
+    padding:8px 11px;
+    cursor:pointer;
+  }
+  .shop-item-btn:active{transform:scale(.95);}
+  .shop-item-btn.primary{background:var(--accent);border-color:var(--accent);color:#0d0d0d;}
+  .shop-item-btn.owned{border-color:var(--accent);color:var(--accent);}
   .settings-row{
     display:flex;
     align-items:center;
@@ -1828,7 +2019,7 @@
 <div class="notify-hint" id="notifyHint"></div>
 
 <div class="level-hud" id="levelHud">
-  <div class="level-icon" id="levelIcon">
+  <div class="level-icon" id="levelIcon" title="Units — you earn one per level-up, spend them in the theme shop">
     <svg viewBox="0 0 40 44" class="level-icon-svg">
       <polygon points="20,1 38,11.5 38,32.5 20,43 2,32.5 2,11.5" />
     </svg>
@@ -2370,9 +2561,12 @@ function getLevelColor(level){
 function loadState(){
   try{
     const s = JSON.parse(localStorage.getItem(STATE_KEY));
-    if(s && typeof s.xp === "number") return s;
+    if(s && typeof s.xp === "number"){
+      if(typeof s.units !== "number") s.units = 0;
+      return s;
+    }
   }catch(e){}
-  return { xp: 0 };
+  return { xp: 0, units: 0 };
 }
 function saveState(state){
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
@@ -2399,6 +2593,9 @@ function addXp(amount){
   const before = getLevelInfo(state.xp).level;
   state.xp = Math.max(0, state.xp + amount);
   const after = getLevelInfo(state.xp).level;
+  // Each level-up banks one unit (the hexagon balance); falling levels refund it.
+  if(after > before) state.units = (state.units || 0) + (after - before);
+  else if(after < before) state.units = Math.max(0, (state.units || 0) - (before - after));
   saveState(state);
 
   if(after > before){
@@ -2410,6 +2607,10 @@ function addXp(amount){
     renderLevelBar();
   }
   return after > before; // callers can skip a smaller chime if the big level-up fanfare already played
+}
+
+function getUnits(){
+  return loadState().units || 0;
 }
 
 function onLevelUp(before, after){
@@ -2448,6 +2649,8 @@ function showLevelUpOverlay(before, after){
 
   oldNum.textContent = before;
   newNum.textContent = after;
+  const gained = after - before;
+  document.getElementById("lvupUnit").textContent = gained === 1 ? "+1 unit" : `+${gained} units`;
   overlay.style.setProperty("--lvl-color", getLevelColor(after));
 
   // restart CSS animations reliably
@@ -2474,8 +2677,8 @@ function renderLevelBar(){
   const color = getLevelColor(level);
   const pct = Math.min(100, (xpIntoLevel / xpForNext) * 100);
   document.getElementById("levelHud").style.setProperty("--lvl-color", color);
-  document.getElementById("levelIconNum").textContent = level;
-  document.getElementById("xpLabel").textContent = `${xpIntoLevel} / ${xpForNext} XP`;
+  document.getElementById("levelIconNum").textContent = getUnits();
+  document.getElementById("xpLabel").textContent = `Lv ${level} · ${xpIntoLevel} / ${xpForNext} XP`;
 
   const fill = document.getElementById("xpFill");
   const projection = document.getElementById("xpFillProjection");
@@ -2493,8 +2696,8 @@ function animateXpGain(prevXp, targetXp){
   const color = getLevelColor(targetInfo.level);
 
   document.getElementById("levelHud").style.setProperty("--lvl-color", color);
-  document.getElementById("levelIconNum").textContent = targetInfo.level;
-  document.getElementById("xpLabel").textContent = `${targetInfo.xpIntoLevel} / ${targetInfo.xpForNext} XP`;
+  document.getElementById("levelIconNum").textContent = getUnits();
+  document.getElementById("xpLabel").textContent = `Lv ${targetInfo.level} · ${targetInfo.xpIntoLevel} / ${targetInfo.xpForNext} XP`;
 
   const fill = document.getElementById("xpFill");
   const projection = document.getElementById("xpFillProjection");
@@ -4318,8 +4521,9 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---- desktop/keyboard convenience: Escape closes whichever overlay is open ---- */
 document.addEventListener("keydown", (e) => {
   if(e.key !== "Escape") return;
-  if(document.getElementById("settingsView").classList.contains("active")) { closeSettings(); }
-  else if(document.getElementById("confirmOverlay").classList.contains("active")) { closeConfirm(); render(); }
+  if(document.getElementById("confirmOverlay").classList.contains("active")) { closeConfirm(); render(); }
+  else if(document.getElementById("shopView").classList.contains("active")) { closeShop(); }
+  else if(document.getElementById("settingsView").classList.contains("active")) { closeSettings(); }
   else if(document.getElementById("customDayOverlay").classList.contains("active")) closeCustomDayModal();
   else if(document.getElementById("detailView").classList.contains("active")) closeDetail();
   else if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
@@ -5034,6 +5238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /* ---------------- Settings menu ---------------- */
 const THEME_KEY = "checklist_theme_v1";
+const OWNED_KEY = "checklist_owned_themes_v1";
 const ACCENTS = [
   { id: "emerald", name: "Emerald", color: "#4f9d69" },
   { id: "gold", name: "Royal Gold", color: "#c9a227" },
@@ -5041,11 +5246,36 @@ const ACCENTS = [
   { id: "ocean", name: "Ocean", color: "#4e8fc4" },
   { id: "violet", name: "Amethyst", color: "#9b6fd6" }
 ];
+// Preview swatches used in the shop (must match the [data-theme="…"] CSS blocks).
+const THEME_CSS = {
+  nocturne:  { bg: "#0d1220", accent: "#c9b458", border: "#25304d" },
+  parchment: { bg: "#ece4d2", accent: "#8a5a2b", border: "#d6c9ab" },
+  neon:      { bg: "#0a0a12", accent: "#ff2d78", border: "#26263c" }
+};
+const PAID_THEMES = [
+  { id: "nocturne",  name: "Nocturne",   price: 5,  desc: "A midnight indigo restyle under starlit gold." },
+  { id: "parchment", name: "Parchment",  price: 10, desc: "A light paper-and-ink look for bright rooms." },
+  { id: "neon",      name: "Neon Pulse", price: 15, desc: "Electric magenta on deep black." }
+];
 let currentTheme = loadTheme();
 applyTheme(currentTheme);
+function loadOwnedThemes(){
+  try{
+    const v = JSON.parse(localStorage.getItem(OWNED_KEY));
+    if(Array.isArray(v)) return v;
+  }catch(e){}
+  return [];
+}
+function saveOwnedThemes(arr){
+  localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
+}
 function loadTheme(){
   const id = localStorage.getItem(THEME_KEY);
-  return ACCENTS.find(a => a.id === id) || ACCENTS[0];
+  const free = ACCENTS.find(a => a.id === id);
+  if(free) return free;
+  const paid = PAID_THEMES.find(a => a.id === id);
+  if(paid) return { id: paid.id, name: paid.name, color: THEME_CSS[paid.id].accent, paid: true };
+  return ACCENTS[0];
 }
 function applyTheme(t){
   const root = document.documentElement;
@@ -5076,10 +5306,101 @@ function renderThemeSwatches(){
   addBtn.type = "button";
   addBtn.className = "theme-swatch theme-swatch-add";
   addBtn.innerHTML = "+";
-  addBtn.title = "More themes coming soon";
-  addBtn.setAttribute("aria-label", "More themes coming soon");
-  addBtn.addEventListener("click", () => sfx.click());
+  addBtn.title = "Theme shop";
+  addBtn.setAttribute("aria-label", "Open the theme shop");
+  addBtn.addEventListener("click", openShop);
   box.appendChild(addBtn);
+}
+function openShop(){
+  currentTheme = loadTheme();
+  renderShop();
+  document.getElementById("shopView").classList.add("active");
+}
+function closeShop(){
+  document.getElementById("shopView").classList.remove("active");
+}
+function renderShop(){
+  const balance = getUnits();
+  document.getElementById("shopBalance").innerHTML =
+    `<div class="hex-mini"><svg viewBox="0 0 20 23"><polygon points="10,1 19,6.5 19,16.5 10,22 1,16.5 1,6.5"/></svg><span>${balance}</span></div>` +
+    `<span>${balance === 1 ? "1 unit" : balance + " units"}</span>`;
+  const box = document.getElementById("shopItems");
+  box.innerHTML = "";
+  const owned = loadOwnedThemes();
+  PAID_THEMES.forEach(t => {
+    const css = THEME_CSS[t.id];
+    const row = document.createElement("div");
+    row.className = "shop-item";
+
+    const prev = document.createElement("div");
+    prev.className = "shop-item-preview";
+    prev.style.background = css.bg;
+    const dot = document.createElement("div");
+    dot.className = "dot";
+    dot.style.background = css.accent;
+    const line = document.createElement("div");
+    line.className = "line";
+    line.style.background = css.border;
+    prev.append(dot, line);
+
+    const info = document.createElement("div");
+    info.className = "shop-item-info";
+    const name = document.createElement("div");
+    name.className = "shop-item-name";
+    name.textContent = t.name;
+    const desc = document.createElement("div");
+    desc.className = "shop-item-desc";
+    desc.textContent = t.desc;
+    info.append(name, desc);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "shop-item-btn";
+    if(owned.includes(t.id)){
+      btn.classList.add("owned");
+      btn.textContent = currentTheme.id === t.id ? "Equipped" : "Equip";
+      btn.disabled = currentTheme.id === t.id;
+      btn.onclick = () => {
+        currentTheme = { id: t.id, name: t.name, color: css.accent, paid: true };
+        localStorage.setItem(THEME_KEY, t.id);
+        applyTheme(currentTheme);
+        renderShop();
+        sfx.click();
+      };
+    } else {
+      btn.textContent = `${t.price} ◇`;
+      btn.onclick = () => buyTheme(t);
+    }
+    row.append(prev, info, btn);
+    box.appendChild(row);
+  });
+}
+function buyTheme(t){
+  const state = loadState();
+  const units = state.units || 0;
+  if(units < t.price){
+    showToast(`Not enough units — need ${t.price - units} more`);
+    return;
+  }
+  openConfirmGeneric(
+    `Buy the ${t.name} theme for ${t.price} units?`,
+    "Buy",
+    () => {
+      const s = loadState();
+      s.units = Math.max(0, (s.units || 0) - t.price);
+      saveState(s);
+      renderLevelBar();
+      const owned = loadOwnedThemes();
+      owned.push(t.id);
+      saveOwnedThemes(owned);
+      currentTheme = { id: t.id, name: t.name, color: THEME_CSS[t.id].accent, paid: true };
+      localStorage.setItem(THEME_KEY, t.id);
+      applyTheme(currentTheme);
+      renderShop();
+      sfx.complete();
+      showToast(`${t.name} equipped`);
+    }
+  );
 }
 function openSettings(){
   currentTheme = loadTheme();
@@ -5103,11 +5424,13 @@ function resetAllData(){
   localStorage.removeItem(EVENTS_KEY);
   localStorage.removeItem(HISTORY_KEY);
   localStorage.removeItem(NOTIFIED_KEY);
+  localStorage.removeItem(OWNED_KEY);
   location.reload();
 }
 function resetExp(){
   const state = loadState();
   state.xp = 0;
+  state.units = 0;
   saveState(state);
   renderLevelBar();
   sfx.undo();
@@ -5118,10 +5441,11 @@ document.addEventListener("DOMContentLoaded", () => {
     else openSettings();
   });
   document.getElementById("settingsBackBtn").addEventListener("click", closeSettings);
+  document.getElementById("shopBackBtn").addEventListener("click", closeShop);
   document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
     openConfirmGeneric(
-      "Reset all exp? Your level returns to 1 and the bar empties. Quests and events are kept.",
+      "Reset all exp and units? Your level returns to 1, the bar empties and the unit balance resets. Quests, events and bought themes are kept.",
       "Reset exp",
       resetExp
     );
@@ -5379,7 +5703,7 @@ maybeAutoShowRetro();
 
       <div class="settings-section">
         <div class="settings-section-title">Appearance</div>
-        <div class="settings-sub">Choose the accent colour of your questbook.</div>
+        <div class="settings-sub">Pick an accent colour, or press + to spend units in the theme shop.</div>
         <div class="theme-swatches" id="themeSwatches"></div>
       </div>
 
@@ -5446,6 +5770,19 @@ maybeAutoShowRetro();
   </div>
 </div>
 
+<div class="shop-overlay" id="shopView">
+  <div class="shop-panel">
+    <div class="shop-header">
+      <button type="button" class="back-btn" id="shopBackBtn" aria-label="Close theme shop">‹ Back</button>
+      <div class="shop-title">Theme Shop</div>
+    </div>
+    <div class="shop-scroll">
+      <div class="shop-balance" id="shopBalance"></div>
+      <div id="shopItems"></div>
+    </div>
+  </div>
+</div>
+
 <canvas id="fxCanvas" class="fx-canvas"></canvas>
 <div class="lvup-overlay" id="lvupOverlay">
   <div class="lvup-glow" id="lvupGlow"></div>
@@ -5454,6 +5791,7 @@ maybeAutoShowRetro();
     <span class="lvup-num lvup-old" id="lvupOld">1</span>
     <span class="lvup-num lvup-new" id="lvupNew">2</span>
   </div>
+  <div class="lvup-unit" id="lvupUnit"></div>
 </div>
 
 <div class="notes-ctx" id="notesCtxMenu" role="menu">
