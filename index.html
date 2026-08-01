@@ -38,6 +38,14 @@
     --dim:#787878;
     --accent:#4f9d69;
     --accent-soft:color-mix(in srgb, var(--accent) 15%, transparent);
+    --bg-decor:radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%);
+    --bg-image:none;
+    --bg-image-opacity:0;
+    --bg-image-blur:0px;
+    --bg-image-scale:1.03;
+    --bg-image-position:center;
+    --bg-image-size:cover;
+    --bg-image-scrim:rgba(0,0,0,0);
     --danger:#b5504f;
   }
   /* Theme palettes — switch via the accent picker in Settings.
@@ -74,16 +82,12 @@
     --bg:#0d1220;
     --card:#141b2e;
     --border:#25304d;
-  }
-  [data-theme="nocturne"] body{
-    background:
+    --bg-decor:
       radial-gradient(1px 1px at 18% 28%, rgba(255,255,255,.55), transparent 2px),
       radial-gradient(1px 1px at 72% 58%, rgba(255,255,255,.4), transparent 2px),
       radial-gradient(1px 1px at 86% 18%, rgba(255,255,255,.45), transparent 2px),
       radial-gradient(1px 1px at 40% 82%, rgba(255,255,255,.3), transparent 2px),
-      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
-      var(--bg);
-    background-attachment:fixed;
+      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%);
   }
   [data-theme="parchment"]{
     --accent:#8a5a2b;
@@ -102,13 +106,9 @@
     --bg:#0a0a12;
     --card:#131320;
     --border:#26263c;
-  }
-  [data-theme="neon"] body{
-    background:
+    --bg-decor:
       radial-gradient(600px 320px at 12% -60px, rgba(255,45,120,.16), transparent 70%),
-      radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%),
-      var(--bg);
-    background-attachment:fixed;
+      radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
@@ -119,13 +119,36 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   }
   body{
+    position:relative;
+    isolation:isolate;
     padding:16px;padding-bottom:96px;max-width:480px;margin:0 auto;
-    background:
-      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
-      var(--bg);
-    background-attachment:fixed;
+    background:transparent;
     -webkit-user-select:none;
     user-select:none;
+  }
+  body::before,
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+  }
+  body::before{
+    z-index:-2;
+    background-image:var(--bg-image);
+    background-position:var(--bg-image-position);
+    background-size:var(--bg-image-size);
+    background-repeat:no-repeat;
+    opacity:var(--bg-image-opacity);
+    filter:blur(var(--bg-image-blur));
+    transform:scale(var(--bg-image-scale));
+  }
+  body::after{
+    z-index:-1;
+    background:
+      var(--bg-decor),
+      linear-gradient(var(--bg-image-scrim), var(--bg-image-scrim)),
+      var(--bg);
   }
   input, textarea, select, [contenteditable="true"],
   .notes-doc, .notes-line-text, .item-label-input{
@@ -5281,6 +5304,32 @@ function applyTheme(t){
   const root = document.documentElement;
   root.setAttribute("data-theme", t.id);
   root.style.setProperty("--accent", t.color);
+  clearBackgroundImage();
+  if(t.bgImage) setBackgroundImage(t.bgImage, t.bgImageOptions || {});
+}
+
+// Framework for image-backed themes. Keep images on their own fixed layer and
+// always pair them with a scrim, so cards/buttons stay readable.
+function setBackgroundImage(url, opts = {}){
+  const root = document.documentElement;
+  const safeUrl = String(url).replace(/"/g, '\\"');
+  root.style.setProperty("--bg-image", `url("${safeUrl}")`);
+  root.style.setProperty("--bg-image-opacity", String(opts.opacity ?? .34));
+  root.style.setProperty("--bg-image-blur", opts.blur || "0px");
+  root.style.setProperty("--bg-image-scale", String(opts.scale ?? 1.03));
+  root.style.setProperty("--bg-image-position", opts.position || "center");
+  root.style.setProperty("--bg-image-size", opts.size || "cover");
+  root.style.setProperty("--bg-image-scrim", opts.scrim || "rgba(0,0,0,.42)");
+}
+function clearBackgroundImage(){
+  const root = document.documentElement;
+  root.style.setProperty("--bg-image", "none");
+  root.style.setProperty("--bg-image-opacity", "0");
+  root.style.setProperty("--bg-image-blur", "0px");
+  root.style.setProperty("--bg-image-scale", "1.03");
+  root.style.setProperty("--bg-image-position", "center");
+  root.style.setProperty("--bg-image-size", "cover");
+  root.style.setProperty("--bg-image-scrim", "rgba(0,0,0,0)");
 }
 function renderThemeSwatches(){
   const box = document.getElementById("themeSwatches");
