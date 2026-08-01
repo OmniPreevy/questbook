@@ -3953,6 +3953,21 @@ function render(){
           render();
         }
       };
+    } else if(weekDone){
+      // done for the week — tap the box to undo the final completed day
+      box.onclick = (e) => {
+        e.stopPropagation();
+        const all = normalize(loadTasks());
+        const t = all.find(x => x.id === task.id);
+        if(!t) return;
+        t.weekCount = Math.max(0, t.weekCount - 1);
+        t.dayCount = 0;
+        t.lastCheckedAt = null;
+        saveTasks(all);
+        addXp(-(t.perDay * xpReward(t)));
+        sfx.undo();
+        render();
+      };
     } else if(!weekDone){
       box.onclick = (e) => {
         e.stopPropagation();
