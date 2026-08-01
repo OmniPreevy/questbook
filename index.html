@@ -81,6 +81,13 @@
       radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
       var(--bg);
     background-attachment:fixed;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  input, textarea, select, [contenteditable="true"],
+  .notes-doc, .notes-line-text, .item-label-input{
+    -webkit-user-select:text;
+    user-select:text;
   }
 
   h1{
@@ -422,12 +429,13 @@
   .cal-arrow-cell{
     background:var(--card);
     border:1.5px solid var(--border);
-    color:var(--dim);
-    font-size:30px;
-    font-weight:400;
+    color:var(--accent);
+    font-size:42px;
+    font-weight:300;
     cursor:pointer;
   }
-  .cal-arrow-cell:active{color:var(--accent);border-color:var(--accent);}
+  .cal-arrow-cell:hover{color:#fff;}
+  .cal-arrow-cell:active{color:#fff;border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));}
 
   /* ---- month view ---- */
   .month-nav{
@@ -730,7 +738,7 @@
   .modal-overlay{
     position:fixed;
     inset:0;
-    z-index:70;
+    z-index:75;
     background:rgba(0,0,0,0);
     display:flex;
     align-items:center;
@@ -997,8 +1005,7 @@
   }
   .item-del{
     background:none;
-    border:none;
-    color:var(--dim);
+    border:none;    color:var(--dim);
     font-size:16px;
     padding:2px 4px;
     flex:0 0 auto;
@@ -1034,6 +1041,41 @@
     flex:0 0 auto;
   }
   .save-hint.show{opacity:1;}
+
+  /* ---- notes context menu ---- */
+  .notes-ctx{
+    position:fixed;
+    z-index:120;
+    min-width:150px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:4px;
+    box-shadow:0 14px 40px rgba(0,0,0,.5);
+    opacity:0;
+    transform:scale(.92);
+    transform-origin:top left;
+    pointer-events:none;
+    transition:opacity .12s ease, transform .12s ease;
+  }
+  .notes-ctx.show{
+    opacity:1;
+    transform:scale(1);
+    pointer-events:auto;
+  }
+  .notes-ctx-btn{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    font-size:14px;
+    padding:9px 12px;
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .notes-ctx-btn:active{background:color-mix(in srgb, var(--accent) 15%, transparent);}
 
   .detail-timer{
     flex:0 0 auto;
@@ -1122,6 +1164,56 @@
     background:var(--card);
     border:1px solid var(--border);
     border-radius:10px;
+  }
+
+  /* ---- weekly retro: floating window with blurred backdrop ---- */
+  .retro-overlay{
+    position:fixed;
+    inset:0;
+    z-index:73;
+    background:rgba(0,0,0,.5);
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .retro-overlay.show{opacity:1;pointer-events:auto;}
+  #retroView{
+    position:fixed;
+    left:50%;top:50%;right:auto;bottom:auto;
+    transform:translate(-50%,-46%) scale(.95);
+    opacity:0;
+    pointer-events:none;
+    z-index:74;
+    width:min(92vw,400px);
+    max-width:min(92vw,400px);
+    max-height:82vh;
+    margin:0;
+    padding:0;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+    display:flex;
+    flex-direction:column;
+    transition:transform .22s ease, opacity .22s ease;
+  }
+  #retroView.active{
+    transform:translate(-50%,-50%) scale(1);
+    opacity:1;
+    pointer-events:auto;
+  }
+  #retroView .detail-header{
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    margin-bottom:0;
+  }
+  #retroView .detail-scroll{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    padding:16px 16px 18px;
   }
 
   .lvup-overlay{
@@ -1849,9 +1941,10 @@
   </div>
 </div>
 
+<div class="retro-overlay" id="retroOverlay"></div>
+
 <div class="detail-view" id="retroView">
   <div class="detail-header">
-    <div class="pane-grip" data-pane="retroView" title="Drag to move this panel">⠿</div>
     <button class="back-btn" id="retroBackBtn">‹ Back</button>
     <div class="detail-title">Weekly retro</div>
   </div>
@@ -2510,7 +2603,7 @@ function threePaneAvailable(){
   return window.innerWidth >= PANE_WIDTH * 3 + PANE_GAP * 2 + BODY_PAD * 2;
 }
 function rightPaneIds(){
-  return ["dayView", "detailView", "retroView"];
+  return ["dayView", "detailView"];
 }
 function leftPaneIds(){
   return ["monthView", "hiddenView"];
@@ -2638,19 +2731,21 @@ function closeConfirm(){
   pendingDelete = null;
 }
 
+function doDeleteQuest(taskId){
+  saveTasks(normalize(loadTasks()).filter(x => x.id !== taskId));
+  sfx.del();
+  render();
+  if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+  if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+  showSwipeToast("quest deleted");
+}
 function deleteQuest(taskId){
   const t = normalize(loadTasks()).find(x => x.id === taskId);
   if(!t) return;
+  if(t.test){ doDeleteQuest(taskId); return; }
   document.getElementById("confirmTitle").textContent = "Are you sure you want to delete this quest?";
   document.getElementById("confirmDelete").textContent = "Delete";
-  pendingDelete = () => {
-    saveTasks(normalize(loadTasks()).filter(x => x.id !== taskId));
-    sfx.del();
-    render();
-    if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
-    if(document.getElementById("dayView").classList.contains("active")) renderDayView();
-    showSwipeToast("quest deleted");
-  };
+  pendingDelete = () => doDeleteQuest(taskId);
   openConfirmDelete();
 }
 
@@ -3185,6 +3280,113 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* -------------------------------------------------- */
 
+/* ---------------- Notes context menu ---------------- */
+function ctxMenuEl(){ return document.getElementById("notesCtxMenu"); }
+function ctxSelectAllEl(){ return document.getElementById("ctxSelectAll"); }
+function ctxCopyAllEl(){ return document.getElementById("ctxCopyAll"); }
+
+function hideNotesCtxMenu(){
+  ctxMenuEl().classList.remove("show");
+}
+
+function showNotesCtxMenu(x, y, target){
+  const menu = ctxMenuEl();
+  menu.style.left = Math.min(x, innerWidth - 152) + "px";
+  menu.style.top = Math.min(y, innerHeight - 92) + "px";
+  menu._target = target;
+  menu.classList.add("show");
+}
+
+function notesTextareas(){
+  const doc = document.getElementById("notesDoc");
+  return Array.from(doc.querySelectorAll("textarea.notes-line-text"));
+}
+
+function copyTextToClipboard(text){
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try{
+      const ok = document.execCommand("copy");
+      ta.remove();
+      ok ? resolve() : reject(new Error("copy failed"));
+    }catch(err){
+      ta.remove();
+      reject(err);
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const doc = document.getElementById("notesDoc");
+
+  doc.addEventListener("contextmenu", (e) => {
+    if(e.target.closest(".item-check, .counter-bubble")) return;
+    e.preventDefault();
+    const target = e.target.closest("textarea.notes-line-text") || notesTextareas()[0];
+    showNotesCtxMenu(e.clientX, e.clientY, target);
+  });
+
+  let pressTimer = null;
+  let pressStart = null;
+  doc.addEventListener("pointerdown", (e) => {
+    if(e.pointerType === "mouse") return;
+    if(e.target.closest(".item-check, .counter-bubble")) return;
+    clearTimeout(pressTimer);
+    pressStart = { x: e.clientX, y: e.clientY };
+    pressTimer = setTimeout(() => {
+      const target = notesTextareas()[0];
+      showNotesCtxMenu(pressStart.x, pressStart.y, target);
+    }, 550);
+  });
+  const cancelPress = () => clearTimeout(pressTimer);
+  doc.addEventListener("pointerup", cancelPress);
+  doc.addEventListener("pointercancel", cancelPress);
+  doc.addEventListener("pointermove", (e) => {
+    if(pressStart && (Math.abs(e.clientX - pressStart.x) > 12 || Math.abs(e.clientY - pressStart.y) > 12)){
+      clearTimeout(pressTimer);
+    }
+  });
+
+  document.addEventListener("pointerdown", (e) => {
+    const menu = ctxMenuEl();
+    if(!menu.classList.contains("show")) return;
+    if(e.target.closest("#notesCtxMenu")) return;
+    hideNotesCtxMenu();
+  });
+  document.addEventListener("scroll", hideNotesCtxMenu, true);
+  window.addEventListener("resize", hideNotesCtxMenu);
+  window.addEventListener("blur", hideNotesCtxMenu);
+
+  ctxSelectAllEl().addEventListener("click", () => {
+    const target = ctxMenuEl()._target || notesTextareas()[0];
+    if(target){
+      target.focus();
+      target.select();
+    }
+    hideNotesCtxMenu();
+  });
+
+  ctxCopyAllEl().addEventListener("click", async () => {
+    const text = notesTextareas().map(ta => ta.value).filter(v => v.length > 0).join("\n");
+    try{
+      await copyTextToClipboard(text);
+      showSwipeToast("notes copied");
+    }catch(err){
+      showSwipeToast("copy not supported");
+    }
+    hideNotesCtxMenu();
+  });
+});
+/* -------------------------------------------------- */
+
 /* ---------------- Edit modal ---------------- */
 let editingTaskId = null;
 let editMode = "once";
@@ -3395,11 +3597,11 @@ function openRetroView(weekKey){
   document.getElementById("retroEmptyMsg").style.display = nothingLogged ? "block" : "none";
 
   document.getElementById("retroView").classList.add("active");
-  closeRightPanes("retroView");
-  if(!threePaneAvailable()) closeLeftPanes();
+  document.getElementById("retroOverlay").classList.add("show");
 }
 function closeRetroView(){
   document.getElementById("retroView").classList.remove("active");
+  document.getElementById("retroOverlay").classList.remove("show");
 }
 
 // Auto-surface once per week: first time the app is opened after a week
@@ -3416,8 +3618,12 @@ function maybeAutoShowRetro(){
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("retroBtn").addEventListener("click", () => openRetroView());
+  document.getElementById("retroBtn").addEventListener("click", () => {
+    if(document.getElementById("retroView").classList.contains("active")) closeRetroView();
+    else openRetroView();
+  });
   document.getElementById("retroBackBtn").addEventListener("click", closeRetroView);
+  document.getElementById("retroOverlay").addEventListener("click", closeRetroView);
 });
 /* -------------------------------------------------------------------------- */
 
@@ -3571,6 +3777,10 @@ function updateAutoHideBtn(){
   btn.classList.toggle("on", on);
   btn.setAttribute("aria-pressed", on ? "true" : "false");
   btn.innerHTML = `<span class="ah-dot"></span>${on ? "Done: hidden" : "Done: bottom"}`;
+  btn.style.display = anyQuestDone() ? "" : "none";
+}
+function anyQuestDone(){
+  return normalize(loadTasks()).some(t => isCheckedOff(t));
 }
 
 // 1=blue, 2=green, 3=yellow, 4=orange, 5=red
@@ -3611,6 +3821,7 @@ function render(){
   list.innerHTML = "";
 
   updateHiddenBtn(tasks);
+  updateAutoHideBtn();
   const autoHide = autoHideDoneEnabled();
   const now = Date.now();
   const visible = tasks.filter(t => {
@@ -3941,7 +4152,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("autoHideBtn").addEventListener("click", toggleAutoHideDone);
   updateAutoHideBtn();
-  document.getElementById("hiddenBtn").addEventListener("click", openHiddenView);
+  document.getElementById("hiddenBtn").addEventListener("click", () => {
+    if(document.getElementById("hiddenView").classList.contains("active")) closeHiddenView();
+    else openHiddenView();
+  });
   document.getElementById("hiddenBackBtn").addEventListener("click", closeHiddenView);
   document.getElementById("confirmCancel").addEventListener("click", () => {
     closeConfirm();
@@ -4138,6 +4352,7 @@ function addTestQuest(){
     remindHours: null,
     oneTime: false,
     checkedAt: null,
+    test: true,
     noteBlocks: [{ id: generateId(), type: "text", content: fiftyLinesLorem() }]
   });
   saveTasks(tasks);
@@ -4481,7 +4696,10 @@ function renderCalendar(){
   arrowCell.className = "cal-cell cal-arrow-cell";
   arrowCell.setAttribute("aria-label", "View full month");
   arrowCell.textContent = "→";
-  arrowCell.addEventListener("click", () => openMonthView());
+  arrowCell.addEventListener("click", () => {
+    if(document.getElementById("monthView").classList.contains("active")) closeMonthView();
+    else openMonthView();
+  });
   grid.appendChild(arrowCell);
 }
 
@@ -4880,7 +5098,10 @@ function resetExp(){
   sfx.undo();
 }
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("settingsBtn").addEventListener("click", () => {
+    if(document.getElementById("settingsView").classList.contains("active")) closeSettings();
+    else openSettings();
+  });
   document.getElementById("settingsBackBtn").addEventListener("click", closeSettings);
   document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
@@ -4901,7 +5122,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ------------------------------------------- */
 
 /* ---- desktop: draggable panes ---- */
-const ROW_ITEMS = ["hiddenView","monthView","main","dayView","retroView","detailView"];
+const ROW_ITEMS = ["hiddenView","monthView","main","dayView","detailView"];
 function defaultPaneLayout(){
   return ROW_ITEMS.slice();
 }
@@ -5218,6 +5439,11 @@ maybeAutoShowRetro();
     <span class="lvup-num lvup-old" id="lvupOld">1</span>
     <span class="lvup-num lvup-new" id="lvupNew">2</span>
   </div>
+</div>
+
+<div class="notes-ctx" id="notesCtxMenu" role="menu">
+  <button type="button" class="notes-ctx-btn" id="ctxSelectAll" role="menuitem">Select all</button>
+  <button type="button" class="notes-ctx-btn" id="ctxCopyAll" role="menuitem">Copy all</button>
 </div>
 
 </body>
