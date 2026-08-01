@@ -1,0 +1,11 @@
+- make the arrow in the button that leads to month view bigger, not thicker but more noticeable
+
+- make the lorem quests deletable without confirmation
+
+- make retrospective a floating window instead of a section that takes over everything, blur the background behind it when it's open.
+
+- the confirmation for resetting exp shows up under the settings menu not on top of it
+
+- make all text in the app non-selectable except for the notes text
+
+- add a context menu for notes that replaces the right click menu and appears for mobile on held click, it contains two buttons, select all (selects all text in notes except for special items), and copy all (selects all then  copies it)

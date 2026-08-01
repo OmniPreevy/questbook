@@ -1,0 +1,5210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#14121a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quest Book">
+<title>Quest Book</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121212;
+    --card:#1c1c1c;
+    --border:#2b2b2b;
+    --text:#e8e8e8;
+    --dim:#787878;
+    --accent:#4f9d69;
+    --accent-soft:color-mix(in srgb, var(--accent) 15%, transparent);
+    --danger:#b5504f;
+  }
+  /* Theme palettes — switch via the accent picker in Settings.
+     Each theme can tint the page background, cards and borders,
+     so future themes can restyle the whole app from here. */
+  [data-theme="gold"]{
+    --accent:#c9a227;
+    --bg:#151310;
+    --card:#1d1a14;
+    --border:#2e2a1c;
+  }
+  [data-theme="crimson"]{
+    --accent:#c25b5b;
+    --bg:#161010;
+    --card:#1e1616;
+    --border:#332121;
+  }
+  [data-theme="ocean"]{
+    --accent:#4e8fc4;
+    --bg:#0f1418;
+    --card:#151c23;
+    --border:#22303c;
+  }
+  [data-theme="violet"]{
+    --accent:#9b6fd6;
+    --bg:#131016;
+    --card:#1a1722;
+    --border:#2b2538;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  html,body{
+    margin:0;padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  body{
+    padding:16px;padding-bottom:96px;max-width:480px;margin:0 auto;
+    background:
+      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+
+  h1{
+    font-family:'Cinzel', Georgia, 'Times New Roman', serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:1.2px;
+    margin:4px 0 4px;
+    padding-left:17px;
+    padding-bottom:22px;
+    max-width:calc(100% - 137px);
+    color:#f0f0f0;
+  }
+  h1 .drop-cap{
+    font-family:'Cinzel Decorative', 'Cinzel', Georgia, serif;
+    font-size:1.85em;
+    font-weight:700;
+    line-height:1;
+    vertical-align:-0.1em;
+    color:var(--accent);
+  }
+  .sub{color:var(--dim);font-size:13px;margin-bottom:4px;}
+  .backup-row{display:flex;flex-wrap:wrap;gap:10px 14px;margin-bottom:6px;}
+  .backup-btn{
+    background:none;border:none;padding:0;
+    color:var(--dim);font-size:11px;
+    text-decoration:underline;
+    text-underline-offset:2px;
+  }
+  .backup-row .backup-right{margin-left:auto;}
+  .notify-hint{
+    font-size:10.5px;
+    color:var(--dim);
+    margin-bottom:14px;
+    line-height:1.4;
+  }
+  .backup-btn:active{color:var(--accent);}
+
+  .task{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .task.done, .task.week-done{opacity:1;}
+  .task::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:var(--bg);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .task.done::after{opacity:.5;}
+  .task.week-done::after{opacity:.6;}
+
+  .box{
+    width:24px;height:24px;min-width:24px;
+    border:2px solid var(--dim);
+    border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;
+    font-weight:600;
+    color:var(--text);
+    transition:.15s;
+    cursor:pointer;
+  }
+  .box.box-tight{font-size:9px;}
+  .task.done .box, .task.week-done .box{
+    background:var(--accent);border-color:var(--accent);color:#0d0d0d;
+  }
+  .task.week-done .box{background:var(--dim);border-color:var(--dim);cursor:default;}
+
+  .info{flex:1;min-width:0;cursor:pointer;}
+  .name{font-size:15px;font-weight:500;}
+  .task.done .name{text-decoration:line-through;color:var(--dim);}
+  .meta{font-size:12px;color:var(--dim);margin-top:2px;}
+
+  .del{
+    background:none;border:none;color:var(--dim);
+    font-size:18px;padding:4px 6px;line-height:1;cursor:pointer;
+  }
+  .del:active{color:var(--danger);}
+
+  .empty{color:var(--dim);font-size:14px;text-align:center;padding:40px 10px;}
+
+  .list-wrap{position:relative;}
+  .list-fade{
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:56px;
+    background:linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events:none;
+    display:none;
+  }
+  .list-wrap.collapsed .list-fade{display:block;}
+  .list-expand-btn{
+    width:100%;
+    background:none;
+    border:none;
+    color:var(--dim);
+    font-size:13px;
+    padding:8px 0 18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .list-expand-btn .chev{
+    display:inline-block;
+    transition:transform .2s ease;
+  }
+  .list-expand-btn.expanded .chev{
+    transform:rotate(180deg);
+  }
+
+  /* ---- swipeable quest rows ----
+     The card slides over tinted hint layers: dragging right reveals
+     "Delete" on the left, dragging left reveals "Hide" on the right.
+     The wrapper clips the card and owns the vertical rhythm. */
+  .list-expand-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  .list-expand-row .list-expand-btn{
+    flex:1;
+    width:auto;
+  }
+  .hidden-btn{
+    display:none;
+    align-items:center;
+    gap:5px;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-size:12px;
+    border-radius:8px;
+    padding:6px 10px;
+    margin-right:10px;
+    flex:0 0 auto;
+  }
+  .hidden-btn.show{display:flex;}
+  .hidden-btn:active{color:var(--text);border-color:var(--dim);}
+  .auto-hide-btn{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-size:11px;
+    border-radius:8px;
+    padding:6px 10px;
+    margin-left:6px;
+    cursor:pointer;
+    transition:color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .auto-hide-btn .ah-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:currentColor;
+    flex:0 0 auto;
+  }
+  .auto-hide-btn.on{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));}
+  .auto-hide-btn:active{color:var(--text);border-color:var(--dim);}
+
+  .task-wrap{
+    position:relative;
+    overflow:hidden;
+    border-radius:10px;
+    margin-bottom:10px;
+    background:var(--bg);
+    touch-action:pan-y;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .task-wrap .task{
+    position:relative;
+    margin:0;
+    transition:transform .2s ease;
+    will-change:transform;
+    background:var(--card);
+  }
+  .swipe-hint{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.4px;
+    pointer-events:none;
+  }
+  .swipe-hint-del{
+    justify-content:flex-start;
+    padding-left:16px;
+    color:var(--danger);
+    background:linear-gradient(90deg, rgba(181,80,79,.28), rgba(181,80,79,0) 70%);
+  }
+  .swipe-hint-hide{
+    justify-content:flex-end;
+    padding-right:16px;
+    color:var(--dim);
+    background:linear-gradient(270deg, rgba(255,255,255,.1), rgba(255,255,255,0) 70%);
+  }
+  .task-wrap.hint-del .swipe-hint-hide,
+  .task-wrap.hint-hide .swipe-hint-del{display:none;}
+
+  /* ---- toast over the week strip ---- */
+  .swipe-toast{
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%) translateY(-6px);
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:13px;
+    padding:7px 16px;
+    border-radius:999px;
+    box-shadow:0 4px 14px rgba(0,0,0,.45);
+    opacity:0;
+    pointer-events:none;
+    z-index:20;
+    white-space:nowrap;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .swipe-toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* ---- hidden quests menu ---- */
+  .hidden-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .hidden-row .info{cursor:pointer;}
+  .hidden-divider{
+    border:none;
+    border-top:1px solid var(--border);
+    margin:18px 0 14px;
+  }
+  .hidden-section-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--dim);
+    margin-bottom:10px;
+  }
+
+  /* ---- calendar ---- */
+  .cal-section{
+    margin:22px 0 20px;
+    position:relative;
+  }
+  .section-header, .cal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .section-title, .cal-title{
+    font-size:16px;
+    font-weight:700;
+  }
+  .section-title::before, .cal-title::before{
+    content:"◆";
+    font-size:10px;
+    color:var(--accent);
+    margin-right:7px;
+    vertical-align:2px;
+  }
+  .section-add-btn, .cal-add-btn{
+    width:30px;height:30px;
+    border-radius:50%;
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+    flex:0 0 auto;
+  }
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    align-items:start;
+    gap:7px;
+  }
+  .cal-cell{
+    background:var(--card);
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    padding:8px 4px;
+    aspect-ratio:1 / 1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    text-align:center;
+  }
+  .cal-day-label{
+    font-size:14px;
+    font-weight:800;
+    color:#a3a3a3;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .cal-times{
+    font-size:12px;
+    font-weight:600;
+    line-height:1.35;
+    color:var(--text);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .cal-times-empty{
+    color:var(--dim);
+    font-size:16px;
+  }
+  .cal-cell.span-blue{border-color:#3b82f6;}
+  .cal-cell.span-yellow{border-color:#eab308;}
+  .cal-cell.span-red{border-color:#ef4444;}
+  .cal-arrow-cell{
+    background:var(--card);
+    border:1.5px solid var(--border);
+    color:var(--dim);
+    font-size:30px;
+    font-weight:400;
+    cursor:pointer;
+  }
+  .cal-arrow-cell:active{color:var(--accent);border-color:var(--accent);}
+
+  /* ---- month view ---- */
+  .month-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin:4px 0 14px;
+  }
+  .month-nav-label{
+    font-size:15px;
+    font-weight:700;
+  }
+  .month-nav-btn{
+    width:32px;height:32px;
+    border-radius:50%;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:16px;
+    display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .month-weekday-row{
+    display:grid;
+    grid-template-columns:repeat(7, minmax(0, 1fr));
+    gap:4px;
+    margin-bottom:6px;
+    text-align:center;
+    font-size:11px;
+    color:var(--dim);
+    font-weight:700;
+  }
+  .month-grid{
+    display:grid;
+    grid-template-columns:repeat(7, minmax(0, 1fr));
+    gap:4px;
+  }
+  .month-cell{
+    position:relative;
+    aspect-ratio:1/1;
+    min-width:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12.5px;
+    color:var(--text);
+    border-radius:8px;
+    border:1.5px solid transparent;
+    background:var(--card);
+  }
+  .month-cell.other-month{
+    color:var(--dim);
+    opacity:.4;
+    background:transparent;
+  }
+  .month-cell.today{
+    color:var(--accent);
+    font-weight:800;
+  }
+  .month-cell.has-nonrepeat{
+    border-color:#22c55e;
+  }
+  .month-cell .repeat-dot{
+    position:absolute;
+    top:3px;right:3px;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:#ef4444;
+  }
+  .month-legend{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:16px;
+    font-size:11px;
+    color:var(--dim);
+  }
+  .legend-item{display:flex;align-items:center;gap:7px;}
+  .legend-swatch{
+    width:14px;height:14px;
+    border-radius:4px;
+    border:1.5px solid #22c55e;
+    display:inline-block;
+  }
+  .legend-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#ef4444;
+    display:inline-block;
+    margin:0 3px;
+  }
+
+  .day-events-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .event-row{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .event-row .info{flex:1;min-width:0;cursor:default;}
+  .event-row .name{font-size:15px;font-weight:500;}
+  .event-row .meta{font-size:12px;color:var(--dim);margin-top:2px;}
+  .event-bring{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--accent);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:12px;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .event-bring:active{opacity:.7;}
+  .event-bring.done{
+    color:var(--dim);
+    border-color:var(--border);
+    cursor:default;
+    opacity:.6;
+  }
+
+  .levelbar{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:16px;
+  }
+  .level-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  #levelLabel{font-weight:700;font-size:14px;color:var(--accent);}
+  .dim-text{font-size:11px;color:var(--dim);}
+
+  /* ---- top-right HUD ---- */
+  .level-hud{
+    position:fixed;
+    top:14px;
+    right:max(14px, calc(50vw - 240px + 14px));
+    display:flex;
+    align-items:center;
+    gap:8px;
+    z-index:30;
+    --lvl-color: var(--accent);
+  }
+  .level-icon{
+    position:relative;
+    width:36px;
+    height:39px;
+    flex:0 0 auto;
+    filter:drop-shadow(0 0 6px color-mix(in srgb, var(--lvl-color) 55%, transparent));
+    transition:filter .4s ease;
+  }
+  .level-icon-svg{
+    width:100%;
+    height:100%;
+  }
+  .level-icon-svg polygon{
+    fill:color-mix(in srgb, var(--lvl-color) 22%, #151515);
+    stroke:var(--lvl-color);
+    stroke-width:2;
+    transition:fill .4s ease, stroke .4s ease;
+  }
+  #levelIconNum{
+    position:absolute;
+    top:0;left:0;right:0;bottom:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:14px;
+    font-weight:800;
+    color:var(--lvl-color);
+    transition:color .4s ease;
+  }
+  .level-bar-col{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:3px;
+    width:78px;
+  }
+  .level-bar-col .xp-track{width:100%;}
+  .level-bar-col .dim-text{font-size:10px;}
+
+  .xp-track{
+    position:relative;
+    height:7px;
+    background:#151515;
+    border:1px solid var(--border);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .xp-fill-projection{
+    position:absolute;
+    top:0;left:0;
+    height:100%;
+    width:0%;
+    background:color-mix(in srgb, var(--lvl-color, var(--accent)) 55%, #000 45%);
+  }
+  .xp-fill{
+    position:absolute;
+    top:0;left:0;
+    height:100%;
+    width:0%;
+    background:var(--lvl-color, var(--accent));
+    transition:width .35s ease, background .4s ease;
+  }
+
+  .toast{
+    position:fixed;
+    top:16px;left:50%;
+    transform:translateX(-50%) translateY(-20px);
+    background:var(--accent);
+    color:#0d0d0d;
+    font-weight:700;
+    font-size:14px;
+    padding:10px 18px;
+    border-radius:8px;
+    opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:50;
+    text-align:center;
+    max-width:90%;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* ---- feedback fx: particle canvas, floating xp text, pop-bounce ---- */
+  .fx-canvas{
+    position:fixed;
+    inset:0;
+    z-index:90;
+    pointer-events:none;
+  }
+  .fx-float{
+    position:fixed;
+    z-index:91;
+    font-weight:800;
+    font-size:14px;
+    pointer-events:none;
+    white-space:nowrap;
+    text-shadow:0 1px 5px rgba(0,0,0,.6);
+    animation:fxFloatUp .85s ease-out forwards;
+  }
+  @keyframes fxFloatUp{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.7);}
+    18%{opacity:1; transform:translate(-50%,-62%) scale(1.05);}
+    100%{opacity:0; transform:translate(-50%,-135%) scale(1);}
+  }
+  @keyframes popScale{
+    0%{transform:scale(1);}
+    35%{transform:scale(1.3);}
+    62%{transform:scale(.93);}
+    100%{transform:scale(1);}
+  }
+  .pop-anim{animation:popScale .32s cubic-bezier(.34,1.56,.64,1);}
+  @media (prefers-reduced-motion: reduce){
+    .pop-anim{animation:none;}
+  }
+
+  /* ---- priority strip + reorder buttons ---- */
+  .prio-strip{
+    width:4px;
+    align-self:stretch;
+    border-radius:4px;
+    flex:0 0 auto;
+  }
+  .order-btns{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .order-btn{
+    background:none;
+    border:none;
+    color:var(--dim);
+    font-size:11px;
+    line-height:1;
+    padding:3px 4px;
+    cursor:pointer;
+  }
+  .order-btn:disabled{
+    opacity:.25;
+    cursor:default;
+  }
+  .order-btn:active:not(:disabled){color:var(--accent);}
+
+  /* ---- edit modal ---- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:70;
+    background:rgba(0,0,0,0);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, background .2s ease;
+  }
+  .modal-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+    background:rgba(0,0,0,.7);
+  }
+  .modal-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+    width:100%;
+    max-width:340px;
+    transform:scale(.95);
+    transition:transform .2s ease;
+  }
+  .modal-overlay.active .modal-card{transform:scale(1);}
+  .modal-title{font-size:16px;font-weight:700;margin-bottom:14px;}
+  .modal-label{
+    display:block;
+    font-size:11px;
+    color:var(--dim);
+    margin:0 0 4px 2px;
+  }
+  .modal-card input, .modal-card select{
+    width:100%;
+    background:#151515;
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px;
+    font-size:15px;
+    margin-bottom:12px;
+  }
+  .modal-row{
+    display:flex;
+    gap:10px;
+  }
+  .modal-col{flex:1;min-width:0;}
+  .modal-checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+    font-size:14px;
+    color:var(--text);
+  }
+  .modal-checkbox-row input[type=checkbox]{
+    width:17px;height:17px;
+    accent-color:var(--accent);
+    margin:0;
+  }
+  .weekday-picker{
+    display:flex;
+    gap:5px;
+    margin-bottom:12px;
+  }
+  .weekday-btn{
+    flex:1;
+    aspect-ratio:1/1;
+    border-radius:8px;
+    background:#151515;
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-size:12px;
+    font-weight:700;
+    padding:0;
+  }
+  .weekday-btn.selected{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d0d0d;
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:4px;
+  }
+  .modal-btn{
+    flex:1;
+    border:none;
+    border-radius:8px;
+    padding:11px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .modal-btn.secondary{
+    background:#151515;
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+  .modal-btn.primary{
+    background:var(--accent);
+    color:#0d0d0d;
+  }
+
+  /* ---- task notes / detail page ---- */
+  .detail-view{
+    position:fixed;
+    inset:0;
+    z-index:60;
+    background:var(--bg);
+    padding:16px;
+    padding-top:calc(16px + env(safe-area-inset-top));
+    display:flex;
+    flex-direction:column;
+    max-width:480px;
+    margin:0 auto;
+    transform:translateX(100vw); /* always fully off the right edge, at any window width */
+    transition:transform .28s ease;
+  }
+  .detail-view.active{
+    transform:translateX(0);
+  }
+  .detail-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:4px;
+  }
+  #hiddenView .detail-header{margin-bottom:14px;}
+  .back-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:15px;
+    flex:0 0 auto;
+  }
+  .detail-title{
+    font-size:17px;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    flex:1;
+    min-width:0;
+  }
+  .detail-header-actions{
+    display:flex;
+    gap:6px;
+    flex:0 0 auto;
+  }
+  .icon-add-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--dim);
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .icon-add-btn:active{
+    background:var(--card);
+    color:var(--text);
+    border-color:var(--accent);
+  }
+  .detail-meta{
+    font-size:12px;
+    color:var(--dim);
+    margin:8px 2px 14px;
+  }
+  .detail-scroll{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    display:block;
+  }
+
+  /* everything below lives inside one seamless notes body */
+  .notes-doc{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    flex-direction:column;
+    min-height:200px;
+    flex-shrink:0;
+  }
+  .notes-line-text{
+    background:transparent;
+    border:none;
+    color:var(--text);
+    font-size:15px;
+    line-height:1.5;
+    font-family:inherit;
+    resize:none;
+    padding:3px 0;
+    overflow:hidden;
+    width:100%;
+    flex-shrink:0;
+  }
+  .notes-line-text:focus{outline:none;}
+  .notes-line-check, .notes-line-counter{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:5px 0;
+    flex-shrink:0;
+  }
+  .item-check{
+    width:22px;height:22px;
+    min-width:22px;
+    border:2px solid var(--dim);
+    border-radius:5px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;
+    flex:0 0 auto;
+  }
+  .item-check.checked{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d0d0d;
+  }
+  .item-label-input{
+    flex:1;
+    min-width:0;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    font-size:15px;
+    padding:4px 0;
+  }
+  .item-label-input:focus{outline:none;}
+  .item-label-input.checked-label{
+    text-decoration:line-through;
+    color:var(--dim);
+  }
+  .item-toggle{
+    font-size:10px;
+    color:var(--dim);
+    background:#151515;
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:5px 7px;
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+  .item-toggle.daily{
+    color:#3b82f6;
+    border-color:#3b82f6;
+  }
+  .item-toggle.weekly{
+    color:var(--accent);
+    border-color:var(--accent);
+  }
+  .item-toggle.monthly{
+    color:#eab308;
+    border-color:#eab308;
+  }
+  .item-del{
+    background:none;
+    border:none;
+    color:var(--dim);
+    font-size:16px;
+    padding:2px 4px;
+    flex:0 0 auto;
+  }
+  .counter-bubble{
+    min-width:34px;
+    height:30px;
+    padding:0 8px;
+    border-radius:8px;
+    background:#151515;
+    border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;
+    font-size:15px;
+    color:var(--accent);
+    flex:0 0 auto;
+  }
+  .counter-reset{
+    background:none;
+    border:none;
+    color:var(--dim);
+    font-size:14px;
+    padding:2px 6px;
+    flex:0 0 auto;
+  }
+  .save-hint{
+    text-align:center;
+    font-size:11px;
+    color:var(--dim);
+    margin-top:8px;
+    opacity:0;
+    transition:opacity .3s ease;
+    flex:0 0 auto;
+  }
+  .save-hint.show{opacity:1;}
+
+  .detail-timer{
+    flex:0 0 auto;
+    border-top:1px solid var(--border);
+    margin:14px -16px -16px;
+    padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+    background:var(--bg);
+  }
+  .quest-timer{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    padding:6px 0 4px;
+  }
+  .timer-display{
+    font-size:34px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:1px;
+    color:var(--text);
+  }
+  .timer-controls{
+    display:flex;
+    gap:10px;
+  }
+  .timer-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 22px;
+    font-size:14px;
+    font-weight:600;
+    min-width:88px;
+  }
+  .timer-btn-primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d0d0d;
+  }
+  .timer-btn-primary.running{
+    background:#c9527a;
+    border-color:#c9527a;
+    color:#fff;
+  }
+
+  .retro-range{
+    text-align:center;
+    color:var(--dim);
+    font-size:13px;
+    margin-bottom:18px;
+  }
+  .retro-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .retro-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px 10px;
+    text-align:center;
+  }
+  .retro-num{
+    font-size:30px;
+    font-weight:800;
+    color:var(--text);
+    line-height:1;
+    margin-bottom:6px;
+  }
+  .retro-label{
+    font-size:11.5px;
+    color:var(--dim);
+  }
+  .retro-card.retro-good .retro-num{color:#22c55e;}
+  .retro-card.retro-bad .retro-num{color:#ef4444;}
+  .retro-xp{
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    color:var(--accent);
+    padding:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+  }
+
+  .lvup-overlay{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:rgba(8,8,8,0);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease, background .3s ease;
+    overflow:hidden;
+  }
+  .lvup-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+    background:rgba(8,8,8,.82);
+  }
+  .lvup-glow{
+    position:absolute;
+    width:70vmax;height:70vmax;
+    border-radius:50%;
+    background:radial-gradient(circle, var(--lvl-color, var(--accent)) 0%, transparent 65%);
+    opacity:0;
+    filter:blur(10px);
+  }
+  .lvup-overlay.active .lvup-glow{
+    animation:glowPulse 1.8s ease-out forwards;
+  }
+  @keyframes glowPulse{
+    0%{opacity:0; transform:scale(.4);}
+    30%{opacity:.55; transform:scale(1);}
+    100%{opacity:0; transform:scale(1.15);}
+  }
+  .lvup-tag{
+    letter-spacing:4px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--dim);
+    opacity:0;
+    margin-bottom:6px;
+  }
+  .lvup-overlay.active .lvup-tag{
+    animation:tagIn .5s ease .15s forwards;
+  }
+  @keyframes tagIn{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .lvup-numbers{
+    position:relative;
+    height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .lvup-num{
+    position:absolute;
+    font-size:96px;
+    font-weight:800;
+    line-height:1;
+  }
+  .lvup-old{
+    color:var(--dim);
+    opacity:0;
+  }
+  .lvup-new{
+    color:var(--lvl-color, var(--accent));
+    opacity:0;
+    text-shadow:0 0 30px color-mix(in srgb, var(--lvl-color) 60%, transparent);
+  }
+  .lvup-overlay.active .lvup-old{
+    animation:oldNumSeq 1s ease forwards;
+  }
+  .lvup-overlay.active .lvup-new{
+    animation:newNumSeq 1s ease forwards;
+  }
+  @keyframes oldNumSeq{
+    0%{opacity:0; transform:scale(.7);}
+    20%{opacity:1; transform:scale(1);}
+    55%{opacity:1; transform:scale(1);}
+    100%{opacity:0; transform:scale(.5) translateY(-10px);}
+  }
+  @keyframes newNumSeq{
+    0%{opacity:0; transform:scale(.4) rotate(-8deg);}
+    55%{opacity:0; transform:scale(.4) rotate(-8deg);}
+    75%{opacity:1; transform:scale(1.15) rotate(0deg);}
+    100%{opacity:1; transform:scale(1) rotate(0deg);}
+  }
+
+  /* ---- floating add button ---- */
+  .fab-add{
+    position:fixed;
+    bottom:22px;
+    left:50%;
+    transform:translateX(-50%);
+    width:58px;
+    height:58px;
+    border-radius:50%;
+    border:none;
+    background:var(--accent);
+    color:#0d0d0d;
+    font-size:28px;
+    font-weight:400;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
+    z-index:40;
+  }
+  .fab-add:active{transform:translateX(-50%) scale(.94);}
+
+  .fab-choice-popover{
+    position:fixed;
+    bottom:90px;
+    left:50%;
+    transform:translateX(-50%) translateY(8px);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px;
+    z-index:41;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s ease, transform .15s ease;
+    min-width:190px;
+  }
+  .fab-choice-popover.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateX(-50%) translateY(0);
+  }
+  .fab-choice-btn{
+    background:#151515;
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:11px 14px;
+    font-size:14px;
+    text-align:left;
+  }
+  .fab-choice-btn:active{border-color:var(--accent);}
+
+  /* ---- new quest full-screen view ---- */
+  .new-task-view{
+    position:fixed;
+    inset:0;
+    z-index:65;
+    background:var(--bg);
+    padding:16px;
+    padding-top:calc(16px + env(safe-area-inset-top));
+    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    max-width:480px;
+    margin:0 auto;
+    transform:translateY(100%);
+    transition:transform .3s ease;
+  }
+  .new-task-view.active{transform:translateY(0);}
+
+  .nt-name-row{
+    position:relative;
+    display:flex;
+    align-items:stretch;
+    gap:10px;
+    margin:18px 0 20px;
+  }
+  .priority-bar{
+    width:10px;
+    border:none;
+    border-radius:6px;
+    flex:0 0 auto;
+    background:var(--accent);
+    padding:0;
+  }
+  .nt-name-input{
+    flex:1;
+    min-width:0;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:12px 14px;
+    font-size:16px;
+  }
+  #ntRemindHours{
+    width:100%;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:15px;
+  }
+  .ot-toggle{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .ot-toggle-btn{
+    flex:1;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--dim);
+    border-radius:8px;
+    padding:11px 8px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .ot-toggle-btn.selected{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d0d0d;
+  }
+  .ot-info{
+    font-size:12px;
+    color:var(--dim);
+    margin:-6px 0 16px;
+    line-height:1.4;
+  }
+  .priority-popover{
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    display:flex;
+    gap:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:10px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(-6px);
+    transition:opacity .15s ease, transform .15s ease;
+    z-index:5;
+  }
+  .priority-popover.show{
+    opacity:1;
+    pointer-events:auto;
+    transform:translateY(0);
+  }
+  .prio-swatch{
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    border:2px solid transparent;
+    padding:0;
+  }
+  .prio-swatch.selected{
+    border-color:#fff;
+    box-shadow:0 0 0 2px rgba(255,255,255,.15);
+  }
+
+  .nt-sliders{margin-bottom:16px;}
+  .nt-slider-group{margin-bottom:16px;}
+  .nt-slider-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--dim);
+    margin-bottom:8px;
+  }
+  .nt-slider-val{color:var(--text);font-weight:600;}
+  .nt-day-row{display:flex;align-items:center;gap:10px;}
+  .nt-day-row input[type=range]{flex:1;}
+  .nt-custom-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:13px;
+    flex:0 0 auto;
+  }
+  input[type=range]{
+    -webkit-appearance:none;
+    width:100%;
+    height:6px;
+    border-radius:6px;
+    background:#151515;
+    border:1px solid var(--border);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--accent);
+    border:2px solid #0d0d0d;
+    margin-top:-1px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--accent);
+    border:2px solid #0d0d0d;
+  }
+
+  .nt-notes{
+    flex:1;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:10px;
+    padding:14px;
+    font-size:15px;
+    line-height:1.5;
+    resize:none;
+    font-family:inherit;
+    margin-bottom:14px;
+  }
+  .nt-create-btn{
+    background:var(--accent);
+    border:none;
+    color:#0d0d0d;
+    font-weight:700;
+    font-size:16px;
+    border-radius:10px;
+    padding:14px;
+    flex:0 0 auto;
+  }
+  @media (hover: hover) and (pointer: fine){
+    .task:hover{border-color:var(--dim);}
+    .box:hover{border-color:var(--accent);}
+    .fab-add:hover{filter:brightness(1.08);}
+    .back-btn:hover, .del:hover, .order-btn:not(:disabled):hover,
+    .icon-add-btn:hover, .item-add-btn:hover, .backup-btn:hover,
+    .modal-btn.secondary:hover, .nt-custom-btn:hover, #settingsBtn:hover{
+      border-color:var(--accent);
+      color:var(--text);
+    }
+    .modal-btn.primary:hover, .nt-create-btn:hover{filter:brightness(1.08);}
+    .prio-swatch:hover{filter:brightness(1.15);}
+    .settings-action-danger:hover{border-color:var(--danger);color:var(--danger);}
+  }
+
+  /* ---- settings sheet ---- */
+  .settings-overlay{
+    position:fixed;
+    inset:0;
+    z-index:70;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .settings-overlay.active{opacity:1;pointer-events:auto;}
+  .settings-panel{
+    position:absolute;
+    top:0;right:0;bottom:0;
+    width:min(480px, 100%);
+    background:var(--bg);
+    border-left:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .28s ease;
+  }
+  .settings-overlay.active .settings-panel{transform:translateX(0);}
+  .settings-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    padding-top:calc(14px + env(safe-area-inset-top));
+    border-bottom:1px solid var(--border);
+    flex:0 0 auto;
+  }
+  .settings-title{
+    font-family:'Cinzel', Georgia, serif;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:.8px;
+  }
+  .settings-scroll{
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:8px 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .settings-section{margin-top:22px;}
+  .settings-section:first-child{margin-top:12px;}
+  .settings-section-title{
+    font-family:'Cinzel', Georgia, serif;
+    font-size:13px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--accent);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:2px;
+  }
+  .settings-section-title::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:linear-gradient(to right, var(--border), transparent);
+  }
+  .settings-sub{
+    font-size:12.5px;
+    color:var(--dim);
+    margin:6px 0 12px;
+    line-height:1.4;
+  }
+  .theme-swatches{
+    display:flex;
+    gap:16px;
+    padding:8px 0 4px;
+  }
+  .theme-swatch{
+    width:40px;height:40px;
+    border-radius:50%;
+    border:2px solid var(--border);
+    position:relative;
+    cursor:pointer;
+    transition:transform .15s ease;
+    padding:0;
+  }
+  .theme-swatch:active{transform:scale(.9);}
+  .theme-swatch.active{
+    border-color:#fff;
+    box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--border);
+  }
+  .theme-swatch.active::after{
+    content:"✓";
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#0d0d0d;
+    font-size:15px;
+    font-weight:700;
+    text-shadow:0 0 3px rgba(255,255,255,.45);
+  }
+  .theme-swatch-add{
+    background:transparent;
+    border:2px dashed var(--dim);
+    color:var(--dim);
+    font-size:22px;
+    font-weight:400;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .settings-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:13px 2px;
+  }
+  .settings-row + .settings-row{border-top:1px solid var(--border);}
+  .settings-row-text{flex:1;min-width:0;}
+  .settings-row-title{font-size:14px;font-weight:600;}
+  .settings-row-sub{font-size:12px;color:var(--dim);margin-top:2px;line-height:1.4;}
+  .settings-action{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 16px;
+    font-size:13px;
+    font-weight:600;
+    flex:0 0 auto;
+    cursor:pointer;
+  }
+  .settings-action:active{border-color:var(--accent);color:var(--accent);}
+  .settings-danger-zone{
+    margin-top:26px;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+  .settings-danger-zone .settings-sub{margin-bottom:10px;}
+  .settings-danger-row{
+    display:flex;
+    gap:10px;
+  }
+  .settings-danger-row .settings-action-danger{flex:1;width:auto;}
+  .settings-action-danger{
+    width:100%;
+    background:transparent;
+    border:1px solid var(--danger);
+    color:var(--danger);
+    padding:12px;
+  }
+  .settings-action-danger:active{background:var(--danger);color:#fff;}
+  .switch{
+    width:52px;height:30px;
+    border-radius:999px;
+    background:var(--card);
+    border:1px solid var(--border);
+    position:relative;
+    flex:0 0 auto;
+    cursor:pointer;
+    transition:background .2s ease, border-color .2s ease;
+    padding:0;
+  }
+  .switch::after{
+    content:"";
+    position:absolute;
+    top:3px;left:3px;
+    width:22px;height:22px;
+    border-radius:50%;
+    background:var(--dim);
+    transition:left .2s ease, background .2s ease;
+  }
+  .switch.on{background:var(--accent);border-color:var(--accent);}
+  .switch.on::after{left:25px;background:#0d0d0d;}
+
+  /* ---- wide-screen layout: main column + side panes ----
+     On phones / narrow windows the detail views keep sliding over the
+     main screen. On wide screens they become panes beside the main
+     column, keeping the whole group centered. Pane order in the row:
+     month view (left), main (center), notes/day/retro (right). */
+  @media (min-width: 1024px){
+    body{
+      max-width:none;
+      padding-bottom:16px;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      gap:20px;
+    }
+    .app-main{
+      position:relative;
+      order:2;
+      flex:0 0 480px;
+      width:480px;
+      max-width:480px;
+    }
+    .level-hud{
+      position:absolute;
+      top:14px;
+      right:0;
+    }
+    .detail-view{
+      position:sticky;
+      inset:auto;
+      top:16px;
+      order:3;
+      z-index:auto;
+      width:480px;
+      max-width:480px;
+      margin:0;
+      flex:0 0 480px;
+      height:calc(100vh - 32px);
+      transform:none;
+      transition:none;
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .detail-view:not(.active){display:none;}
+    #monthView{order:1;}
+    #hiddenView{order:1;}
+    .pane-grip{
+      flex:0 0 auto;
+      width:28px;height:34px;
+      display:flex;align-items:center;justify-content:center;
+      color:var(--dim);
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:8px;
+      font-size:14px;
+      cursor:grab;
+      touch-action:none;
+      user-select:none;
+    }
+    .pane-grip:active{cursor:grabbing;}
+    .pane-dragging{
+      z-index:80;
+      box-shadow:0 12px 32px rgba(0,0,0,.35);
+    }
+    #paneDropLine{
+      position:fixed;
+      top:16px;bottom:16px;
+      width:3px;border-radius:2px;
+      background:var(--accent);
+      z-index:120;
+      display:none;
+      pointer-events:none;
+    }
+    .fab-add{z-index:40;}
+    .fab-choice-popover{z-index:41;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app-main">
+<h1><span class="drop-cap">Q</span>uest <span class="drop-cap">B</span>ook</h1>
+<div class="sub" id="dateLabel"></div>
+<div class="backup-row">
+  <button type="button" id="retroBtn" class="backup-btn">Last week's retro</button>
+  <button type="button" id="testQuestBtn" class="backup-btn" style="display:none;" title="Temporary: create a lorem ipsum test quest">Lorem quest</button>
+  <button type="button" id="settingsBtn" class="backup-btn backup-right" title="Settings">⚙ Settings</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none;">
+</div>
+<div class="notify-hint" id="notifyHint"></div>
+
+<div class="level-hud" id="levelHud">
+  <div class="level-icon" id="levelIcon">
+    <svg viewBox="0 0 40 44" class="level-icon-svg">
+      <polygon points="20,1 38,11.5 38,32.5 20,43 2,32.5 2,11.5" />
+    </svg>
+    <span id="levelIconNum">1</span>
+  </div>
+  <div class="level-bar-col">
+    <div class="xp-track">
+      <div class="xp-fill-projection" id="xpFillProjection"></div>
+      <div class="xp-fill" id="xpFill"></div>
+    </div>
+    <span id="xpLabel" class="dim-text">0 / 100 XP</span>
+  </div>
+</div>
+
+<div class="section-header">
+  <div class="section-title">Quests</div>
+  <button type="button" class="section-add-btn" id="questAddBtn" aria-label="Add quest">+</button>
+</div>
+<div class="list-wrap" id="listWrap">
+  <div id="list"></div>
+  <div class="list-fade" id="listFade"></div>
+</div>
+<div class="empty" id="emptyMsg" style="display:none;">No tasks yet. Tap + to add one.</div>
+<div class="list-expand-row" id="listExpandRow">
+  <button type="button" class="hidden-btn" id="hiddenBtn" aria-label="Hidden quests" title="Hidden quests for today">
+    <span>hidden</span>
+    <span id="hiddenCount">0</span>
+  </button>
+  <button type="button" class="list-expand-btn" id="listExpandBtn" style="display:none;"></button>
+  <button type="button" class="auto-hide-btn" id="autoHideBtn" aria-pressed="false" title="Toggle: auto-hide completed quests, or keep them at the bottom"></button>
+</div>
+
+<div class="cal-section">
+  <div class="cal-header">
+    <div class="cal-title">Calendar</div>
+    <div class="detail-header-actions">
+      <button type="button" class="icon-add-btn" id="icsExportBtn" aria-label="Export to .ics" title="Export to .ics">⤓</button>
+      <button type="button" class="cal-add-btn" id="calAddBtn" aria-label="Add event">+</button>
+    </div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="swipe-toast" id="swipeToast"></div>
+</div>
+
+  <button type="button" class="fab-add" id="fabAdd" aria-label="Add">+</button>
+  <div class="fab-choice-popover" id="fabChoicePopover">
+    <button type="button" class="fab-choice-btn" id="fabChoiceQuest">⚔ Quest</button>
+    <button type="button" class="fab-choice-btn" id="fabChoiceEvent">📅 Calendar event</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal-card">
+    <div class="modal-title" id="confirmTitle">Are you sure you want to delete this quest?</div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="confirmCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="confirmDelete" style="background:var(--danger);color:#fff;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="eventOverlay">
+  <div class="modal-card">
+    <div class="modal-title" id="eventModalTitle">New event</div>
+
+    <label class="modal-label">Name</label>
+    <input type="text" id="eventName" placeholder="Event name">
+
+    <label class="modal-label">Day</label>
+    <input type="date" id="eventDay">
+
+    <div class="modal-row">
+      <div class="modal-col">
+        <label class="modal-label">Start time</label>
+        <input type="time" id="eventStart">
+      </div>
+      <div class="modal-col">
+        <label class="modal-label">Duration (min)</label>
+        <input type="number" id="eventDuration" min="1" value="60">
+      </div>
+    </div>
+
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="eventRepeatToggle">
+      <span>Repeats</span>
+    </label>
+
+    <div id="eventRepeatOptions" class="event-repeat-options" style="display:none;">
+      <label class="modal-label">Repeats on</label>
+      <div class="weekday-picker" id="weekdayPicker">
+        <button type="button" class="weekday-btn" data-day="0">S</button>
+        <button type="button" class="weekday-btn" data-day="1">M</button>
+        <button type="button" class="weekday-btn" data-day="2">T</button>
+        <button type="button" class="weekday-btn" data-day="3">W</button>
+        <button type="button" class="weekday-btn" data-day="4">T</button>
+        <button type="button" class="weekday-btn" data-day="5">F</button>
+        <button type="button" class="weekday-btn" data-day="6">S</button>
+      </div>
+      <label class="modal-label">Ends on (optional)</label>
+      <input type="date" id="eventRepeatUntil">
+    </div>
+
+    <label class="modal-label">Remind me (hours before, optional)</label>
+    <input type="number" id="eventRemindHours" min="0" step="0.5" placeholder="e.g. 1">
+
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="eventCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="eventSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="detail-view" id="retroView">
+  <div class="detail-header">
+    <div class="pane-grip" data-pane="retroView" title="Drag to move this panel">⠿</div>
+    <button class="back-btn" id="retroBackBtn">‹ Back</button>
+    <div class="detail-title">Weekly retro</div>
+  </div>
+  <div class="detail-scroll">
+    <div class="retro-range" id="retroRange">Week of —</div>
+
+    <div class="retro-grid">
+      <div class="retro-card">
+        <div class="retro-num" id="retroCompleted">0</div>
+        <div class="retro-label">quests completed</div>
+      </div>
+      <div class="retro-card">
+        <div class="retro-num" id="retroEvents">0</div>
+        <div class="retro-label">events</div>
+      </div>
+      <div class="retro-card retro-good">
+        <div class="retro-num" id="retroHit">0</div>
+        <div class="retro-label">weekly goals hit</div>
+      </div>
+      <div class="retro-card retro-bad">
+        <div class="retro-num" id="retroMissed">0</div>
+        <div class="retro-label">weekly goals missed</div>
+      </div>
+    </div>
+
+    <div class="retro-xp" id="retroXp">0 XP earned that week</div>
+    <div class="empty" id="retroEmptyMsg" style="display:none;">Nothing logged for that week yet — check back after using the app a bit.</div>
+  </div>
+</div>
+
+<div class="detail-view" id="monthView">
+  <div class="detail-header">
+    <div class="pane-grip" data-pane="monthView" title="Drag to move this panel">⠿</div>
+    <button class="back-btn" id="monthBackBtn">‹ Back</button>
+    <div class="detail-title">Calendar</div>
+  </div>
+  <div class="month-nav">
+    <button type="button" id="monthPrevBtn" class="month-nav-btn" aria-label="Previous month">‹</button>
+    <div class="month-nav-label" id="monthNavLabel">Month</div>
+    <button type="button" id="monthNextBtn" class="month-nav-btn" aria-label="Next month">›</button>
+  </div>
+  <div class="detail-scroll">
+    <div class="month-weekday-row">
+      <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+    </div>
+    <div class="month-grid" id="monthGrid"></div>
+    <div class="month-legend">
+      <span class="legend-item"><span class="legend-swatch legend-green"></span> non-repeating event</span>
+      <span class="legend-item"><span class="legend-dot"></span> repeating event</span>
+    </div>
+  </div>
+</div>
+
+<div class="detail-view" id="hiddenView">
+  <div class="detail-header">
+    <div class="pane-grip" data-pane="hiddenView" title="Drag to move this panel">⠿</div>
+    <button class="back-btn" id="hiddenBackBtn">‹ Back</button>
+    <div class="detail-title">Hidden quests</div>
+  </div>
+  <div class="detail-scroll">
+    <div id="hiddenList"></div>
+    <hr class="hidden-divider" id="hiddenDivider" style="display:none;">
+    <div id="hiddenFinishedWrap" style="display:none;">
+      <div class="hidden-section-title">Finished quests</div>
+      <div id="hiddenFinishedList"></div>
+    </div>
+    <div class="empty" id="hiddenEmptyMsg" style="display:none;">Nothing hidden for today.</div>
+  </div>
+</div>
+
+<div class="detail-view" id="dayView">
+  <div class="detail-header">
+    <div class="pane-grip" data-pane="dayView" title="Drag to move this panel">⠿</div>
+    <button class="back-btn" id="dayBackBtn">‹ Back</button>
+    <div class="detail-title" id="dayViewTitle">Day</div>
+    <div class="detail-header-actions">
+      <button type="button" id="dayAddEventBtn" class="icon-add-btn" aria-label="Add event" title="Add event">+</button>
+    </div>
+  </div>
+  <div class="detail-scroll">
+    <div id="dayEventsList" class="day-events-list"></div>
+    <div class="empty" id="dayEmptyMsg" style="display:none;">No events this day. Tap + to add one.</div>
+  </div>
+</div>
+
+<div id="paneDropLine"></div>
+
+<div class="new-task-view" id="newTaskView">
+  <div class="detail-header">
+    <button type="button" class="back-btn" id="ntCancel">‹ Cancel</button>
+    <div class="detail-title">New quest</div>
+  </div>
+
+  <div class="nt-name-row">
+    <button type="button" class="priority-bar" id="ntPriorityBar" aria-label="Set priority"></button>
+    <input type="text" id="ntName" class="nt-name-input" placeholder="Quest name">
+    <div class="priority-popover" id="ntPriorityPopover">
+      <button type="button" class="prio-swatch" data-p="1"></button>
+      <button type="button" class="prio-swatch" data-p="2"></button>
+      <button type="button" class="prio-swatch" data-p="3"></button>
+      <button type="button" class="prio-swatch" data-p="4"></button>
+      <button type="button" class="prio-swatch" data-p="5"></button>
+    </div>
+  </div>
+
+  <div class="ot-toggle" id="ntModeToggle">
+    <button type="button" class="ot-toggle-btn selected" data-mode="once">One-time</button>
+    <button type="button" class="ot-toggle-btn" data-mode="repeat">Repeatable</button>
+  </div>
+
+  <div class="nt-sliders" id="ntSliders" style="display:none;">
+    <div class="nt-slider-group">
+      <div class="nt-slider-label">
+        <span>Times per week</span>
+        <span class="nt-slider-val" id="ntWeekVal">4</span>
+      </div>
+      <input type="range" id="ntWeekSlider" min="1" max="7" value="4">
+    </div>
+
+    <div class="nt-slider-group">
+      <div class="nt-slider-label">
+        <span>Times per day</span>
+        <span class="nt-slider-val" id="ntDayVal">1</span>
+      </div>
+      <div class="nt-day-row">
+        <input type="range" id="ntDaySlider" min="1" max="5" value="1">
+        <button type="button" id="ntDayCustomBtn" class="nt-custom-btn">Custom</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ot-info" id="ntOnceInfo">This quest disappears 5 hours after you check it off.</div>
+
+  <div class="nt-slider-group">
+    <div class="nt-slider-label">
+      <span id="ntRemindLabel">Remind me in (hours, optional)</span>
+    </div>
+    <input type="number" id="ntRemindHours" min="0" step="0.5" placeholder="e.g. 2">
+  </div>
+
+  <textarea id="ntNotes" class="nt-notes" placeholder="Notes about this quest…"></textarea>
+
+  <button type="button" id="ntCreate" class="nt-create-btn">Create quest</button>
+</div>
+
+<div class="modal-overlay" id="customDayOverlay">
+  <div class="modal-card">
+    <div class="modal-title">Custom times per day</div>
+    <input type="number" id="customDayInput" min="1" value="1">
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="customDayCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="customDaySave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "checklist_tasks_v1";
+const STATE_KEY = "checklist_state_v1";
+const AUTO_HIDE_DONE_KEY = "checklist_autohide_done_v1";
+const EVENTS_KEY = "checklist_events_v1";
+
+// Manual name tables — avoids relying on toLocaleDateString/Intl, which can
+// be unreliable or missing full locale data on some Android WebViews and
+// silently produce empty output for specific dates.
+const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/* ================================================================
+   Feedback FX — synthesized sound (Web Audio, no asset files) +
+   canvas particle bursts + floating "+XP" text + checkbox pop-bounce.
+
+   Design intent: a small, consistent sound/motion vocabulary so each
+   cue stays meaningful instead of turning into noise —
+     sfx.tick()      small forward progress (note check, counter, partial quest tick)
+     sfx.complete()  a quest's daily/one-time target is fully met
+     sfx.untick()    quiet, neutral — unchecking a note item (never punishing)
+     sfx.undo()      quiet, neutral — undoing quest progress/XP
+     sfx.del()       soft downward blip — deleting something
+     sfx.pop()       light blip — creating a new item/quest
+     sfx.click()     tiny neutral click — minor UI toggles
+     sfx.levelUp()   the big one — ascending fanfare
+   Tones are short, soft (sine/triangle), and quiet by default on purpose:
+   these fire dozens of times a day, so anything harsh gets muted fast.
+   Everything here is additive — it never blocks or delays the underlying
+   state change/render it's attached to.
+================================================================ */
+const SOUND_KEY = "checklist_sound_v1";
+let soundOn = localStorage.getItem(SOUND_KEY) !== "0"; // default on
+const REDUCE_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+let actx = null, masterGain = null;
+function ensureAudio(){
+  if(actx) return actx;
+  try{
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(actx.destination);
+  }catch(e){ actx = null; }
+  return actx;
+}
+function unlockAudio(){
+  const ctx = ensureAudio();
+  if(ctx && ctx.state === "suspended") ctx.resume();
+}
+document.addEventListener("pointerdown", unlockAudio, { once: true, passive: true });
+
+function setSoundOn(on){
+  soundOn = on;
+  localStorage.setItem(SOUND_KEY, on ? "1" : "0");
+  renderSoundBtn();
+}
+function renderSoundBtn(){
+  const btn = document.getElementById("soundToggleBtn");
+  if(!btn) return;
+  btn.classList.toggle("on", soundOn);
+  btn.setAttribute("aria-checked", soundOn ? "true" : "false");
+}
+
+// One scheduled oscillator "note" with a quick attack and exponential decay.
+function tone({freq, delay = 0, dur = 0.12, type = "sine", peak = 0.22, glideTo = null}){
+  if(!soundOn) return;
+  const ctx = ensureAudio();
+  if(!ctx || ctx.state === "suspended") return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if(glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(peak, t0 + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+const sfx = {
+  tick(){ tone({freq: 720, dur: 0.07, type: "triangle", peak: 0.14, glideTo: 940}); },
+  untick(){ tone({freq: 360, dur: 0.06, type: "sine", peak: 0.07, glideTo: 280}); },
+  complete(){
+    [523.25, 659.25, 783.99].forEach((f, i) => // C5 E5 G5 — bright major pluck
+      tone({freq: f, delay: i * 0.055, dur: 0.17, type: "triangle", peak: 0.2})
+    );
+  },
+  undo(){ tone({freq: 260, dur: 0.09, type: "sine", peak: 0.08, glideTo: 180}); },
+  del(){ tone({freq: 340, dur: 0.1, type: "sine", peak: 0.09, glideTo: 150}); },
+  pop(){ tone({freq: 480, dur: 0.09, type: "sine", peak: 0.15, glideTo: 680}); },
+  click(){ tone({freq: 600, dur: 0.035, type: "square", peak: 0.05}); },
+  levelUp(){
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => // C5 E5 G5 C6
+      tone({freq: f, delay: i * 0.09, dur: 0.3, type: "triangle", peak: 0.22})
+    );
+    tone({freq: 1046.5, delay: 0.4, dur: 0.55, type: "sine", peak: 0.14});
+  }
+};
+
+// ---- particle canvas: small radial bursts + a level-up confetti rain ----
+let fxCanvas = null, fxCtx = null, fxParticles = [], fxRafId = null;
+function initFxCanvas(){
+  fxCanvas = document.getElementById("fxCanvas");
+  if(!fxCanvas) return;
+  fxCtx = fxCanvas.getContext("2d");
+  resizeFxCanvas();
+  window.addEventListener("resize", resizeFxCanvas);
+}
+function resizeFxCanvas(){
+  if(!fxCanvas || !fxCtx) return;
+  const dpr = window.devicePixelRatio || 1;
+  fxCanvas.width = innerWidth * dpr;
+  fxCanvas.height = innerHeight * dpr;
+  fxCanvas.style.width = innerWidth + "px";
+  fxCanvas.style.height = innerHeight + "px";
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function getAccentColor(){
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  return v || "#4f9d69";
+}
+function addFxParticle(p){
+  fxParticles.push(p);
+  if(!fxRafId) fxRafId = requestAnimationFrame(stepFx);
+}
+function stepFx(now){
+  if(!fxCtx){ fxRafId = null; return; }
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  fxParticles = fxParticles.filter(p => (now - p.born) < p.life);
+  for(const p of fxParticles){
+    const t = (now - p.born) / p.life;
+    p.x += p.vx; p.y += p.vy;
+    p.vy += p.g; p.vx *= 0.985;
+    p.rot += p.vrot;
+    fxCtx.save();
+    fxCtx.globalAlpha = Math.max(0, 1 - t);
+    fxCtx.translate(p.x, p.y);
+    fxCtx.rotate(p.rot);
+    fxCtx.fillStyle = p.color;
+    fxCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    fxCtx.restore();
+  }
+  fxRafId = fxParticles.length ? requestAnimationFrame(stepFx) : null;
+}
+// Small radial burst from a point — used for check/complete/counter taps.
+function burstAt(x, y, opts = {}){
+  if(REDUCE_MOTION || !fxCtx) return;
+  const {
+    count = 14, colors = [getAccentColor()], speed = 3.2, spread = Math.PI * 2,
+    angle = -Math.PI / 2, gravity = 0.16, size = 3.5, life = 600
+  } = opts;
+  for(let i = 0; i < count; i++){
+    const a = angle + (Math.random() - 0.5) * spread;
+    const sp = speed * (0.5 + Math.random() * 0.9);
+    addFxParticle({
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: gravity,
+      size: size * (0.6 + Math.random() * 0.8),
+      color: colors[(Math.random() * colors.length) | 0],
+      born: performance.now(), life: life * (0.75 + Math.random() * 0.5),
+      rot: Math.random() * 7, vrot: (Math.random() - 0.5) * 0.25
+    });
+  }
+}
+// Gentle confetti fall across the top of the screen — the level-up moment.
+function confettiRain(colors, durationMs = 1600){
+  if(REDUCE_MOTION || !fxCtx) return;
+  const endAt = performance.now() + durationMs;
+  (function drop(){
+    if(performance.now() > endAt) return;
+    for(let i = 0; i < 3; i++){
+      addFxParticle({
+        x: Math.random() * innerWidth, y: -12,
+        vx: (Math.random() - 0.5) * 1.6, vy: 1.6 + Math.random() * 2, g: 0.05,
+        size: 4 + Math.random() * 3,
+        color: colors[(Math.random() * colors.length) | 0],
+        born: performance.now(), life: 2200 + Math.random() * 800,
+        rot: Math.random() * 7, vrot: (Math.random() - 0.5) * 0.3
+      });
+    }
+    setTimeout(drop, 60);
+  })();
+}
+
+// Floating "+N XP" text that rises and fades — the clearest reward signal.
+function floatText(x, y, text, color){
+  if(REDUCE_MOTION || typeof x !== "number") return;
+  const el = document.createElement("div");
+  el.className = "fx-float";
+  el.textContent = text;
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  el.style.color = color || getAccentColor();
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+// Quick scale-bounce on any element — cheap, high-value "juice".
+function popEl(el){
+  if(!el || REDUCE_MOTION) return;
+  el.classList.remove("pop-anim");
+  void el.offsetWidth; // restart the animation reliably
+  el.classList.add("pop-anim");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initFxCanvas();
+});
+document.addEventListener("DOMContentLoaded", () => {
+  renderSoundBtn();
+  const btn = document.getElementById("soundToggleBtn");
+  if(btn){
+    btn.addEventListener("click", () => {
+      setSoundOn(!soundOn);
+      if(soundOn) sfx.click();
+    });
+  }
+});
+/* ================================================================ */
+
+/* ---------------- Leveling system ----------------
+   Designed to be easy to extend later:
+   - xpReward(task) currently scales with priority (5xp per priority level);
+     change XP_PER_PRIORITY_LEVEL or the formula to tune the curve further
+     (e.g. also factor in task.perWeek, task.perDay, a "difficulty" field).
+   - Change xpRequiredForLevel(level) to tune the difficulty curve.
+   - Add entries to LEVEL_REWARDS to unlock things at specific levels;
+     onLevelUp() will report every level newly reached so rewards can
+     be granted, popups shown, etc.
+------------------------------------------------------ */
+const XP_PER_PRIORITY_LEVEL = 5;
+
+function xpRequiredForLevel(level){
+  // Every level costs the same amount of XP so the bar reads consistently.
+  return 100;
+}
+
+function xpReward(task){
+  // Higher-priority quests are worth more XP: priority 1 => 5xp ... priority 5 => 25xp
+  const priority = task.priority || 3;
+  return priority * XP_PER_PRIORITY_LEVEL;
+}
+
+// Reserved for future content, e.g. { 5: "Unlocks dark theme #2", 10: "New badge" }
+const LEVEL_REWARDS = {};
+
+// Cycles through a rich palette so every level reads as visually distinct.
+// Add more colors here any time — indexing just wraps around.
+const LEVEL_COLORS = [
+  "#4f9d69", "#3d8fb0", "#c9a23d", "#8a5fc9", "#c9527a", "#4fb0a3",
+  "#5b7fd4", "#d45b78", "#43a86e", "#c9a13b", "#6f6fc9", "#3fa7b0",
+  "#d97a3b", "#5c8fd9", "#8f6fc9", "#4fa872", "#d45b9b", "#3ba7d9",
+  "#c96f3b", "#6f7fb0", "#a8c94f", "#4fb08f", "#c94f6f", "#7f9bd9",
+  "#d9b03b", "#5bb078", "#c96f8f", "#3f7fb0", "#8fb04f", "#d95b8f",
+  "#4f9bd5", "#c9b84f", "#7b6fd4", "#4fd4a3", "#d45f9b", "#5fb09b"
+];
+function getLevelColor(level){
+  return LEVEL_COLORS[(level - 1) % LEVEL_COLORS.length];
+}
+
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STATE_KEY));
+    if(s && typeof s.xp === "number") return s;
+  }catch(e){}
+  return { xp: 0 };
+}
+function saveState(state){
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+}
+
+// Given total accumulated xp, derive level + progress within that level
+function getLevelInfo(totalXp){
+  let level = 1;
+  let remaining = Math.max(0, totalXp);
+  while(remaining >= xpRequiredForLevel(level)){
+    remaining -= xpRequiredForLevel(level);
+    level++;
+  }
+  return {
+    level,
+    xpIntoLevel: remaining,
+    xpForNext: xpRequiredForLevel(level)
+  };
+}
+
+function addXp(amount){
+  const state = loadState();
+  const prevXp = state.xp;
+  const before = getLevelInfo(state.xp).level;
+  state.xp = Math.max(0, state.xp + amount);
+  const after = getLevelInfo(state.xp).level;
+  saveState(state);
+
+  if(after > before){
+    onLevelUp(before, after);
+    renderLevelBar(); // level-up overlay covers the transition; just snap the HUD after
+  } else if(amount > 0){
+    animateXpGain(prevXp, state.xp);
+  } else {
+    renderLevelBar();
+  }
+  return after > before; // callers can skip a smaller chime if the big level-up fanfare already played
+}
+
+function onLevelUp(before, after){
+  sfx.levelUp();
+  confettiRain([getLevelColor(after), getAccentColor(), "#ffffff"], 1700);
+  showLevelUpOverlay(before, after);
+  // Announce any rewards attached to levels passed through along the way
+  for(let lv = before + 1; lv <= after; lv++){
+    const reward = LEVEL_REWARDS[lv];
+    if(reward) setTimeout(() => showToast(`Lv ${lv}: ${reward}`), 2000);
+  }
+}
+
+let toastTimer = null;
+function showToast(msg){
+  let el = document.getElementById("toast");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  clearTimeout(toastTimer);
+  requestAnimationFrame(() => el.classList.add("show"));
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+let lvupTimer = null;
+function showLevelUpOverlay(before, after){
+  const overlay = document.getElementById("lvupOverlay");
+  const glow = document.getElementById("lvupGlow");
+  const oldNum = document.getElementById("lvupOld");
+  const newNum = document.getElementById("lvupNew");
+  if(!overlay) return;
+
+  oldNum.textContent = before;
+  newNum.textContent = after;
+  overlay.style.setProperty("--lvl-color", getLevelColor(after));
+
+  // restart CSS animations reliably
+  overlay.classList.remove("active");
+  void overlay.offsetWidth; // force reflow
+  overlay.classList.add("active");
+
+  clearTimeout(lvupTimer);
+  lvupTimer = setTimeout(() => overlay.classList.remove("active"), 2000);
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("lvupOverlay");
+  if(overlay){
+    overlay.addEventListener("click", () => {
+      overlay.classList.remove("active");
+      clearTimeout(lvupTimer);
+    });
+  }
+});
+
+function renderLevelBar(){
+  const state = loadState();
+  const { level, xpIntoLevel, xpForNext } = getLevelInfo(state.xp);
+  const color = getLevelColor(level);
+  const pct = Math.min(100, (xpIntoLevel / xpForNext) * 100);
+  document.getElementById("levelHud").style.setProperty("--lvl-color", color);
+  document.getElementById("levelIconNum").textContent = level;
+  document.getElementById("xpLabel").textContent = `${xpIntoLevel} / ${xpForNext} XP`;
+
+  const fill = document.getElementById("xpFill");
+  const projection = document.getElementById("xpFillProjection");
+  fill.style.width = `${pct}%`;
+  // keep the projection layer hidden behind the real fill outside of an active gain animation
+  projection.style.transition = "none";
+  projection.style.width = `${pct}%`;
+}
+
+// The "earn" animation: a darker projection snaps ahead to show where the
+// bar is headed, then the real fill smoothly catches up and covers it.
+function animateXpGain(prevXp, targetXp){
+  const prevInfo = getLevelInfo(prevXp);
+  const targetInfo = getLevelInfo(targetXp);
+  const color = getLevelColor(targetInfo.level);
+
+  document.getElementById("levelHud").style.setProperty("--lvl-color", color);
+  document.getElementById("levelIconNum").textContent = targetInfo.level;
+  document.getElementById("xpLabel").textContent = `${targetInfo.xpIntoLevel} / ${targetInfo.xpForNext} XP`;
+
+  const fill = document.getElementById("xpFill");
+  const projection = document.getElementById("xpFillProjection");
+  const prevPct = Math.min(100, (prevInfo.xpIntoLevel / prevInfo.xpForNext) * 100);
+  const targetPct = Math.min(100, (targetInfo.xpIntoLevel / targetInfo.xpForNext) * 100);
+
+  // pin the real fill at its current position with no transition first
+  fill.style.transition = "none";
+  fill.style.width = `${prevPct}%`;
+  void fill.offsetWidth; // force reflow so the browser locks in the starting width
+
+  // darker projection jumps ahead to the target immediately — the "preview"
+  projection.style.transition = "width .15s ease";
+  projection.style.width = `${targetPct}%`;
+
+  // then the real fill eases forward over it, covering the projection as it goes
+  requestAnimationFrame(() => {
+    fill.style.transition = "width .6s ease, background .4s ease";
+    fill.style.width = `${targetPct}%`;
+  });
+}
+/* -------------------------------------------------- */
+
+let currentDetailTaskId = null;
+
+/* ---------------- Per-quest stopwatch ---------------- */
+let questTimerInterval = null;
+
+function formatTimerMs(ms){
+  const totalMs = Math.max(0, ms);
+  const totalSec = Math.floor(totalMs / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const tenths = Math.floor((totalMs % 1000) / 100);
+  const pad = n => String(n).padStart(2, "0");
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}.${tenths}` : `${pad(m)}:${pad(s)}.${tenths}`;
+}
+
+function getTaskTimerElapsedMs(t){
+  let ms = t.timerElapsedMs || 0;
+  if(t.timerRunningSince) ms += Date.now() - t.timerRunningSince;
+  return ms;
+}
+
+function renderQuestTimer(){
+  if(!currentDetailTaskId) return;
+  const t = loadTasks().find(x => x.id === currentDetailTaskId);
+  if(!t) return;
+  document.getElementById("questTimerDisplay").textContent = formatTimerMs(getTaskTimerElapsedMs(t));
+  const toggle = document.getElementById("questTimerToggle");
+  toggle.textContent = t.timerRunningSince ? "Pause" : "Start";
+  toggle.classList.toggle("running", !!t.timerRunningSince);
+}
+
+function restartQuestTimerInterval(t){
+  clearInterval(questTimerInterval);
+  if(t.timerRunningSince){
+    questTimerInterval = setInterval(renderQuestTimer, 100);
+  }
+}
+
+function toggleQuestTimer(){
+  if(!currentDetailTaskId) return;
+  const tasks = loadTasks();
+  const t = tasks.find(x => x.id === currentDetailTaskId);
+  if(!t) return;
+  if(t.timerRunningSince){
+    t.timerElapsedMs = (t.timerElapsedMs || 0) + (Date.now() - t.timerRunningSince);
+    t.timerRunningSince = null;
+  } else {
+    t.timerRunningSince = Date.now();
+  }
+  saveTasks(tasks);
+  renderQuestTimer();
+  restartQuestTimerInterval(t);
+}
+
+function resetQuestTimer(){
+  if(!currentDetailTaskId) return;
+  const tasks = loadTasks();
+  const t = tasks.find(x => x.id === currentDetailTaskId);
+  if(!t) return;
+  t.timerElapsedMs = 0;
+  t.timerRunningSince = null;
+  saveTasks(tasks);
+  clearInterval(questTimerInterval);
+  renderQuestTimer();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("questTimerToggle").addEventListener("click", toggleQuestTimer);
+  document.getElementById("questTimerReset").addEventListener("click", resetQuestTimer);
+});
+/* ------------------------------------------------------ */
+
+/* ---- wide-screen pane management ----
+   On wide screens the app lays out as [month] [main] [notes]. Only one
+   right-side pane (notes/day/retro) is visible at a time; the month view
+   lives on the left so a full three-pane row is possible on large screens.
+   These helpers keep panes from stacking when only two will fit. */
+const PANE_WIDTH = 480;
+const PANE_GAP = 20;
+const BODY_PAD = 16;
+function threePaneAvailable(){
+  return window.innerWidth >= PANE_WIDTH * 3 + PANE_GAP * 2 + BODY_PAD * 2;
+}
+function rightPaneIds(){
+  return ["dayView", "detailView", "retroView"];
+}
+function leftPaneIds(){
+  return ["monthView", "hiddenView"];
+}
+function closeRightPanes(keepId){
+  rightPaneIds().forEach(id => {
+    if(id === keepId) return;
+    const el = document.getElementById(id);
+    if(el) el.classList.remove("active");
+  });
+}
+function closeLeftPanes(keepId){
+  leftPaneIds().forEach(id => {
+    if(id === keepId) return;
+    const el = document.getElementById(id);
+    if(el) el.classList.remove("active");
+  });
+}
+
+/* ---- swipe to delete (right) or hide for today (left) ----
+   Pointer events unify touch and mouse. The card only starts sliding after
+   a ~8px horizontal move, so taps still hit the box / info / buttons. */
+function attachSwipe(wrap, taskEl, task){
+  let startX = null, startY = null, dx = 0, active = false, justSwiped = false;
+  let swipeGuardTimer = null;
+  const THRESHOLD = 80;
+
+  wrap.addEventListener("pointerdown", (e) => {
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    if(taskEl.getAttribute("aria-busy") === "true") return;
+    justSwiped = false;
+    clearTimeout(swipeGuardTimer);
+    startX = e.clientX;
+    startY = e.clientY;
+    dx = 0;
+    active = false;
+  });
+
+  wrap.addEventListener("pointermove", (e) => {
+    if(startX === null) return;
+    const x = e.clientX - startX;
+    const y = e.clientY - startY;
+    if(!active){
+      if(Math.abs(x) > 8 && Math.abs(x) > Math.abs(y)){
+        active = true;
+        taskEl.style.transition = "none";
+        try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
+      } else if(Math.abs(y) > 8){
+        startX = null; // vertical scroll — hand back to the page
+        return;
+      }
+    }
+    if(!active) return;
+    dx = x;
+    const w = wrap.clientWidth || 320;
+    const tx = Math.max(-w, Math.min(w, dx));
+    taskEl.style.transform = "translateX(" + tx + "px)";
+    wrap.classList.toggle("hint-del", tx > 8);
+    wrap.classList.toggle("hint-hide", tx < -8);
+  });
+
+  const release = (e) => {
+    if(startX === null) return;
+    const wasActive = active;
+    const commit = wasActive && Math.abs(dx) >= THRESHOLD;
+    startX = null;
+    try{
+      if(e && wrap.hasPointerCapture && wrap.hasPointerCapture(e.pointerId)){
+        wrap.releasePointerCapture(e.pointerId);
+      }
+    }catch(err){}
+    if(!wasActive) return;
+    justSwiped = true;
+    // some browsers don't fire a click after a drag, so expire the guard
+    clearTimeout(swipeGuardTimer);
+    swipeGuardTimer = setTimeout(() => { justSwiped = false; }, 350);
+    const w = wrap.clientWidth || 320;
+    if(commit){
+      // stop halfway — the card stays put and only the committed hint shows,
+      // so "Delete" and "Hide" never both appear in the empty row
+      const target = (dx > 0 ? w : -w) * 0.5;
+      taskEl.style.transition = "transform .22s ease";
+      taskEl.style.transform = "translateX(" + target + "px)";
+      wrap.classList.toggle("hint-del", dx > 0);
+      wrap.classList.toggle("hint-hide", dx < 0);
+      taskEl.setAttribute("aria-busy", "true");
+      if(dx > 0){
+        deleteQuest(task.id);
+      } else {
+        setTimeout(() => hideQuestSwipe(task.id), 220);
+      }
+    } else {
+      wrap.classList.remove("hint-del", "hint-hide");
+      taskEl.style.transition = "transform .22s ease";
+      taskEl.style.transform = "translateX(0px)";
+    }
+  };
+
+  wrap.addEventListener("pointerup", release);
+  wrap.addEventListener("pointercancel", release);
+
+  // a swipe ends in a click on the (already animated) row — swallow it so it
+  // can't open the detail view or toggle the box while the row flies away
+  wrap.addEventListener("click", (e) => {
+    if(justSwiped){
+      justSwiped = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+}
+
+let pendingDelete = null;
+function openConfirmDelete(){
+  document.getElementById("confirmOverlay").classList.add("active");
+}
+function openConfirmGeneric(title, actionLabel, fn){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmDelete").textContent = actionLabel;
+  pendingDelete = fn;
+  openConfirmDelete();
+}
+function closeConfirm(){
+  document.getElementById("confirmOverlay").classList.remove("active");
+  pendingDelete = null;
+}
+
+function deleteQuest(taskId){
+  const t = normalize(loadTasks()).find(x => x.id === taskId);
+  if(!t) return;
+  document.getElementById("confirmTitle").textContent = "Are you sure you want to delete this quest?";
+  document.getElementById("confirmDelete").textContent = "Delete";
+  pendingDelete = () => {
+    saveTasks(normalize(loadTasks()).filter(x => x.id !== taskId));
+    sfx.del();
+    render();
+    if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+    if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+    showSwipeToast("quest deleted");
+  };
+  openConfirmDelete();
+}
+
+function hideQuestSwipe(taskId){
+  const all = normalize(loadTasks());
+  const t = all.find(x => x.id === taskId);
+  if(!t) return;
+  t.hiddenUntil = todayStr();
+  saveTasks(all);
+  sfx.undo();
+  render();
+  if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+  showSwipeToast("quest pushed");
+}
+
+let swipeToastTimer = null;
+function showSwipeToast(text){
+  const t = document.getElementById("swipeToast");
+  if(!t) return;
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(swipeToastTimer);
+  swipeToastTimer = setTimeout(() => t.classList.remove("show"), 1500);
+}
+
+function updateHiddenBtn(tasks){
+  const btn = document.getElementById("hiddenBtn");
+  const count = document.getElementById("hiddenCount");
+  const n = tasks.filter(t => t.hiddenUntil).length;
+  btn.classList.toggle("show", n > 0);
+  if(count) count.textContent = n;
+}
+
+function renderHiddenList(){
+  const tasks = normalize(loadTasks());
+  const hidden = tasks.filter(t => t.hiddenUntil);
+  const listEl = document.getElementById("hiddenList");
+  const empty = document.getElementById("hiddenEmptyMsg");
+  listEl.innerHTML = "";
+  hidden.forEach(t => {
+    const row = document.createElement("div");
+    row.className = "hidden-row";
+    const info = document.createElement("div");
+    info.className = "info";
+    info.onclick = () => openDetail(t.id);
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = t.name;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = t.oneTime ? "one-time" : `${t.perDay}x/day · ${t.perWeek}x/week`;
+    info.appendChild(name);
+    info.appendChild(meta);
+    const restore = document.createElement("button");
+    restore.className = "del";
+    restore.textContent = "↺";
+    restore.title = "Show again today";
+    restore.onclick = () => {
+      const all = normalize(loadTasks());
+      const x = all.find(q => q.id === t.id);
+      if(x) x.hiddenUntil = null;
+      saveTasks(all);
+      sfx.pop();
+      render();
+      renderHiddenList();
+      updateHiddenBtn(loadTasks());
+    };
+    const del = document.createElement("button");
+    del.className = "del";
+    del.textContent = "×";
+    del.title = "Delete quest";
+    del.onclick = () => deleteQuest(t.id);
+    row.appendChild(info);
+    row.appendChild(restore);
+    row.appendChild(del);
+    listEl.appendChild(row);
+  });
+
+  // Finished quests — shown below the divider when auto-hide is on
+  const autoHide = autoHideDoneEnabled();
+  const now = Date.now();
+  const finished = autoHide
+    ? tasks.filter(t => !t.hiddenUntil && isCheckedOff(t) && now - (t.lastCheckedAt || 0) >= DONE_SETTLE_MS)
+    : [];
+  const divider = document.getElementById("hiddenDivider");
+  const wrap = document.getElementById("hiddenFinishedWrap");
+  const finishedEl = document.getElementById("hiddenFinishedList");
+  if(autoHide && finished.length){
+    divider.style.display = "block";
+    wrap.style.display = "block";
+    finishedEl.innerHTML = "";
+    finished.forEach(t => {
+      const row = document.createElement("div");
+      row.className = "hidden-row";
+      const info = document.createElement("div");
+      info.className = "info";
+      info.onclick = () => openDetail(t.id);
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = t.name;
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = t.oneTime
+        ? "completed · one-time"
+        : `completed · ${t.weekCount}/${t.perWeek}x this week`;
+      info.appendChild(name);
+      info.appendChild(meta);
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "×";
+      del.title = "Delete quest";
+      del.onclick = () => deleteQuest(t.id);
+      row.appendChild(info);
+      row.appendChild(del);
+      finishedEl.appendChild(row);
+    });
+  } else {
+    divider.style.display = "none";
+    wrap.style.display = "none";
+  }
+
+  empty.style.display = (hidden.length + finished.length) ? "none" : "block";
+}
+
+function openHiddenView(){
+  renderHiddenList();
+  document.getElementById("hiddenView").classList.add("active");
+  closeLeftPanes("hiddenView");
+  if(!threePaneAvailable()) closeRightPanes(null);
+}
+function closeHiddenView(){
+  document.getElementById("hiddenView").classList.remove("active");
+}
+function positionFab(){
+  if(window.innerWidth < 1024) return;
+  const main = document.querySelector(".app-main");
+  if(!main) return;
+  const center = main.getBoundingClientRect().left + main.offsetWidth / 2;
+  const fab = document.getElementById("fabAdd");
+  const pop = document.getElementById("fabChoicePopover");
+  const left = center + "px";
+  if(fab && fab.style.left !== left) fab.style.left = left;
+  if(pop && pop.style.left !== left) pop.style.left = left;
+}
+function clearFabPos(){
+  const fab = document.getElementById("fabAdd");
+  const pop = document.getElementById("fabChoicePopover");
+  if(fab && fab.style.left) fab.style.left = "";
+  if(pop && pop.style.left) pop.style.left = "";
+}
+window.addEventListener("resize", () => {
+  if(window.innerWidth < 1024){
+    clearFabPos();
+    return;
+  }
+  positionFab();
+  if(window.innerWidth < 1024) return;
+  const rightActive = rightPaneIds().some(id => {
+    const el = document.getElementById(id);
+    return el && el.classList.contains("active");
+  });
+  if(rightActive && !threePaneAvailable()) closeLeftPanes();
+});
+
+new MutationObserver(positionFab).observe(document.body, {
+  attributes:true,
+  subtree:true,
+  attributeFilter:["class"]
+});
+document.addEventListener("DOMContentLoaded", positionFab);
+
+function openDetail(taskId){
+  const tasks = normalize(loadTasks());
+  saveTasks(tasks);
+  const task = tasks.find(t => t.id === taskId);
+  if(!task) return;
+  currentDetailTaskId = taskId;
+  lastCursorInfo = null;
+
+  document.getElementById("detailTitle").textContent = task.name;
+  document.getElementById("detailMeta").textContent = task.oneTime
+    ? "one-time quest"
+    : `${task.perDay}x/day · ${task.perWeek}x/week`;
+  document.getElementById("saveHint").classList.remove("show");
+
+  document.getElementById("detailView").classList.add("active");
+  renderNotesDoc();
+  renderQuestTimer();
+  restartQuestTimerInterval(task);
+  closeRightPanes("detailView");
+  if(!threePaneAvailable()) closeLeftPanes();
+}
+
+function closeDetail(){
+  document.getElementById("detailView").classList.remove("active");
+  currentDetailTaskId = null;
+  clearInterval(questTimerInterval);
+}
+
+function flashSaved(){
+  const hint = document.getElementById("saveHint");
+  hint.textContent = "Saved";
+  hint.classList.add("show");
+  clearTimeout(flashSaved._t);
+  flashSaved._t = setTimeout(() => hint.classList.remove("show"), 1000);
+}
+
+/* ---- notes document: a single ordered list of blocks ----
+   block types: 'text' (free paragraph), 'check', 'counter'.
+   Checklist/counter buttons split the currently-focused text
+   block at the cursor and insert the new block right there,
+   so it lands inline instead of in a separate section. ---- */
+function withCurrentTask(fn){
+  const all = normalize(loadTasks());
+  const t = all.find(x => x.id === currentDetailTaskId);
+  if(!t) return;
+  fn(t, all);
+  saveTasks(all);
+}
+
+let lastCursorInfo = null; // { blockId, pos } — kept fresh via focus/click/keyup on text lines
+let pendingFocus = null;   // where to put the cursor after the next re-render
+
+function ensureTrailingTextBlock(t){
+  const last = t.noteBlocks[t.noteBlocks.length - 1];
+  if(!last || last.type !== "text"){
+    t.noteBlocks.push({ id: generateId(), type: "text", content: "" });
+  }
+}
+
+function insertBlockAtFocusOrEnd(newBlock){
+  withCurrentTask(t => {
+    let idx = -1;
+    if(lastCursorInfo){
+      idx = t.noteBlocks.findIndex(b => b.id === lastCursorInfo.blockId && b.type === "text");
+    }
+
+    if(idx !== -1){
+      const fullVal = t.noteBlocks[idx].content;
+      const cursorPos = Math.min(lastCursorInfo.pos, fullVal.length);
+      const before = fullVal.slice(0, cursorPos);
+      const after = fullVal.slice(cursorPos);
+
+      // only keep surrounding text blocks that actually hold something —
+      // this is what stops empty blank lines from piling up on repeat inserts
+      const replacement = [];
+      if(before !== "") replacement.push({ id: generateId(), type: "text", content: before });
+      replacement.push(newBlock);
+      if(after !== "") replacement.push({ id: generateId(), type: "text", content: after });
+      t.noteBlocks.splice(idx, 1, ...replacement);
+    } else {
+      const last = t.noteBlocks[t.noteBlocks.length - 1];
+      if(last && last.type === "text" && last.content === ""){
+        t.noteBlocks.splice(t.noteBlocks.length - 1, 0, newBlock);
+      } else {
+        t.noteBlocks.push(newBlock);
+      }
+    }
+
+    ensureTrailingTextBlock(t);
+  });
+}
+
+// Lets Backspace at the very start of a text line merge it into the
+// previous block (or delete it, if empty) instead of being stuck forever —
+// this is what makes stray blank lines actually removable.
+function handleBackspaceAtStart(blockId){
+  withCurrentTask(t => {
+    const idx = t.noteBlocks.findIndex(b => b.id === blockId);
+    if(idx <= 0) return; // nothing before it — nothing to merge into
+    const prev = t.noteBlocks[idx - 1];
+    const cur = t.noteBlocks[idx];
+
+    if(prev.type === "text"){
+      const mergedPos = prev.content.length;
+      prev.content = prev.content + cur.content;
+      t.noteBlocks.splice(idx, 1);
+      pendingFocus = { kind: "text", blockId: prev.id, pos: mergedPos };
+    } else if(cur.type === "text" && cur.content === ""){
+      // previous is a checklist/counter item and this line is an empty
+      // separator — safe to just drop the blank line
+      t.noteBlocks.splice(idx, 1);
+      pendingFocus = { kind: "label", blockId: prev.id };
+    }
+    // deleting/merging a line can leave a checklist/counter item as the
+    // very last block — always keep one text line at the end so there's
+    // still somewhere to place the cursor and keep writing
+    ensureTrailingTextBlock(t);
+  });
+  renderNotesDoc();
+  restorePendingFocus();
+}
+
+function restorePendingFocus(){
+  if(!pendingFocus) return;
+  const { kind, blockId, pos } = pendingFocus;
+  pendingFocus = null;
+  if(kind === "text"){
+    const el = document.querySelector(`.notes-line-text[data-block-id="${blockId}"]`);
+    if(el){
+      el.focus();
+      el.setSelectionRange(pos, pos);
+      lastCursorInfo = { blockId, pos };
+    }
+  } else if(kind === "label"){
+    const el = document.querySelector(`.item-label-input[data-block-id="${blockId}"]`);
+    if(el) el.focus();
+  }
+}
+
+function addCheckItem(){
+  if(!currentDetailTaskId) return;
+  const block = { id: generateId(), type: "check", label: "", checked: false, resetMode: "none", periodKey: null };
+  insertBlockAtFocusOrEnd(block);
+  renderNotesDoc();
+  focusBlockLabel(block.id);
+  sfx.pop();
+}
+
+function addCounterItem(){
+  if(!currentDetailTaskId) return;
+  const block = { id: generateId(), type: "counter", label: "", count: 0 };
+  insertBlockAtFocusOrEnd(block);
+  renderNotesDoc();
+  focusBlockLabel(block.id);
+  sfx.pop();
+}
+
+function toggleCheckBlock(blockId, x, y){
+  let becameChecked = false;
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(bl => bl.id === blockId);
+    if(!b) return;
+    b.checked = !b.checked;
+    becameChecked = b.checked;
+    if(b.resetMode && b.resetMode !== "none") b.periodKey = computePeriodKey(b.resetMode);
+  });
+  renderNotesDoc();
+  const el = document.querySelector(`.item-check[data-block-id="${blockId}"]`);
+  if(becameChecked){
+    sfx.tick();
+    popEl(el);
+    if(typeof x === "number") burstAt(x, y, { count: 9, colors: [getAccentColor()], size: 2.6, speed: 2.4, life: 420 });
+  } else {
+    sfx.untick();
+  }
+}
+
+function toggleBlockResetMode(blockId){
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(x => x.id === blockId);
+    if(!b) return;
+    const idx = RESET_MODES.indexOf(b.resetMode || "none");
+    const nextMode = RESET_MODES[(idx + 1) % RESET_MODES.length];
+    b.resetMode = nextMode;
+    b.periodKey = computePeriodKey(nextMode);
+  });
+  renderNotesDoc();
+  sfx.click();
+}
+
+function incrementCounterBlock(blockId, x, y){
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(x2 => x2.id === blockId);
+    if(!b) return;
+    b.count = (b.count || 0) + 1;
+  });
+  renderNotesDoc();
+  sfx.tick();
+  popEl(document.querySelector(`.counter-bubble[data-block-id="${blockId}"]`));
+  if(typeof x === "number") burstAt(x, y, { count: 7, colors: [getAccentColor()], size: 2.2, speed: 2, life: 380 });
+}
+
+function resetCounterBlock(blockId){
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(x => x.id === blockId);
+    if(!b) return;
+    b.count = 0;
+  });
+  renderNotesDoc();
+  sfx.undo();
+}
+
+function updateBlockLabel(blockId, value){
+  // silent persist — no re-render, so the input keeps focus while typing
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(x => x.id === blockId);
+    if(!b) return;
+    b.label = value;
+  });
+  flashSaved();
+}
+
+function updateBlockContent(blockId, value){
+  withCurrentTask(t => {
+    const b = t.noteBlocks.find(x => x.id === blockId);
+    if(!b) return;
+    b.content = value;
+  });
+  flashSaved();
+}
+
+function deleteBlock(blockId){
+  withCurrentTask(t => {
+    if(t.noteBlocks.length <= 1) return; // always keep at least one line
+    t.noteBlocks = t.noteBlocks.filter(b => b.id !== blockId);
+    ensureTrailingTextBlock(t);
+  });
+  renderNotesDoc();
+  sfx.del();
+}
+
+function focusBlockLabel(blockId){
+  const el = document.querySelector(`[data-block-id="${blockId}"].item-label-input`);
+  if(el) el.focus();
+}
+
+function autoGrowTextarea(ta){
+  ta.style.height = "auto";
+  ta.style.height = ta.scrollHeight + "px";
+}
+
+function renderNotesDoc(){
+  if(!currentDetailTaskId) return;
+  const tasks = normalize(loadTasks());
+  saveTasks(tasks);
+  const t = tasks.find(x => x.id === currentDetailTaskId);
+  const doc = document.getElementById("notesDoc");
+  doc.innerHTML = "";
+  if(!t) return;
+
+  t.noteBlocks.forEach((block, idx) => {
+    if(block.type === "text"){
+      const ta = document.createElement("textarea");
+      ta.className = "notes-line-text";
+      ta.dataset.blockId = block.id;
+      ta.value = block.content;
+      ta.rows = 1;
+      ta.placeholder = idx === 0 ? "Notes about this task…" : "";
+      ta.addEventListener("input", () => {
+        autoGrowTextarea(ta);
+        updateBlockContent(block.id, ta.value);
+      });
+      const updateCursor = () => { lastCursorInfo = { blockId: block.id, pos: ta.selectionStart }; };
+      ta.addEventListener("focus", updateCursor);
+      ta.addEventListener("click", updateCursor);
+      ta.addEventListener("keyup", updateCursor);
+      ta.addEventListener("select", updateCursor);
+      ta.addEventListener("keydown", (e) => {
+        if(e.key === "Backspace" && ta.selectionStart === 0 && ta.selectionEnd === 0){
+          e.preventDefault();
+          handleBackspaceAtStart(block.id);
+        }
+      });
+      doc.appendChild(ta);
+      autoGrowTextarea(ta);
+    } else if(block.type === "check"){
+      const row = document.createElement("div");
+      row.className = "notes-line-check";
+
+      const box = document.createElement("div");
+      box.className = "item-check" + (block.checked ? " checked" : "");
+      box.textContent = block.checked ? "✓" : "";
+      box.dataset.blockId = block.id;
+      box.onclick = (e) => toggleCheckBlock(block.id, e.clientX, e.clientY);
+
+      const label = document.createElement("input");
+      label.type = "text";
+      label.className = "item-label-input" + (block.checked ? " checked-label" : "");
+      label.dataset.blockId = block.id;
+      label.value = block.label;
+      label.placeholder = "Checklist item";
+      label.oninput = () => updateBlockLabel(block.id, label.value);
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      const mode = block.resetMode || "none";
+      const modeLabels = { none: "pinned", daily: "↻ daily", weekly: "↻ weekly", monthly: "↻ monthly" };
+      toggle.className = "item-toggle" + (mode !== "none" ? " " + mode : "");
+      toggle.textContent = modeLabels[mode];
+      toggle.onclick = () => toggleBlockResetMode(block.id);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "item-del";
+      del.textContent = "×";
+      del.onclick = () => deleteBlock(block.id);
+
+      row.append(box, label, toggle, del);
+      doc.appendChild(row);
+    } else if(block.type === "counter"){
+      const row = document.createElement("div");
+      row.className = "notes-line-counter";
+
+      const bubble = document.createElement("div");
+      bubble.className = "counter-bubble";
+      bubble.textContent = block.count || 0;
+      bubble.dataset.blockId = block.id;
+      bubble.onclick = (e) => incrementCounterBlock(block.id, e.clientX, e.clientY);
+
+      const label = document.createElement("input");
+      label.type = "text";
+      label.className = "item-label-input";
+      label.dataset.blockId = block.id;
+      label.value = block.label;
+      label.placeholder = "Counter label";
+      label.oninput = () => updateBlockLabel(block.id, label.value);
+
+      const reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "counter-reset";
+      reset.textContent = "↺";
+      reset.onclick = () => resetCounterBlock(block.id);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "item-del";
+      del.textContent = "×";
+      del.onclick = () => deleteBlock(block.id);
+
+      row.append(bubble, label, reset, del);
+      doc.appendChild(row);
+    }
+  });
+}
+/* ----------------------------------------------------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("backBtn").addEventListener("click", closeDetail);
+  document.getElementById("addCheckItemBtn").addEventListener("click", addCheckItem);
+  document.getElementById("addCounterItemBtn").addEventListener("click", addCounterItem);
+});
+/* -------------------------------------------------- */
+
+/* ---------------- Edit modal ---------------- */
+let editingTaskId = null;
+let editMode = "once";
+
+function setEditMode(mode){
+  editMode = mode;
+  document.querySelectorAll("#editModeToggle .ot-toggle-btn").forEach(btn => {
+    btn.classList.toggle("selected", btn.dataset.mode === mode);
+  });
+  document.getElementById("editRepeatFields").style.display = (mode === "repeat") ? "block" : "none";
+  document.getElementById("editOnceInfo").style.display = (mode === "once") ? "block" : "none";
+  document.getElementById("editRemindLabel").textContent = (mode === "once")
+    ? "Remind me in (hours, optional)"
+    : "Remind me (hrs before day ends, optional)";
+}
+
+function openEdit(taskId){
+  const tasks = normalize(loadTasks());
+  const t = tasks.find(x => x.id === taskId);
+  if(!t) return;
+  editingTaskId = taskId;
+
+  document.getElementById("editName").value = t.name;
+  document.getElementById("editPriority").value = t.priority;
+  const wc = document.getElementById("editWeekCount");
+  wc.value = t.weekCount;
+  wc.max = t.perWeek;
+  document.getElementById("editPerWeek").value = t.perWeek;
+  document.getElementById("editPerDay").value = t.perDay;
+  document.getElementById("editRemindHours").value = (t.remindHours === null || t.remindHours === undefined) ? "" : t.remindHours;
+  setEditMode(t.oneTime ? "once" : "repeat");
+
+  document.getElementById("editOverlay").classList.add("active");
+}
+
+function closeEdit(){
+  document.getElementById("editOverlay").classList.remove("active");
+  editingTaskId = null;
+}
+
+function saveEdit(){
+  if(!editingTaskId) return;
+  const all = normalize(loadTasks());
+  const t = all.find(x => x.id === editingTaskId);
+  if(!t) return;
+
+  const name = document.getElementById("editName").value.trim();
+  if(name) t.name = name;
+
+  t.priority = parseInt(document.getElementById("editPriority").value, 10);
+
+  const switchingMode = (editMode === "once") !== !!t.oneTime;
+  t.oneTime = editMode === "once";
+
+  if(t.oneTime){
+    // one-time quests don't track weekly/daily progress — reset cleanly if switching into this mode
+    if(switchingMode){
+      t.perWeek = 1;
+      t.perDay = 1;
+      t.dayCount = 0;
+      t.weekCount = 0;
+      t.checkedAt = null;
+      if(typeof t.createdAt !== "number") t.createdAt = Date.now();
+    }
+  } else {
+    if(switchingMode){
+      t.checkedAt = null;
+    }
+    const newPerWeek = parseInt(document.getElementById("editPerWeek").value, 10);
+    if(!isNaN(newPerWeek) && newPerWeek >= 1) t.perWeek = newPerWeek;
+
+    const newPerDay = parseInt(document.getElementById("editPerDay").value, 10);
+    if(!isNaN(newPerDay) && newPerDay >= 1) t.perDay = newPerDay;
+
+    // clamp progress counters so they never exceed the (possibly lowered) targets
+    t.dayCount = Math.min(t.dayCount, t.perDay);
+
+    const wc = parseInt(document.getElementById("editWeekCount").value, 10);
+    const weekCountSource = !isNaN(wc) ? wc : t.weekCount;
+    t.weekCount = Math.max(0, Math.min(weekCountSource, t.perWeek));
+  }
+
+  const remindRaw = parseFloat(document.getElementById("editRemindHours").value);
+  t.remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
+
+  saveTasks(all);
+  closeEdit();
+  render();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("editCancel").addEventListener("click", closeEdit);
+  document.getElementById("editSave").addEventListener("click", saveEdit);
+  document.querySelectorAll("#editModeToggle .ot-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => setEditMode(btn.dataset.mode));
+  });
+  document.getElementById("editName").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") saveEdit();
+  });
+  const overlay = document.getElementById("editOverlay");
+  overlay.addEventListener("click", (e) => {
+    if(e.target === overlay) closeEdit();
+  });
+});
+/* --------------------------------------------- */
+
+function todayStr(d = new Date()){
+  return d.toISOString().slice(0,10);
+}
+// Monday-based week key
+function weekStr(d = new Date()){
+  const date = new Date(d);
+  const day = (date.getDay() + 6) % 7; // 0 = Monday
+  date.setDate(date.getDate() - day);
+  return todayStr(date);
+}
+function monthStr(d = new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+const RESET_MODES = ["none", "daily", "weekly", "monthly"];
+function computePeriodKey(mode, d = new Date()){
+  if(mode === "daily") return todayStr(d);
+  if(mode === "weekly") return weekStr(d);
+  if(mode === "monthly") return monthStr(d);
+  return null;
+}
+
+/* ---------------- Activity history (for weekly retrospectives) ----------------
+   Quests reset their weekly count, and one-time quests delete themselves a
+   few hours after completion — so by the time a retrospective would want to
+   look back, the live task data may already be gone. This is a small
+   append-only log that survives both, giving retrospectives something
+   reliable to read from. */
+const HISTORY_KEY = "checklist_history_v1";
+
+function loadHistory(){
+  try{
+    const h = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    if(Array.isArray(h)) return h;
+  }catch(e){}
+  return [];
+}
+function saveHistory(h){
+  // cap growth — keep the most recent ~1000 entries, plenty for many weeks
+  if(h.length > 1000) h = h.slice(h.length - 1000);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+}
+function logHistoryEvent(entry){
+  const h = loadHistory();
+  h.push({ id: generateId(), ts: Date.now(), ...entry });
+  saveHistory(h);
+}
+
+// Returns the Monday date string of the ISO week that comes right before
+// the week containing `d` (defaults to today) — i.e. "last week".
+function previousWeekKey(d = new Date()){
+  const thisMonday = new Date(weekStr(d) + "T00:00:00");
+  thisMonday.setDate(thisMonday.getDate() - 7);
+  return dateToStr(thisMonday);
+}
+
+function computeWeeklyStats(weekKey){
+  const history = loadHistory();
+  const inWeek = e => weekStr(new Date(e.ts)) === weekKey;
+
+  const completions = history.filter(e => e.type === "quest_done" && inWeek(e));
+  const weekResults = history.filter(e => e.type === "week_result" && e.weekKey === weekKey);
+
+  const questsCompleted = completions.length;
+  const xpEarned = completions.reduce((sum, e) => sum + (e.xp || 0), 0);
+  const questsHit = weekResults.filter(e => e.hit).length;
+  const questsMissed = weekResults.filter(e => !e.hit).length;
+
+  // events occurring anywhere in that Mon–Sun window
+  const monday = new Date(weekKey + "T00:00:00");
+  let eventsOccurred = 0;
+  const events = loadEvents();
+  for(let i = 0; i < 7; i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dKey = dateToStr(d);
+    events.forEach(ev => { if(eventOccursOnDay(ev, d, dKey)) eventsOccurred++; });
+  }
+
+  return { weekKey, questsCompleted, xpEarned, questsHit, questsMissed, eventsOccurred };
+}
+
+function weekRangeLabel(weekKey){
+  const monday = new Date(weekKey + "T00:00:00");
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return `Week of ${MONTH_ABBR[monday.getMonth()]} ${monday.getDate()} – ${MONTH_ABBR[sunday.getMonth()]} ${sunday.getDate()}`;
+}
+
+function openRetroView(weekKey){
+  const key = weekKey || previousWeekKey();
+  const stats = computeWeeklyStats(key);
+
+  document.getElementById("retroRange").textContent = weekRangeLabel(key);
+  document.getElementById("retroCompleted").textContent = stats.questsCompleted;
+  document.getElementById("retroEvents").textContent = stats.eventsOccurred;
+  document.getElementById("retroHit").textContent = stats.questsHit;
+  document.getElementById("retroMissed").textContent = stats.questsMissed;
+  document.getElementById("retroXp").textContent = `${stats.xpEarned} XP earned that week`;
+
+  const nothingLogged = stats.questsCompleted === 0 && stats.eventsOccurred === 0 &&
+    stats.questsHit === 0 && stats.questsMissed === 0;
+  document.getElementById("retroEmptyMsg").style.display = nothingLogged ? "block" : "none";
+
+  document.getElementById("retroView").classList.add("active");
+  closeRightPanes("retroView");
+  if(!threePaneAvailable()) closeLeftPanes();
+}
+function closeRetroView(){
+  document.getElementById("retroView").classList.remove("active");
+}
+
+// Auto-surface once per week: first time the app is opened after a week
+// boundary passes, show what happened last week.
+function maybeAutoShowRetro(){
+  const lastShown = localStorage.getItem("checklist_last_retro_shown");
+  const lastWeek = previousWeekKey();
+  if(lastShown === lastWeek) return;
+  const stats = computeWeeklyStats(lastWeek);
+  const hasData = stats.questsCompleted > 0 || stats.eventsOccurred > 0 ||
+    stats.questsHit > 0 || stats.questsMissed > 0;
+  localStorage.setItem("checklist_last_retro_shown", lastWeek);
+  if(hasData) openRetroView(lastWeek);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("retroBtn").addEventListener("click", () => openRetroView());
+  document.getElementById("retroBackBtn").addEventListener("click", closeRetroView);
+});
+/* -------------------------------------------------------------------------- */
+
+function loadTasks(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  }catch(e){ return []; }
+}
+function saveTasks(tasks){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+const ONE_TIME_LINGER_MS = 5 * 60 * 60 * 1000; // one-time quests vanish 5 hours after being checked off
+
+function normalize(tasks){
+  const t = todayStr();
+  const w = weekStr();
+
+  // one-time quests that were checked off more than 5 hours ago disappear
+  const kept = tasks.filter(task => {
+    if(task.oneTime && task.checkedAt && (Date.now() - task.checkedAt > ONE_TIME_LINGER_MS)) return false;
+    return true;
+  });
+
+  kept.forEach((task, i) => {
+    if(task.dayDate !== t){
+      task.dayDate = t;
+      task.dayCount = 0;
+      task.lastCheckedAt = null;
+    }
+    if(task.weekKey !== w){
+      if(!task.oneTime && task.weekKey){
+        logHistoryEvent({
+          type: "week_result",
+          weekKey: task.weekKey,
+          taskName: task.name,
+          priority: task.priority,
+          weekCount: task.weekCount,
+          perWeek: task.perWeek,
+          hit: task.weekCount >= task.perWeek
+        });
+      }
+      task.weekKey = w;
+      task.weekCount = 0;
+      task.lastCheckedAt = null;
+    }
+    if(typeof task.priority !== "number") task.priority = 3;
+    if(typeof task.order !== "number") task.order = i;
+    if(typeof task.remindHours !== "number" || task.remindHours < 0) task.remindHours = null;
+    if(typeof task.oneTime !== "boolean") task.oneTime = false; // pre-existing tasks stay repeatable
+    if(typeof task.checkedAt !== "number") task.checkedAt = null;
+    if(typeof task.lastCheckedAt !== "number") task.lastCheckedAt = null;
+    if(typeof task.createdAt !== "number") task.createdAt = task.order || Date.now();
+    if(typeof task.timerElapsedMs !== "number") task.timerElapsedMs = 0;
+    if(typeof task.timerRunningSince !== "number") task.timerRunningSince = null;
+    if(task.hiddenUntil && task.hiddenUntil < t) delete task.hiddenUntil; // reappears the next day
+    if(typeof task.hiddenUntil !== "string") task.hiddenUntil = null;
+
+    // Migrate old plain-notes / separate-items model into unified noteBlocks
+    if(!Array.isArray(task.noteBlocks)){
+      const blocks = [];
+      if(task.notes) blocks.push({ id: generateId(), type: "text", content: task.notes });
+      if(Array.isArray(task.noteItems)){
+        task.noteItems.forEach(item => {
+          if(item.type === "check"){
+            const legacyMode = item.resetWeekly ? "weekly" : "none";
+            blocks.push({
+              id: item.id || generateId(), type: "check",
+              label: item.label || "", checked: !!item.checked,
+              resetMode: legacyMode, periodKey: legacyMode === "none" ? null : (item.weekKey || w)
+            });
+          } else if(item.type === "counter"){
+            blocks.push({ id: item.id || generateId(), type: "counter", label: item.label || "", count: item.count || 0 });
+          }
+        });
+      }
+      if(blocks.length === 0) blocks.push({ id: generateId(), type: "text", content: "" });
+      task.noteBlocks = blocks;
+    }
+    delete task.notes;
+    delete task.noteItems;
+
+    task.noteBlocks.forEach(b => {
+      if(b.type !== "check") return;
+      // migrate blocks still on the old boolean field
+      if(typeof b.resetWeekly === "boolean"){
+        b.resetMode = b.resetWeekly ? "weekly" : "none";
+        b.periodKey = b.resetMode === "none" ? null : (b.weekKey || w);
+        delete b.resetWeekly;
+        delete b.weekKey;
+      }
+      if(typeof b.resetMode !== "string" || !RESET_MODES.includes(b.resetMode)) b.resetMode = "none";
+      if(b.resetMode !== "none"){
+        const currentKey = computePeriodKey(b.resetMode);
+        if(b.periodKey !== currentKey){
+          b.checked = false;
+          b.periodKey = currentKey;
+        }
+      }
+    });
+  });
+  return kept;
+}
+
+function generateId(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// Priority 5 = top of list. Ties keep their relative manual order.
+// Quests sitting checked off for DONE_SETTLE_MS sink to the bottom so the
+// user can still undo for a moment; on reset (new day/week) they return to
+// their priority/order spot because lastCheckedAt is cleared.
+const DONE_SETTLE_MS = 10 * 1000;
+function isCheckedOff(task){
+  if(task.oneTime) return !!task.checkedAt;
+  return task.weekCount >= task.perWeek || task.dayCount >= task.perDay;
+}
+function getSortedTasks(tasks){
+  const now = Date.now();
+  return tasks.slice().sort((a, b) => {
+    const aSunk = isCheckedOff(a) && now - (a.lastCheckedAt || 0) >= DONE_SETTLE_MS;
+    const bSunk = isCheckedOff(b) && now - (b.lastCheckedAt || 0) >= DONE_SETTLE_MS;
+    if(aSunk !== bSunk) return aSunk ? 1 : -1;
+    return b.priority - a.priority || a.order - b.order;
+  });
+}
+
+let doneRepositionTimer = null;
+function scheduleDoneReposition(){
+  clearTimeout(doneRepositionTimer);
+  doneRepositionTimer = setTimeout(() => render(), DONE_SETTLE_MS);
+}
+
+// Toggle: completed quests auto-hide from the list ("1") or sink to the
+// bottom ("0", default). Both respect the same 10s settle window so the
+// user can still undo a check before the quest moves.
+function autoHideDoneEnabled(){
+  return localStorage.getItem(AUTO_HIDE_DONE_KEY) === "1";
+}
+function toggleAutoHideDone(){
+  localStorage.setItem(AUTO_HIDE_DONE_KEY, autoHideDoneEnabled() ? "0" : "1");
+  updateAutoHideBtn();
+  render();
+  if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+  sfx.pop();
+}
+function updateAutoHideBtn(){
+  const btn = document.getElementById("autoHideBtn");
+  if(!btn) return;
+  const on = autoHideDoneEnabled();
+  btn.classList.toggle("on", on);
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.innerHTML = `<span class="ah-dot"></span>${on ? "Done: hidden" : "Done: bottom"}`;
+}
+
+// 1=blue, 2=green, 3=yellow, 4=orange, 5=red
+const PRIORITY_COLORS = ["#3b82f6", "#22c55e", "#eab308", "#f97316", "#ef4444"];
+function getPriorityColor(p){
+  return PRIORITY_COLORS[p - 1] || PRIORITY_COLORS[2];
+}
+
+function moveTask(taskId, direction){
+  const all = normalize(loadTasks());
+  const sorted = getSortedTasks(all);
+  const idx = sorted.findIndex(t => t.id === taskId);
+  const swapIdx = idx + direction;
+  if(idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return;
+
+  const a = sorted[idx];
+  const b = sorted[swapIdx];
+  if(a.priority !== b.priority) return; // don't cross priority tiers via arrows
+
+  const tmp = a.order;
+  a.order = b.order;
+  b.order = tmp;
+  saveTasks(all);
+  render();
+}
+
+const QUEST_COLLAPSE_LIMIT = 3;
+let questListExpanded = false;
+
+function render(){
+  let tasks = normalize(loadTasks());
+  saveTasks(tasks);
+
+  const list = document.getElementById("list");
+  const emptyMsg = document.getElementById("emptyMsg");
+  const listWrap = document.getElementById("listWrap");
+  const expandBtn = document.getElementById("listExpandBtn");
+  list.innerHTML = "";
+
+  updateHiddenBtn(tasks);
+  const autoHide = autoHideDoneEnabled();
+  const now = Date.now();
+  const visible = tasks.filter(t => {
+    if(t.hiddenUntil) return false;
+    if(autoHide && isCheckedOff(t) && now - (t.lastCheckedAt || 0) >= DONE_SETTLE_MS) return false;
+    return true;
+  });
+
+  if(visible.length === 0){
+    emptyMsg.style.display = "block";
+    emptyMsg.textContent = tasks.length === 0
+      ? "No tasks yet. Tap + to add one."
+      : (autoHide ? "All quests completed for today." : "All quests hidden for today.");
+    listWrap.classList.remove("collapsed");
+    expandBtn.style.display = "none";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  const sorted = getSortedTasks(visible);
+  const shouldCollapse = !questListExpanded && sorted.length > QUEST_COLLAPSE_LIMIT;
+
+  sorted.forEach((task, idx) => {
+    const weekDone = !task.oneTime && task.weekCount >= task.perWeek;
+    const dayDone = !task.oneTime && task.dayCount >= task.perDay;
+    const oneTimeDone = task.oneTime && !!task.checkedAt;
+
+    const el = document.createElement("div");
+    el.className = "task" + (weekDone ? " week-done" : (dayDone || oneTimeDone ? " done" : ""));
+
+    const strip = document.createElement("div");
+    strip.className = "prio-strip";
+    strip.style.background = getPriorityColor(task.priority);
+
+    const box = document.createElement("div");
+    box.className = "box";
+    box.dataset.taskId = task.id;
+    if(task.oneTime){
+      box.textContent = oneTimeDone ? "✓" : "";
+    } else if(weekDone || dayDone){
+      box.textContent = "✓";
+    } else if(task.perDay > 1){
+      const remaining = task.perDay - task.dayCount;
+      box.textContent = String(remaining);
+      if(String(remaining).length > 2) box.classList.add("box-tight");
+    } else {
+      box.textContent = "";
+    }
+
+    const info = document.createElement("div");
+    info.className = "info";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = task.name;
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    if(task.oneTime){
+      if(oneTimeDone){
+        const minsLeft = Math.max(0, Math.ceil((ONE_TIME_LINGER_MS - (Date.now() - task.checkedAt)) / 60000));
+        const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
+        meta.textContent = `clears in ${h > 0 ? h + "h " : ""}${m}m`;
+      } else {
+        meta.textContent = "one-time";
+      }
+    } else if(weekDone){
+      meta.textContent = "done for the week";
+    } else {
+      meta.textContent = `${task.weekCount}/${task.perWeek}x this week` +
+        (task.perDay > 1 ? ` · ${task.dayCount}/${task.perDay} today` : "");
+    }
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    // up/down reorder buttons — only move within same priority tier
+    const orderBtns = document.createElement("div");
+    orderBtns.className = "order-btns";
+    const upBtn = document.createElement("button");
+    upBtn.className = "order-btn";
+    upBtn.textContent = "▲";
+    const downBtn = document.createElement("button");
+    downBtn.className = "order-btn";
+    downBtn.textContent = "▼";
+
+    const prevTask = sorted[idx - 1];
+    const nextTask = sorted[idx + 1];
+    upBtn.disabled = !prevTask || prevTask.priority !== task.priority;
+    downBtn.disabled = !nextTask || nextTask.priority !== task.priority;
+
+    upBtn.onclick = (e) => { e.stopPropagation(); moveTask(task.id, -1); };
+    downBtn.onclick = (e) => { e.stopPropagation(); moveTask(task.id, 1); };
+    orderBtns.appendChild(upBtn);
+    orderBtns.appendChild(downBtn);
+
+    const edit = document.createElement("button");
+    edit.className = "del edit";
+    edit.textContent = "✎";
+    edit.onclick = (e) => {
+      e.stopPropagation();
+      openEdit(task.id);
+    };
+
+    if(task.oneTime){
+      box.onclick = (e) => {
+        e.stopPropagation();
+        const all = normalize(loadTasks());
+        const t = all.find(x => x.id === task.id);
+        if(!t) return;
+        if(!t.checkedAt){
+          t.checkedAt = Date.now();
+          t.lastCheckedAt = t.checkedAt;
+          saveTasks(all);
+          const xp = xpReward(t);
+          const leveledUp = addXp(xp);
+          logHistoryEvent({ type: "quest_done", taskName: t.name, priority: t.priority, xp });
+          if(navigator.vibrate) navigator.vibrate(20);
+          if(!leveledUp) sfx.complete();
+          burstAt(e.clientX, e.clientY, { count: 20, colors: [getPriorityColor(t.priority), getAccentColor()], size: 4 });
+          floatText(e.clientX, e.clientY, `+${xp} XP`, getPriorityColor(t.priority));
+          render();
+          scheduleDoneReposition();
+          popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
+        } else {
+          t.checkedAt = null;
+          t.lastCheckedAt = null;
+          saveTasks(all);
+          addXp(-xpReward(t));
+          sfx.undo();
+          render();
+        }
+      };
+    } else if(!weekDone){
+      box.onclick = (e) => {
+        e.stopPropagation();
+        const all = normalize(loadTasks());
+        const t = all.find(x => x.id === task.id);
+        if(!t) return;
+        if(t.dayCount < t.perDay){
+          t.dayCount++;
+          const dayFullyDone = t.dayCount === t.perDay;
+          if(dayFullyDone){
+            // only a fully-completed day counts toward the weekly total
+            t.weekCount++;
+            t.lastCheckedAt = Date.now();
+          }
+          saveTasks(all);
+          const xp = xpReward(t);
+          const leveledUp = addXp(xp);
+          if(dayFullyDone){
+            logHistoryEvent({ type: "quest_done", taskName: t.name, priority: t.priority, xp });
+          }
+          if(navigator.vibrate) navigator.vibrate(20);
+          floatText(e.clientX, e.clientY, `+${xp} XP`, getPriorityColor(t.priority));
+          if(dayFullyDone){
+            if(!leveledUp) sfx.complete();
+            burstAt(e.clientX, e.clientY, { count: 20, colors: [getPriorityColor(t.priority), getAccentColor()], size: 4 });
+          } else {
+            if(!leveledUp) sfx.tick();
+            burstAt(e.clientX, e.clientY, { count: 8, colors: [getPriorityColor(t.priority)], size: 2.6, speed: 2.3, life: 400 });
+          }
+          render();
+          if(dayFullyDone) scheduleDoneReposition();
+          popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
+        } else {
+          // today's target was already fully met — tap again to undo the whole day
+          const earnedToday = t.dayCount * xpReward(t);
+          t.weekCount = Math.max(0, t.weekCount - 1);
+          t.dayCount = 0;
+          t.lastCheckedAt = null;
+          saveTasks(all);
+          addXp(-earnedToday);
+          sfx.undo();
+          render();
+        }
+      };
+    }
+
+    info.onclick = () => openDetail(task.id);
+
+    el.appendChild(strip);
+    el.appendChild(box);
+    el.appendChild(info);
+    el.appendChild(orderBtns);
+    el.appendChild(edit);
+
+    if(!shouldCollapse || idx < QUEST_COLLAPSE_LIMIT){
+      const wrap = document.createElement("div");
+      wrap.className = "task-wrap";
+      const delHint = document.createElement("div");
+      delHint.className = "swipe-hint swipe-hint-del";
+      delHint.textContent = "Delete";
+      const hideHint = document.createElement("div");
+      hideHint.className = "swipe-hint swipe-hint-hide";
+      hideHint.textContent = "Hide";
+      wrap.appendChild(delHint);
+      wrap.appendChild(hideHint);
+      wrap.appendChild(el);
+      attachSwipe(wrap, el, task);
+      list.appendChild(wrap);
+    }
+  });
+
+  listWrap.classList.toggle("collapsed", shouldCollapse);
+
+  if(sorted.length > QUEST_COLLAPSE_LIMIT){
+    expandBtn.style.display = "flex";
+    expandBtn.classList.toggle("expanded", questListExpanded);
+    expandBtn.innerHTML = questListExpanded
+      ? `<span class="chev">▾</span> Show less`
+      : `<span class="chev">▾</span> Show ${sorted.length - QUEST_COLLAPSE_LIMIT} more`;
+  } else {
+    expandBtn.style.display = "none";
+  }
+}
+
+/* ---------------- New quest (add task) view ---------------- */
+let ntPriority = 3;
+let ntPerDay = 1;
+let ntMode = "once";
+
+function setNtMode(mode){
+  ntMode = mode;
+  document.querySelectorAll("#ntModeToggle .ot-toggle-btn").forEach(btn => {
+    btn.classList.toggle("selected", btn.dataset.mode === mode);
+  });
+  document.getElementById("ntSliders").style.display = (mode === "repeat") ? "block" : "none";
+  document.getElementById("ntOnceInfo").style.display = (mode === "once") ? "block" : "none";
+  document.getElementById("ntRemindLabel").textContent = (mode === "once")
+    ? "Remind me in (hours, optional)"
+    : "Remind me (hrs before day ends, optional)";
+}
+
+function resetNewTaskForm(){
+  document.getElementById("ntName").value = "";
+  document.getElementById("ntNotes").value = "";
+  document.getElementById("ntWeekSlider").value = 4;
+  document.getElementById("ntWeekVal").textContent = 4;
+  document.getElementById("ntDaySlider").value = 1;
+  ntPerDay = 1;
+  document.getElementById("ntDayVal").textContent = 1;
+  document.getElementById("ntRemindHours").value = "";
+  setNtMode("once");
+  setNtPriority(3);
+}
+
+function setNtPriority(p){
+  ntPriority = p;
+  const color = getPriorityColor(p);
+  document.getElementById("ntPriorityBar").style.background = color;
+  document.querySelectorAll("#ntPriorityPopover .prio-swatch").forEach(sw => {
+    sw.classList.toggle("selected", parseInt(sw.dataset.p, 10) === p);
+  });
+}
+
+function openNewTaskView(){
+  resetNewTaskForm();
+  document.getElementById("newTaskView").classList.add("active");
+}
+function closeNewTaskView(){
+  document.getElementById("newTaskView").classList.remove("active");
+  document.getElementById("ntPriorityPopover").classList.remove("show");
+}
+
+function createNewTask(){
+  const name = document.getElementById("ntName").value.trim();
+  if(!name){
+    document.getElementById("ntName").focus();
+    return;
+  }
+  const notes = document.getElementById("ntNotes").value;
+  const isOneTime = ntMode === "once";
+
+  const perWeek = isOneTime ? 1 : parseInt(document.getElementById("ntWeekSlider").value, 10);
+  const perDay = isOneTime ? 1 : ntPerDay;
+  const remindRaw = parseFloat(document.getElementById("ntRemindHours").value);
+  const remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
+
+  const tasks = loadTasks();
+  tasks.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    name,
+    perWeek,
+    perDay,
+    priority: ntPriority,
+    order: Date.now(),
+    createdAt: Date.now(),
+    dayCount: 0,
+    dayDate: todayStr(),
+    weekCount: 0,
+    weekKey: weekStr(),
+    notes,
+    remindHours,
+    oneTime: isOneTime,
+    checkedAt: null
+  });
+  saveTasks(tasks);
+  sfx.pop();
+  closeNewTaskView();
+  render();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("questAddBtn").addEventListener("click", openNewTaskView);
+
+  const fabBtn = document.getElementById("fabAdd");
+  const fabPopover = document.getElementById("fabChoicePopover");
+  fabBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    fabPopover.classList.toggle("show");
+  });
+  document.getElementById("fabChoiceQuest").addEventListener("click", () => {
+    fabPopover.classList.remove("show");
+    openNewTaskView();
+  });
+  document.getElementById("fabChoiceEvent").addEventListener("click", () => {
+    fabPopover.classList.remove("show");
+    openEventModal();
+  });
+  document.addEventListener("click", (e) => {
+    if(!fabPopover.contains(e.target) && e.target !== fabBtn){
+      fabPopover.classList.remove("show");
+    }
+  });
+
+  document.getElementById("listExpandBtn").addEventListener("click", () => {
+    questListExpanded = !questListExpanded;
+    render();
+  });
+  document.getElementById("autoHideBtn").addEventListener("click", toggleAutoHideDone);
+  updateAutoHideBtn();
+  document.getElementById("hiddenBtn").addEventListener("click", openHiddenView);
+  document.getElementById("hiddenBackBtn").addEventListener("click", closeHiddenView);
+  document.getElementById("confirmCancel").addEventListener("click", () => {
+    closeConfirm();
+    render();
+  });
+  document.getElementById("confirmDelete").addEventListener("click", () => {
+    const fn = pendingDelete;
+    closeConfirm();
+    if(fn) fn();
+  });
+  document.getElementById("confirmOverlay").addEventListener("click", (e) => {
+    if(e.target === e.currentTarget){
+      closeConfirm();
+      render();
+    }
+  });
+  document.getElementById("ntCancel").addEventListener("click", closeNewTaskView);
+  document.getElementById("ntCreate").addEventListener("click", createNewTask);
+  document.getElementById("ntName").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") createNewTask();
+  });
+
+  // priority popover
+  const bar = document.getElementById("ntPriorityBar");
+  const popover = document.getElementById("ntPriorityPopover");
+  bar.addEventListener("click", (e) => {
+    e.stopPropagation();
+    popover.classList.toggle("show");
+  });
+  document.querySelectorAll("#ntPriorityPopover .prio-swatch").forEach(sw => {
+    sw.style.background = getPriorityColor(parseInt(sw.dataset.p, 10));
+    sw.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setNtPriority(parseInt(sw.dataset.p, 10));
+      popover.classList.remove("show");
+    });
+  });
+  document.addEventListener("click", () => popover.classList.remove("show"));
+
+  // one-time / repeatable mode toggle
+  document.querySelectorAll("#ntModeToggle .ot-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => setNtMode(btn.dataset.mode));
+  });
+
+  // weekly slider
+  const weekSlider = document.getElementById("ntWeekSlider");
+  weekSlider.addEventListener("input", () => {
+    document.getElementById("ntWeekVal").textContent = weekSlider.value;
+  });
+
+  // daily slider (1-5) + custom value that can exceed it
+  const daySlider = document.getElementById("ntDaySlider");
+  daySlider.addEventListener("input", () => {
+    ntPerDay = parseInt(daySlider.value, 10);
+    document.getElementById("ntDayVal").textContent = ntPerDay;
+  });
+  document.getElementById("ntDayCustomBtn").addEventListener("click", () => {
+    document.getElementById("customDayInput").value = ntPerDay;
+    document.getElementById("customDayOverlay").classList.add("active");
+  });
+  document.getElementById("customDayCancel").addEventListener("click", closeCustomDayModal);
+  document.getElementById("customDaySave").addEventListener("click", saveCustomDay);
+  document.getElementById("customDayInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") saveCustomDay();
+  });
+  const customDayOverlay = document.getElementById("customDayOverlay");
+  customDayOverlay.addEventListener("click", (e) => {
+    if(e.target === customDayOverlay) closeCustomDayModal();
+  });
+});
+/* -------------------------------------------------------------- */
+
+function closeCustomDayModal(){
+  document.getElementById("customDayOverlay").classList.remove("active");
+}
+function saveCustomDay(){
+  const n = parseInt(document.getElementById("customDayInput").value, 10);
+  if(!isNaN(n) && n >= 1){
+    ntPerDay = n;
+    document.getElementById("ntDayVal").textContent = n;
+    document.getElementById("ntDaySlider").value = Math.min(n, 5);
+  }
+  closeCustomDayModal();
+}
+
+{
+  const now = new Date();
+  document.getElementById("dateLabel").textContent =
+    `${WEEKDAY_FULL[now.getDay()]}, ${MONTH_ABBR[now.getMonth()]} ${now.getDate()}`;
+}
+
+/* ---------------- Backup / restore ---------------- */
+function exportData(){
+  const data = {
+    tasks: JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"),
+    state: JSON.parse(localStorage.getItem(STATE_KEY) || '{"xp":0}'),
+    events: JSON.parse(localStorage.getItem(EVENTS_KEY) || "[]"),
+    history: JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"),
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `checklist-backup-${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importDataFromFile(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try{
+      data = JSON.parse(reader.result);
+      if(!Array.isArray(data.tasks)) throw new Error("bad format");
+    }catch(e){
+      alert("That doesn't look like a valid backup file.");
+      return;
+    }
+    if(!confirm("This replaces all current tasks, XP, events, and history with the backup file. Continue?")) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tasks));
+    localStorage.setItem(STATE_KEY, JSON.stringify(data.state || { xp: 0 }));
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(data.events || []));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history || []));
+    location.reload();
+  };
+  reader.readAsText(file);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("exportBtn").addEventListener("click", exportData);
+  const fileInput = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if(file) importDataFromFile(file);
+    fileInput.value = "";
+  });
+});
+/* --------------------------------------------------- */
+
+/* ---- desktop/keyboard convenience: Escape closes whichever overlay is open ---- */
+document.addEventListener("keydown", (e) => {
+  if(e.key !== "Escape") return;
+  if(document.getElementById("settingsView").classList.contains("active")) { closeSettings(); }
+  else if(document.getElementById("confirmOverlay").classList.contains("active")) { closeConfirm(); render(); }
+  else if(document.getElementById("customDayOverlay").classList.contains("active")) closeCustomDayModal();
+  else if(document.getElementById("detailView").classList.contains("active")) closeDetail();
+  else if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
+  else if(document.getElementById("editOverlay").classList.contains("active")) closeEdit();
+  else if(document.getElementById("eventOverlay").classList.contains("active")) closeEventModal();
+  else if(document.getElementById("dayView").classList.contains("active")) closeDayView();
+  else if(document.getElementById("monthView").classList.contains("active")) closeMonthView();
+  else if(document.getElementById("hiddenView").classList.contains("active")) closeHiddenView();
+  else if(document.getElementById("retroView").classList.contains("active")) closeRetroView();
+  else if(document.getElementById("fabChoicePopover").classList.contains("show")) document.getElementById("fabChoicePopover").classList.remove("show");
+});
+
+/* ---- temporary testing helper: press M to toggle the "Lorem quest" button ---- */
+const LOREM_WORDS = ["lorem","ipsum","dolor","sit","amet","consectetur","adipiscing","elit","sed","do","eiusmod","tempor","incididunt","ut","labore","et","dolore","magna","aliqua"];
+function loremIpsumLine(n){
+  const words = [];
+  const count = 8 + (n % 5);
+  for(let i = 0; i < count; i++){
+    words.push(LOREM_WORDS[(n * 7 + i * 3) % LOREM_WORDS.length]);
+  }
+  return words.join(" ") + ".";
+}
+function fiftyLinesLorem(){
+  const lines = [];
+  for(let i = 1; i <= 50; i++) lines.push(loremIpsumLine(i));
+  return lines.join("\n");
+}
+function addTestQuest(){
+  const names = ["Test quest","Lorem quest","Practice quest","Dummy quest","Sample quest"];
+  const name = names[Math.floor(Math.random() * names.length)] + " " + String(Date.now()).slice(-4);
+  const tasks = loadTasks();
+  tasks.push({
+    id: generateId(),
+    name,
+    perWeek: 4,
+    perDay: 1,
+    priority: 3,
+    order: Date.now(),
+    createdAt: Date.now(),
+    dayCount: 0,
+    dayDate: todayStr(),
+    weekCount: 0,
+    weekKey: weekStr(),
+    notes: "",
+    remindHours: null,
+    oneTime: false,
+    checkedAt: null,
+    noteBlocks: [{ id: generateId(), type: "text", content: fiftyLinesLorem() }]
+  });
+  saveTasks(tasks);
+  sfx.pop();
+  render();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("testQuestBtn").addEventListener("click", addTestQuest);
+});
+document.addEventListener("keydown", (e) => {
+  const tag = e.target && e.target.tagName;
+  if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+  if(e.key.toLowerCase() === "m"){
+    const btn = document.getElementById("testQuestBtn");
+    if(btn) btn.style.display = (btn.style.display === "none") ? "" : "none";
+  }
+});
+
+
+/* ---------------- Calendar ---------------- */
+function normalizeEvent(e){
+  return {
+    id: e.id,
+    name: e.name || "",
+    day: e.day,
+    startTime: e.startTime,
+    durationMinutes: e.durationMinutes,
+    repeat: !!e.repeat,
+    repeatDays: Array.isArray(e.repeatDays) ? e.repeatDays : [],
+    repeatUntil: e.repeatUntil || "",
+    remindHours: (typeof e.remindHours === "number" && e.remindHours >= 0) ? e.remindHours : null
+  };
+}
+
+function loadEvents(){
+  try{
+    const e = JSON.parse(localStorage.getItem(EVENTS_KEY));
+    if(Array.isArray(e)) return e.map(normalizeEvent);
+  }catch(err){}
+  return [];
+}
+function saveEvents(events){
+  localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+}
+
+// Does this event occur on the given date? Handles both one-off and
+// repeating events (repeat runs from event.day up to event.repeatUntil,
+// inclusive, on whichever weekdays are checked).
+function eventOccursOnDay(event, dateObj, dayKey){
+  if(!event.repeat){
+    return event.day === dayKey;
+  }
+  if(!event.day || dayKey < event.day) return false;
+  if(event.repeatUntil && dayKey > event.repeatUntil) return false;
+  return event.repeatDays.includes(dateObj.getDay());
+}
+
+function formatTime12h(hhmm){
+  if(!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+// returns "HH:MM" (24h), wrapping past midnight if the duration runs long
+function addMinutesToTime(hhmm, minutes){
+  const [h, m] = hhmm.split(":").map(Number);
+  let total = (h * 60 + m + minutes) % (24 * 60);
+  if(total < 0) total += 24 * 60;
+  const outH = Math.floor(total / 60);
+  const outM = total % 60;
+  return `${String(outH).padStart(2, "0")}:${String(outM).padStart(2, "0")}`;
+}
+
+function timeToMinutes(hhmm){
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function dateToStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* ---------------- .ics export ---------------- */
+function pad2(n){ return String(n).padStart(2, "0"); }
+
+function icsDateTime(dayStr, timeStr){
+  const [y, m, d] = dayStr.split("-");
+  const [hh, mm] = timeStr.split(":");
+  return `${y}${m}${d}T${hh}${mm}00`;
+}
+function icsEscape(str){
+  return String(str).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+function icsNowStamp(){
+  const now = new Date();
+  return `${now.getUTCFullYear()}${pad2(now.getUTCMonth()+1)}${pad2(now.getUTCDate())}T${pad2(now.getUTCHours())}${pad2(now.getUTCMinutes())}${pad2(now.getUTCSeconds())}Z`;
+}
+const ICS_WEEKDAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
+function buildIcsContent(){
+  const events = loadEvents();
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Quest Book//Calendar//EN", "CALSCALE:GREGORIAN"];
+  const stamp = icsNowStamp();
+
+  events.forEach(ev => {
+    const start = icsDateTime(ev.day, ev.startTime);
+    const endTimeStr = addMinutesToTime(ev.startTime, ev.durationMinutes);
+    let endDay = ev.day;
+    const startMin = timeToMinutes(ev.startTime);
+    if(startMin + ev.durationMinutes >= 24 * 60){
+      const d = new Date(ev.day + "T00:00:00");
+      d.setDate(d.getDate() + Math.floor((startMin + ev.durationMinutes) / (24 * 60)));
+      endDay = dateToStr(d);
+    }
+    const end = icsDateTime(endDay, endTimeStr);
+
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:${ev.id}@questbook`);
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`DTSTART:${start}`);
+    lines.push(`DTEND:${end}`);
+    lines.push(`SUMMARY:${icsEscape(ev.name || "Event")}`);
+    if(ev.repeat && ev.repeatDays.length){
+      const byday = ev.repeatDays.slice().sort().map(d => ICS_WEEKDAY[d]).join(",");
+      let rrule = `FREQ=WEEKLY;BYDAY=${byday}`;
+      if(ev.repeatUntil) rrule += `;UNTIL=${ev.repeatUntil.replace(/-/g, "")}T235959Z`;
+      lines.push(`RRULE:${rrule}`);
+    }
+    lines.push("END:VEVENT");
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function exportIcs(){
+  const events = loadEvents();
+  if(events.length === 0){
+    alert("No calendar events to export yet.");
+    return;
+  }
+  const blob = new Blob([buildIcsContent()], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `questbook-calendar-${todayStr()}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+/* ---------------------------------------------- */
+
+/* ---------------- Reminders (best-effort, app must be open) ----------------
+   There's no service worker here (file:// pages can't register one), so
+   these only fire while this tab/app is actually open — not in the
+   background or with the app closed. Good enough for "keep it open on
+   your desk" use; not a substitute for a real OS-level calendar reminder. */
+const NOTIFIED_KEY = "checklist_notified_v1";
+
+function loadNotified(){
+  try{
+    const n = JSON.parse(localStorage.getItem(NOTIFIED_KEY));
+    if(n && typeof n === "object") return n;
+  }catch(e){}
+  return {};
+}
+function saveNotified(n){
+  // keep this from growing forever — drop anything older than 3 days
+  const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  Object.keys(n).forEach(k => { if(n[k] < cutoff) delete n[k]; });
+  localStorage.setItem(NOTIFIED_KEY, JSON.stringify(n));
+}
+
+function fireNotification(title, body){
+  if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try{ new Notification(title, { body, icon: undefined }); }catch(e){}
+}
+
+function checkReminders(){
+  if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  const now = Date.now();
+  const notified = loadNotified();
+  const todayKey = todayStr();
+  let changed = false;
+
+  // Events — remind N hours before start. Checks today plus the next few
+  // days, since a large remindHours value (e.g. 24+) needs to fire before
+  // "today" even matches the event's actual day.
+  loadEvents().forEach(ev => {
+    if(ev.remindHours === null || ev.remindHours === undefined) return;
+    for(let dayOffset = 0; dayOffset <= 3; dayOffset++){
+      const d = new Date();
+      d.setDate(d.getDate() + dayOffset);
+      const dKey = dateToStr(d);
+      if(!eventOccursOnDay(ev, d, dKey)) continue;
+      const startMs = new Date(`${dKey}T${ev.startTime}:00`).getTime();
+      const remindAt = startMs - ev.remindHours * 3600000;
+      const key = `event-${ev.id}-${dKey}`;
+      if(now >= remindAt && now < startMs && !notified[key]){
+        fireNotification(`Upcoming: ${ev.name || "Event"}`, `Starts at ${formatTime12h(ev.startTime)}`);
+        notified[key] = now;
+        changed = true;
+      }
+    }
+  });
+
+  // Quests
+  normalize(loadTasks()).forEach(t => {
+    if(t.remindHours === null || t.remindHours === undefined) return;
+
+    if(t.oneTime){
+      // remind N hours after creation, if still unchecked
+      if(t.checkedAt) return;
+      const remindAt = t.createdAt + t.remindHours * 3600000;
+      const key = `quest-once-${t.id}`;
+      if(now >= remindAt && !notified[key]){
+        fireNotification("Quest reminder", t.name);
+        notified[key] = now;
+        changed = true;
+      }
+    } else {
+      // remind N hours before today ends, if not yet completed today
+      if(t.dayCount >= t.perDay) return;
+      const endOfDayMs = new Date(`${todayKey}T23:59:59`).getTime();
+      const remindAt = endOfDayMs - t.remindHours * 3600000;
+      const key = `quest-${t.id}-${todayKey}`;
+      if(now >= remindAt && now < endOfDayMs && !notified[key]){
+        fireNotification(`Quest reminder: ${t.name}`, `${t.perDay - t.dayCount} left today`);
+        notified[key] = now;
+        changed = true;
+      }
+    }
+  });
+
+  if(changed) saveNotified(notified);
+}
+
+function updateNotifyHint(){
+  const btn = document.getElementById("notifyPermBtn");
+  const hint = document.getElementById("notifyHint");
+  if(typeof Notification === "undefined"){
+    btn.style.display = "none";
+    hint.textContent = "Notifications aren't supported in this browser.";
+    return;
+  }
+  if(Notification.permission === "granted"){
+    btn.style.display = "none";
+    hint.textContent = "Notifications on — only while this app is open in your browser.";
+  } else if(Notification.permission === "denied"){
+    btn.style.display = "none";
+    hint.textContent = "Notifications blocked — re-enable them in your browser's site settings.";
+  } else {
+    btn.style.display = "";
+    hint.textContent = "Notifications only fire while this app is open.";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("icsExportBtn").addEventListener("click", exportIcs);
+  document.getElementById("notifyPermBtn").addEventListener("click", () => {
+    if(typeof Notification === "undefined") return;
+    Notification.requestPermission().then(updateNotifyHint);
+  });
+  updateNotifyHint();
+});
+
+setInterval(checkReminders, 60000);
+checkReminders();
+/* ----------------------------------------------------------------------- */
+
+function calendarWindowDays(){
+  const days = [];
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  for(let i = 0; i < 7; i++){
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+function renderCalendar(){
+  const grid = document.getElementById("calGrid");
+  if(!grid) return;
+  grid.innerHTML = "";
+
+  const events = loadEvents();
+  const days = calendarWindowDays();
+  const todayKey = todayStr();
+
+  days.forEach(d => {
+    const dayKey = dateToStr(d);
+    const dayEvents = events
+      .filter(e => eventOccursOnDay(e, d, dayKey))
+      .slice()
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const cell = document.createElement("div");
+    let spanClass = "";
+    let spanColor = null;
+
+    const label = document.createElement("div");
+    label.className = "cal-day-label";
+    label.textContent = `${d.getDate()} ${WEEKDAY_ABBR[d.getDay()]}`;
+
+    const times = document.createElement("div");
+    if(dayEvents.length === 0){
+      times.className = "cal-times cal-times-empty";
+      times.textContent = "—";
+    } else {
+      const first = dayEvents[0];
+      const last = dayEvents[dayEvents.length - 1];
+      const endTime = addMinutesToTime(last.startTime, last.durationMinutes);
+      times.className = "cal-times";
+      times.innerHTML = `${formatTime12h(first.startTime)}<br>${formatTime12h(endTime)}`;
+
+      const startMin = timeToMinutes(first.startTime);
+      let endMin = timeToMinutes(endTime);
+      if(endMin < startMin) endMin += 24 * 60; // spans past midnight
+      const spanHours = (endMin - startMin) / 60;
+
+      if(spanHours > 7){ spanClass = " span-red"; spanColor = "#ef4444"; }
+      else if(spanHours > 4){ spanClass = " span-yellow"; spanColor = "#eab308"; }
+      else { spanClass = " span-blue"; spanColor = "#3b82f6"; }
+    }
+
+    cell.className = "cal-cell" + (dayKey === todayKey ? " today" : "") + spanClass;
+    if(dayKey === todayKey) label.style.color = spanColor || "var(--accent)";
+    cell.appendChild(label);
+    cell.appendChild(times);
+    cell.addEventListener("click", () => openDayView(dayKey, d));
+    grid.appendChild(cell);
+  });
+
+  const arrowCell = document.createElement("button");
+  arrowCell.type = "button";
+  arrowCell.className = "cal-cell cal-arrow-cell";
+  arrowCell.setAttribute("aria-label", "View full month");
+  arrowCell.textContent = "→";
+  arrowCell.addEventListener("click", () => openMonthView());
+  grid.appendChild(arrowCell);
+}
+
+// Re-render every view that reflects events, but only the ones that are
+// actually open — so adding/editing/deleting an event updates the week
+// strip, the month grid, and the day list in one shot.
+function refreshOpenViews(){
+  renderCalendar();
+  const monthEl = document.getElementById("monthView");
+  if(monthEl && monthEl.classList.contains("active")) renderMonthGrid();
+  if(currentDayKey) renderDayView();
+}
+
+/* ---- month view: full month grid, navigable, opens day view on tap ---- */
+let monthViewYear = null;
+let monthViewMonth = null; // 0-indexed
+
+function openMonthView(){
+  const now = new Date();
+  monthViewYear = now.getFullYear();
+  monthViewMonth = now.getMonth();
+  renderMonthGrid();
+  document.getElementById("monthView").classList.add("active");
+  closeLeftPanes("monthView");
+  if(!threePaneAvailable()) closeRightPanes(null);
+}
+function closeMonthView(){
+  document.getElementById("monthView").classList.remove("active");
+}
+function shiftMonth(delta){
+  monthViewMonth += delta;
+  if(monthViewMonth < 0){ monthViewMonth = 11; monthViewYear--; }
+  else if(monthViewMonth > 11){ monthViewMonth = 0; monthViewYear++; }
+  renderMonthGrid();
+}
+
+function renderMonthGrid(){
+  const grid = document.getElementById("monthGrid");
+  const label = document.getElementById("monthNavLabel");
+  grid.innerHTML = "";
+
+  const monthStart = new Date(monthViewYear, monthViewMonth, 1);
+  label.textContent = `${MONTH_FULL[monthStart.getMonth()]} ${monthStart.getFullYear()}`;
+
+  const events = loadEvents();
+  const todayKey = todayStr();
+  const daysInMonth = new Date(monthViewYear, monthViewMonth + 1, 0).getDate();
+  const leadingBlanks = monthStart.getDay(); // 0=Sun
+  const totalCells = Math.ceil((leadingBlanks + daysInMonth) / 7) * 7;
+
+  for(let i = 0; i < totalCells; i++){
+    const dayNum = i - leadingBlanks + 1;
+    const dateObj = new Date(monthViewYear, monthViewMonth, dayNum);
+    const inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+    const dayKey = dateToStr(dateObj);
+
+    const cell = document.createElement("div");
+    cell.className = "month-cell" + (inMonth ? "" : " other-month") + (dayKey === todayKey ? " today" : "");
+
+    const hasNonRepeat = events.some(e => !e.repeat && e.day === dayKey);
+    const hasRepeat = events.some(e => e.repeat && eventOccursOnDay(e, dateObj, dayKey));
+    if(hasNonRepeat) cell.classList.add("has-nonrepeat");
+
+    cell.textContent = String(dateObj.getDate());
+
+    if(hasRepeat){
+      const dot = document.createElement("span");
+      dot.className = "repeat-dot";
+      cell.appendChild(dot);
+    }
+
+    cell.addEventListener("click", () => openDayView(dayKey, dateObj));
+    grid.appendChild(cell);
+  }
+}
+
+/* ---- day-detail view: lists a day's events, edit/delete each ---- */
+let currentDayKey = null;
+let currentDayDateObj = null;
+let editingEventId = null; // null = modal is in "create" mode
+
+function openDayView(dayKey, dateObj){
+  currentDayKey = dayKey;
+  currentDayDateObj = dateObj || new Date(dayKey + "T00:00:00");
+  document.getElementById("dayViewTitle").textContent =
+    `${WEEKDAY_FULL[currentDayDateObj.getDay()]}, ${MONTH_ABBR[currentDayDateObj.getMonth()]} ${currentDayDateObj.getDate()}`;
+  renderDayView();
+  document.getElementById("dayView").classList.add("active");
+  closeRightPanes("dayView");
+  if(!threePaneAvailable()) closeLeftPanes();
+}
+function closeDayView(){
+  document.getElementById("dayView").classList.remove("active");
+  currentDayKey = null;
+  currentDayDateObj = null;
+}
+
+function repeatSummary(ev){
+  if(!ev.repeat || ev.repeatDays.length === 0) return "";
+  const days = ev.repeatDays.slice().sort().map(d => WEEKDAY_ABBR[d]).join("/");
+  const until = ev.repeatUntil ? ` until ${ev.repeatUntil}` : "";
+  return ` · repeats ${days}${until}`;
+}
+
+function renderDayView(){
+  if(!currentDayKey) return;
+  const list = document.getElementById("dayEventsList");
+  const emptyMsg = document.getElementById("dayEmptyMsg");
+  list.innerHTML = "";
+
+  const dateObj = currentDayDateObj || new Date(currentDayKey + "T00:00:00");
+  const events = loadEvents()
+    .filter(e => eventOccursOnDay(e, dateObj, currentDayKey))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  if(events.length === 0){
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  events.forEach(ev => {
+    const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes);
+    const row = document.createElement("div");
+    row.className = "event-row";
+
+    const info = document.createElement("div");
+    info.className = "info";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = ev.name || `${formatTime12h(ev.startTime)} – ${formatTime12h(endTime)}`;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = `${formatTime12h(ev.startTime)} – ${formatTime12h(endTime)} · ${ev.durationMinutes} min` + repeatSummary(ev);
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    const brought = loadTasks().some(t => t.broughtFromEventId === ev.id);
+    const bring = document.createElement("button");
+    bring.className = "event-bring" + (brought ? " done" : "");
+    bring.textContent = brought ? "✓" : "→ quest";
+    bring.title = brought ? "Already added to quests" : "Bring this event into the quest list";
+    bring.disabled = brought;
+    bring.onclick = () => bringEventToQuests(ev);
+
+    const edit = document.createElement("button");
+    edit.className = "del edit";
+    edit.textContent = "✎";
+    edit.onclick = () => openEventModal(ev.id);
+
+    const del = document.createElement("button");
+    del.className = "del";
+    del.textContent = "×";
+    del.onclick = () => {
+      const remaining = loadEvents().filter(e => e.id !== ev.id);
+      saveEvents(remaining);
+      refreshOpenViews();
+    };
+
+    row.appendChild(info);
+    row.appendChild(bring);
+    row.appendChild(edit);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function bringEventToQuests(ev){
+  const dateObj = currentDayDateObj || new Date((currentDayKey || todayStr()) + "T00:00:00");
+  const note = `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`;
+  const name = ev.name || `${formatTime12h(ev.startTime)} – ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
+  const tasks = loadTasks();
+  tasks.push({
+    id: generateId(),
+    name,
+    perWeek: 1,
+    perDay: 1,
+    priority: 3,
+    order: Date.now(),
+    createdAt: Date.now(),
+    dayCount: 0,
+    dayDate: todayStr(),
+    weekCount: 0,
+    weekKey: weekStr(),
+    notes: "",
+    remindHours: null,
+    oneTime: true,
+    checkedAt: null,
+    broughtFromEventId: ev.id,
+    noteBlocks: [{ id: generateId(), type: "text", content: note }]
+  });
+  saveTasks(tasks);
+  sfx.pop();
+  render();
+  if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+}
+
+/* ---- add/edit event modal (shared by the calendar header + day view) ---- */
+let modalRepeatDays = [];
+
+function setWeekdaySelected(day, selected){
+  if(selected && !modalRepeatDays.includes(day)) modalRepeatDays.push(day);
+  if(!selected) modalRepeatDays = modalRepeatDays.filter(d => d !== day);
+  refreshWeekdayButtons();
+}
+function refreshWeekdayButtons(){
+  document.querySelectorAll("#weekdayPicker .weekday-btn").forEach(btn => {
+    btn.classList.toggle("selected", modalRepeatDays.includes(parseInt(btn.dataset.day, 10)));
+  });
+}
+
+function setRepeatOptionsVisible(visible){
+  document.getElementById("eventRepeatOptions").style.display = visible ? "block" : "none";
+}
+
+function openEventModal(eventId){
+  editingEventId = eventId || null;
+  const titleEl = document.getElementById("eventModalTitle");
+  const repeatToggle = document.getElementById("eventRepeatToggle");
+
+  if(editingEventId){
+    const ev = loadEvents().find(e => e.id === editingEventId);
+    if(!ev) return;
+    titleEl.textContent = "Edit event";
+    document.getElementById("eventName").value = ev.name || "";
+    document.getElementById("eventDay").value = ev.day;
+    document.getElementById("eventStart").value = ev.startTime;
+    document.getElementById("eventDuration").value = ev.durationMinutes;
+    repeatToggle.checked = ev.repeat;
+    modalRepeatDays = ev.repeatDays.slice();
+    document.getElementById("eventRepeatUntil").value = ev.repeatUntil || "";
+    document.getElementById("eventRemindHours").value = (ev.remindHours === null || ev.remindHours === undefined) ? "" : ev.remindHours;
+    setRepeatOptionsVisible(ev.repeat);
+    refreshWeekdayButtons();
+  } else {
+    titleEl.textContent = "New event";
+    document.getElementById("eventName").value = "";
+    document.getElementById("eventDay").value = currentDayKey || todayStr();
+    document.getElementById("eventStart").value = "09:00";
+    document.getElementById("eventDuration").value = 60;
+    repeatToggle.checked = false;
+    modalRepeatDays = [];
+    document.getElementById("eventRepeatUntil").value = "";
+    document.getElementById("eventRemindHours").value = "";
+    setRepeatOptionsVisible(false);
+    refreshWeekdayButtons();
+  }
+  document.getElementById("eventOverlay").classList.add("active");
+}
+function closeEventModal(){
+  document.getElementById("eventOverlay").classList.remove("active");
+  editingEventId = null;
+}
+function saveEventModal(){
+  const name = document.getElementById("eventName").value.trim();
+  const day = document.getElementById("eventDay").value;
+  const startTime = document.getElementById("eventStart").value;
+  const durationMinutes = parseInt(document.getElementById("eventDuration").value, 10);
+  const repeat = document.getElementById("eventRepeatToggle").checked;
+  const repeatUntil = document.getElementById("eventRepeatUntil").value || "";
+
+  if(!day || !startTime || isNaN(durationMinutes) || durationMinutes < 1){
+    alert("Please fill in a day, start time, and a duration of at least 1 minute.");
+    return;
+  }
+  if(repeat && modalRepeatDays.length === 0){
+    alert("Pick at least one day of the week for this event to repeat on.");
+    return;
+  }
+
+  const events = loadEvents();
+  const remindRaw = parseFloat(document.getElementById("eventRemindHours").value);
+  const remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
+  const fields = {
+    name, day, startTime, durationMinutes,
+    repeat,
+    repeatDays: repeat ? modalRepeatDays.slice() : [],
+    repeatUntil: repeat ? repeatUntil : "",
+    remindHours
+  };
+
+  if(editingEventId){
+    const ev = events.find(e => e.id === editingEventId);
+    if(ev) Object.assign(ev, fields);
+  } else {
+    events.push({ id: generateId(), ...fields });
+  }
+  saveEvents(events);
+  closeEventModal();
+  refreshOpenViews();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("calAddBtn").addEventListener("click", () => openEventModal());
+  document.getElementById("dayAddEventBtn").addEventListener("click", () => openEventModal());
+  document.getElementById("dayBackBtn").addEventListener("click", closeDayView);
+  document.getElementById("monthBackBtn").addEventListener("click", closeMonthView);
+  document.getElementById("monthPrevBtn").addEventListener("click", () => shiftMonth(-1));
+  document.getElementById("monthNextBtn").addEventListener("click", () => shiftMonth(1));
+  document.getElementById("eventCancel").addEventListener("click", closeEventModal);
+  document.getElementById("eventSave").addEventListener("click", saveEventModal);
+  document.getElementById("eventRepeatToggle").addEventListener("change", (e) => {
+    setRepeatOptionsVisible(e.target.checked);
+  });
+  document.querySelectorAll("#weekdayPicker .weekday-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const day = parseInt(btn.dataset.day, 10);
+      setWeekdaySelected(day, !modalRepeatDays.includes(day));
+    });
+  });
+  const overlay = document.getElementById("eventOverlay");
+  overlay.addEventListener("click", (e) => {
+    if(e.target === overlay) closeEventModal();
+  });
+});
+/* ------------------------------------------- */
+
+/* ---------------- Settings menu ---------------- */
+const THEME_KEY = "checklist_theme_v1";
+const ACCENTS = [
+  { id: "emerald", name: "Emerald", color: "#4f9d69" },
+  { id: "gold", name: "Royal Gold", color: "#c9a227" },
+  { id: "crimson", name: "Crimson", color: "#c25b5b" },
+  { id: "ocean", name: "Ocean", color: "#4e8fc4" },
+  { id: "violet", name: "Amethyst", color: "#9b6fd6" }
+];
+let currentTheme = loadTheme();
+applyTheme(currentTheme);
+function loadTheme(){
+  const id = localStorage.getItem(THEME_KEY);
+  return ACCENTS.find(a => a.id === id) || ACCENTS[0];
+}
+function applyTheme(t){
+  const root = document.documentElement;
+  root.setAttribute("data-theme", t.id);
+  root.style.setProperty("--accent", t.color);
+}
+function renderThemeSwatches(){
+  const box = document.getElementById("themeSwatches");
+  if(!box) return;
+  box.innerHTML = "";
+  ACCENTS.forEach(a => {
+    const sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "theme-swatch" + (a.id === currentTheme.id ? " active" : "");
+    sw.style.background = a.color;
+    sw.title = a.name;
+    sw.setAttribute("aria-label", a.name);
+    sw.addEventListener("click", () => {
+      currentTheme = a;
+      localStorage.setItem(THEME_KEY, a.id);
+      applyTheme(a);
+      renderThemeSwatches();
+      sfx.click();
+    });
+    box.appendChild(sw);
+  });
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "theme-swatch theme-swatch-add";
+  addBtn.innerHTML = "+";
+  addBtn.title = "More themes coming soon";
+  addBtn.setAttribute("aria-label", "More themes coming soon");
+  addBtn.addEventListener("click", () => sfx.click());
+  box.appendChild(addBtn);
+}
+function openSettings(){
+  currentTheme = loadTheme();
+  applyTheme(currentTheme);
+  renderThemeSwatches();
+  renderSoundBtn();
+  updateNotifyHint();
+  document.getElementById("settingsView").classList.add("active");
+}
+function closeSettings(){
+  document.getElementById("settingsView").classList.remove("active");
+}
+function resetPaneLayout(){
+  localStorage.removeItem("qbPaneLayout");
+  applyPaneLayout();
+  sfx.pop();
+}
+function resetAllData(){
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STATE_KEY);
+  localStorage.removeItem(EVENTS_KEY);
+  localStorage.removeItem(HISTORY_KEY);
+  localStorage.removeItem(NOTIFIED_KEY);
+  location.reload();
+}
+function resetExp(){
+  const state = loadState();
+  state.xp = 0;
+  saveState(state);
+  renderLevelBar();
+  sfx.undo();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("settingsBtn").addEventListener("click", openSettings);
+  document.getElementById("settingsBackBtn").addEventListener("click", closeSettings);
+  document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
+  document.getElementById("resetExpBtn").addEventListener("click", () => {
+    openConfirmGeneric(
+      "Reset all exp? Your level returns to 1 and the bar empties. Quests and events are kept.",
+      "Reset exp",
+      resetExp
+    );
+  });
+  document.getElementById("resetDataBtn").addEventListener("click", () => {
+    openConfirmGeneric(
+      "Erase your whole questbook? All quests, events and progress will be lost.",
+      "Erase everything",
+      resetAllData
+    );
+  });
+});
+/* ------------------------------------------- */
+
+/* ---- desktop: draggable panes ---- */
+const ROW_ITEMS = ["hiddenView","monthView","main","dayView","retroView","detailView"];
+function defaultPaneLayout(){
+  return ROW_ITEMS.slice();
+}
+function loadPaneLayout(){
+  try{
+    const v = JSON.parse(localStorage.getItem("qbPaneLayout"));
+    if(Array.isArray(v) && v.length === ROW_ITEMS.length){
+      const valid = ROW_ITEMS.join("|");
+      if(v.every(id => new RegExp("^(?:" + valid + ")$").test(id))) return v;
+    }
+  }catch(e){}
+  return defaultPaneLayout();
+}
+function savePaneLayout(layout){
+  localStorage.setItem("qbPaneLayout", JSON.stringify(layout));
+}
+function rowEl(id){
+  return id === "main" ? document.querySelector(".app-main") : document.getElementById(id);
+}
+function applyPaneLayout(){
+  loadPaneLayout().forEach((id, i) => {
+    const el = rowEl(id);
+    if(el) el.style.order = i;
+  });
+}
+function visibleRowItems(exceptId){
+  const out = [];
+  for(const id of ROW_ITEMS){
+    if(id === exceptId) continue;
+    const el = rowEl(id);
+    if(!el || getComputedStyle(el).display === "none") continue;
+    out.push({ id, el, rect: el.getBoundingClientRect() });
+  }
+  out.sort((a,b) => a.rect.left - b.rect.left);
+  return out;
+}
+function paneBoundaryX(items, k){
+  if(!items.length) return window.innerWidth / 2;
+  if(k <= 0) return items[0].rect.left - 10;
+  if(k >= items.length) return items[items.length - 1].rect.right + 10;
+  return (items[k - 1].rect.right + items[k].rect.left) / 2;
+}
+let dragState = null;
+function startPaneDrag(e, paneId){
+  if(window.innerWidth < 1024 || dragState) return;
+  const pane = rowEl(paneId);
+  if(!pane) return;
+  dragState = {
+    paneId,
+    pane,
+    startX: e.clientX,
+    origCenterX: 0,
+    items: visibleRowItems(paneId),
+    active: false,
+  };
+  const r = pane.getBoundingClientRect();
+  dragState.origCenterX = r.left + r.width / 2;
+  pane.classList.add("pane-dragging");
+  if(e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+  e.preventDefault();
+}
+function movePaneDrag(e){
+  if(!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  if(!dragState.active && Math.abs(dx) < 6) return;
+  dragState.active = true;
+  dragState.pane.style.transform = "translateX(" + dx + "px)";
+  const cx = dragState.origCenterX + dx;
+  let k = dragState.items.length;
+  for(let i = 0; i < dragState.items.length; i++){
+    if(cx < dragState.items[i].rect.left + dragState.items[i].rect.width / 2){ k = i; break; }
+  }
+  const line = document.getElementById("paneDropLine");
+  line.style.left = paneBoundaryX(dragState.items, k) + "px";
+  line.style.display = "block";
+}
+function dropPaneAt(e){
+  const dx = e.clientX - dragState.startX;
+  const cx = dragState.origCenterX + dx;
+  let k = dragState.items.length;
+  for(let i = 0; i < dragState.items.length; i++){
+    if(cx < dragState.items[i].rect.left + dragState.items[i].rect.width / 2){ k = i; break; }
+  }
+  const layout = loadPaneLayout().filter(id => id !== dragState.paneId);
+  const target = k < dragState.items.length ? dragState.items[k].id : null;
+  const ti = target ? layout.indexOf(target) : layout.length;
+  layout.splice(ti, 0, dragState.paneId);
+  savePaneLayout(layout);
+  applyPaneLayout();
+}
+function endPaneDrag(e){
+  if(!dragState) return;
+  if(dragState.active) dropPaneAt(e);
+  dragState.pane.style.transform = "";
+  dragState.pane.classList.remove("pane-dragging");
+  if(e.currentTarget.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)){
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  }
+  document.getElementById("paneDropLine").style.display = "none";
+  dragState = null;
+}
+function cancelPaneDrag(){
+  if(!dragState) return;
+  dragState.pane.style.transform = "";
+  dragState.pane.classList.remove("pane-dragging");
+  document.getElementById("paneDropLine").style.display = "none";
+  dragState = null;
+}
+document.addEventListener("DOMContentLoaded", () => {
+  applyPaneLayout();
+  document.querySelectorAll(".pane-grip").forEach(grip => {
+    const paneId = grip.dataset.pane;
+    grip.addEventListener("pointerdown", (e) => startPaneDrag(e, paneId));
+    grip.addEventListener("pointermove", movePaneDrag);
+    grip.addEventListener("pointerup", endPaneDrag);
+    grip.addEventListener("pointercancel", cancelPaneDrag);
+  });
+});
+applyPaneLayout();
+/* ------------------------------------------- */
+
+render();
+renderLevelBar();
+renderCalendar();
+maybeAutoShowRetro();
+
+/* ---- PWA: installable + auto-updates ----
+   The service worker caches the app for offline use and fetches the newest
+   HTML on every load (network-first), so publishing a new Questbook file
+   pushes the update to everyone who has the app installed. When a new
+   version is detected while the app is open, a prompt offers a reload. */
+(function(){
+  if("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener("statechange", () => {
+          if(nw.state === "installed" && navigator.serviceWorker.controller){
+            openConfirmGeneric("A new version of Quest Book is ready.", "Reload now", () => {
+              if(reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+              setTimeout(() => location.reload(), 200);
+            });
+          }
+        });
+      });
+      const checkForUpdate = () => { if(navigator.onLine !== false) reg.update().catch(() => {}); };
+      document.addEventListener("visibilitychange", () => { if(!document.hidden) checkForUpdate(); });
+      window.addEventListener("focus", checkForUpdate);
+      setInterval(checkForUpdate, 30 * 60 * 1000);
+    }).catch(() => {});
+  }
+})();
+</script>
+<div class="modal-overlay" id="editOverlay">
+  <div class="modal-card">
+    <div class="modal-title">Edit quest</div>
+
+    <label class="modal-label">Name</label>
+    <input type="text" id="editName">
+
+    <label class="modal-label">Priority</label>
+    <select id="editPriority">
+      <option value="1">P1 · low</option>
+      <option value="2">P2</option>
+      <option value="3">P3 · normal</option>
+      <option value="4">P4</option>
+      <option value="5">P5 · high</option>
+    </select>
+
+    <div class="ot-toggle" id="editModeToggle">
+      <button type="button" class="ot-toggle-btn" data-mode="once">One-time</button>
+      <button type="button" class="ot-toggle-btn" data-mode="repeat">Repeatable</button>
+    </div>
+
+    <div id="editRepeatFields" style="display:none;">
+      <div class="modal-row">
+        <div class="modal-col">
+          <label class="modal-label">Times per week</label>
+          <input type="number" id="editPerWeek" min="1" max="7">
+        </div>
+        <div class="modal-col">
+          <label class="modal-label">Times per day</label>
+          <input type="number" id="editPerDay" min="1">
+        </div>
+      </div>
+      <label class="modal-label">Done this week</label>
+      <input type="number" id="editWeekCount" min="0">
+    </div>
+
+    <div class="ot-info" id="editOnceInfo">This quest disappears 5 hours after you check it off.</div>
+
+    <label class="modal-label" id="editRemindLabel">Remind me in (hours, optional)</label>
+    <input type="number" id="editRemindHours" min="0" step="0.5" placeholder="e.g. 2">
+
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="editCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="editSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="detail-view" id="detailView">
+  <div class="detail-header">
+    <div class="pane-grip" data-pane="detailView" title="Drag to move this panel">⠿</div>
+    <button class="back-btn" id="backBtn">‹ Back</button>
+    <div class="detail-title" id="detailTitle">Task</div>
+    <div class="detail-header-actions">
+      <button type="button" id="addCheckItemBtn" class="icon-add-btn" aria-label="Add checklist item" title="Add checklist item">☑</button>
+      <button type="button" id="addCounterItemBtn" class="icon-add-btn" aria-label="Add counter" title="Add counter">🔢</button>
+    </div>
+  </div>
+  <div class="detail-meta" id="detailMeta"></div>
+
+  <div class="detail-scroll">
+    <div class="notes-doc" id="notesDoc"></div>
+  </div>
+
+  <div class="detail-timer">
+    <div class="quest-timer">
+      <div class="timer-display" id="questTimerDisplay">00:00</div>
+      <div class="timer-controls">
+        <button type="button" id="questTimerToggle" class="timer-btn timer-btn-primary">Start</button>
+        <button type="button" id="questTimerReset" class="timer-btn">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-hint" id="saveHint">Saved</div>
+</div>
+
+<div class="settings-overlay" id="settingsView">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <button type="button" class="back-btn" id="settingsBackBtn" aria-label="Close settings">‹ Back</button>
+      <div class="settings-title">Settings</div>
+    </div>
+    <div class="settings-scroll">
+
+      <div class="settings-section">
+        <div class="settings-section-title">Appearance</div>
+        <div class="settings-sub">Choose the accent colour of your questbook.</div>
+        <div class="theme-swatches" id="themeSwatches"></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Sound</div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Sound effects</div>
+            <div class="settings-row-sub">Chimes for quests, events and level-ups.</div>
+          </div>
+          <button type="button" class="switch" id="soundToggleBtn" role="switch" aria-checked="true"></button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Notifications</div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Reminders</div>
+            <div class="settings-row-sub" id="notifyHint">Notifications only fire while this app is open.</div>
+          </div>
+          <button type="button" class="settings-action" id="notifyPermBtn">Enable</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Layout</div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Panel arrangement</div>
+            <div class="settings-row-sub">Restore the default order of the side panels.</div>
+          </div>
+          <button type="button" class="settings-action" id="resetLayoutBtn">Reset</button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Data</div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Backup your questbook</div>
+            <div class="settings-row-sub">Download a JSON file with all of your data.</div>
+          </div>
+          <button type="button" class="settings-action" id="exportBtn">Export</button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Restore a backup</div>
+            <div class="settings-row-sub">Load a previously exported JSON file.</div>
+          </div>
+          <button type="button" class="settings-action" id="importBtn">Import</button>
+        </div>
+      </div>
+
+      <div class="settings-danger-zone">
+        <div class="settings-sub">Danger zone — these can't be undone.</div>
+        <div class="settings-danger-row">
+          <button type="button" class="settings-action settings-action-danger" id="resetExpBtn">Reset exp</button>
+          <button type="button" class="settings-action settings-action-danger" id="resetDataBtn">Reset all data</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<canvas id="fxCanvas" class="fx-canvas"></canvas>
+<div class="lvup-overlay" id="lvupOverlay">
+  <div class="lvup-glow" id="lvupGlow"></div>
+  <div class="lvup-tag">LEVEL UP</div>
+  <div class="lvup-numbers">
+    <span class="lvup-num lvup-old" id="lvupOld">1</span>
+    <span class="lvup-num lvup-new" id="lvupNew">2</span>
+  </div>
+</div>
+
+</body>
+</html>
