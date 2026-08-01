@@ -5277,7 +5277,14 @@ const THEME_CSS = {
 };
 const PAID_THEMES = [
   { id: "nocturne",  name: "Nocturne",   price: 5,  desc: "A midnight indigo restyle under starlit gold." },
-  { id: "parchment", name: "Parchment",  price: 10, desc: "A light paper-and-ink look for bright rooms." },
+  {
+    id: "parchment",
+    name: "Parchment",
+    price: 10,
+    desc: "A light paper-and-ink look for bright rooms.",
+    bgImage: "backdrops/parchment.jpeg",
+    bgImageOptions: { opacity: .42, blur: "0px", scrim: "rgba(244,236,216,.46)" }
+  },
   { id: "neon",      name: "Neon Pulse", price: 15, desc: "Electric magenta on deep black." }
 ];
 let currentTheme = loadTheme();
@@ -5292,12 +5299,22 @@ function loadOwnedThemes(){
 function saveOwnedThemes(arr){
   localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
 }
+function paidThemeToTheme(t){
+  return {
+    id: t.id,
+    name: t.name,
+    color: THEME_CSS[t.id].accent,
+    paid: true,
+    bgImage: t.bgImage,
+    bgImageOptions: t.bgImageOptions
+  };
+}
 function loadTheme(){
   const id = localStorage.getItem(THEME_KEY);
   const free = ACCENTS.find(a => a.id === id);
   if(free) return free;
   const paid = PAID_THEMES.find(a => a.id === id);
-  if(paid) return { id: paid.id, name: paid.name, color: THEME_CSS[paid.id].accent, paid: true };
+  if(paid) return paidThemeToTheme(paid);
   return ACCENTS[0];
 }
 function applyTheme(t){
@@ -5410,7 +5427,7 @@ function renderShop(){
       btn.textContent = currentTheme.id === t.id ? "Equipped" : "Equip";
       btn.disabled = currentTheme.id === t.id;
       btn.onclick = () => {
-        currentTheme = { id: t.id, name: t.name, color: css.accent, paid: true };
+        currentTheme = paidThemeToTheme(t);
         localStorage.setItem(THEME_KEY, t.id);
         applyTheme(currentTheme);
         renderShop();
@@ -5442,7 +5459,7 @@ function buyTheme(t){
       const owned = loadOwnedThemes();
       owned.push(t.id);
       saveOwnedThemes(owned);
-      currentTheme = { id: t.id, name: t.name, color: THEME_CSS[t.id].accent, paid: true };
+      currentTheme = paidThemeToTheme(t);
       localStorage.setItem(THEME_KEY, t.id);
       applyTheme(currentTheme);
       renderShop();
