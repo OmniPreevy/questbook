@@ -36,6 +36,7 @@
     --border:#2b2b2b;
     --text:#e8e8e8;
     --dim:#787878;
+    --danger:#b5504f;
     --accent:#4f9d69;
     --accent-soft:color-mix(in srgb, var(--accent) 15%, transparent);
     --bg-decor:radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%);
@@ -46,7 +47,9 @@
     --bg-image-position:center;
     --bg-image-size:cover;
     --bg-image-scrim:rgba(0,0,0,0);
-    --danger:#b5504f;
+    --alpha-bg:1;
+    --alpha-card:1;
+    --alpha-panel:1;
   }
   /* Theme palettes — switch via the accent picker in Settings.
      Each theme can tint the page background, cards and borders,
@@ -83,16 +86,29 @@
     --card:#141b2e;
     --border:#25304d;
     --bg-decor:
-      radial-gradient(1px 1px at 18% 28%, rgba(255,255,255,.55), transparent 2px),
-      radial-gradient(1px 1px at 72% 58%, rgba(255,255,255,.4), transparent 2px),
-      radial-gradient(1px 1px at 86% 18%, rgba(255,255,255,.45), transparent 2px),
-      radial-gradient(1px 1px at 40% 82%, rgba(255,255,255,.3), transparent 2px),
-      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%);
+      radial-gradient(1px 1px at 8% 22%, rgba(255,255,255,.7), transparent 100%),
+      radial-gradient(3px 3px at 12% 58%, rgba(255,255,255,.9), rgba(255,255,255,.2) 45%, transparent 100%),
+      radial-gradient(1px 1px at 19% 36%, rgba(255,255,255,.55), transparent 100%),
+      radial-gradient(1px 1px at 25% 82%, rgba(255,255,255,.4), transparent 100%),
+      radial-gradient(2px 2px at 33% 12%, rgba(255,255,255,.8), rgba(255,255,255,.25) 45%, transparent 100%),
+      radial-gradient(1px 1px at 39% 66%, rgba(255,255,255,.65), transparent 100%),
+      radial-gradient(3px 3px at 45% 30%, rgba(255,255,255,.9), rgba(255,255,255,.2) 45%, transparent 100%),
+      radial-gradient(1px 1px at 52% 78%, rgba(255,255,255,.45), transparent 100%),
+      radial-gradient(1px 1px at 58% 44%, rgba(255,255,255,.6), transparent 100%),
+      radial-gradient(2px 2px at 63% 10%, rgba(255,255,255,.75), rgba(255,255,255,.2) 45%, transparent 100%),
+      radial-gradient(1px 1px at 68% 60%, rgba(255,255,255,.5), transparent 100%),
+      radial-gradient(3px 3px at 74% 26%, rgba(255,255,255,.9), rgba(255,255,255,.2) 45%, transparent 100%),
+      radial-gradient(1px 1px at 80% 72%, rgba(255,255,255,.45), transparent 100%),
+      radial-gradient(1px 1px at 86% 40%, rgba(255,255,255,.6), transparent 100%),
+      radial-gradient(2px 2px at 91% 64%, rgba(255,255,255,.8), rgba(255,255,255,.2) 45%, transparent 100%),
+      radial-gradient(1px 1px at 96% 18%, rgba(255,255,255,.5), transparent 100%),
+      radial-gradient(1100px 520px at 50% -160px, var(--accent-soft), transparent 72%),
+      radial-gradient(700px 380px at 84% -140px, rgba(201,180,88,.13), transparent 70%);
   }
   [data-theme="parchment"]{
     --accent:#8a5a2b;
     --bg:#ece4d2;
-    --card:#f6efe1;
+    --card:#fff0d1;
     --border:#d6c9ab;
     --text:#2b241a;
     --dim:#8a7d63;
@@ -152,6 +168,25 @@
   body > *{
     position:relative;
     z-index:2;
+  }
+  /* Per-surface transparency (admin page 3). Defaults are fully opaque = no visual change. */
+  html{
+    background:color-mix(in srgb, var(--bg) calc(var(--alpha-bg,1)*100%), transparent);
+  }
+  .task-wrap{
+    background:color-mix(in srgb, var(--bg) calc(var(--alpha-bg,1)*100%), transparent) !important;
+  }
+  .task, .task-wrap .task, .swipe-toast, .hidden-row, .cal-cell, .cal-arrow-cell,
+  .month-nav-btn, .month-cell:not(.other-month), .event-row, .event-bring, .levelbar,
+  .modal-card, .notes-ctx, .retro-card, .retro-xp, .fab-choice-popover, .priority-popover,
+  .nt-notes, .shop-item{
+    background:color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
+  }
+  .detail-view, .notes-doc, .detail-timer{
+    background:color-mix(in srgb, var(--card) calc(var(--alpha-panel,1)*100%), transparent) !important;
+  }
+  #retroView, .settings-panel, .shop-panel{
+    background:color-mix(in srgb, var(--bg) calc(var(--alpha-panel,1)*100%), transparent) !important;
   }
   input, textarea, select, [contenteditable="true"],
   .notes-doc, .notes-line-text, .item-label-input{
@@ -245,6 +280,8 @@
     font-size:18px;padding:4px 6px;line-height:1;cursor:pointer;
   }
   .del:active{color:var(--danger);}
+  .del:disabled{opacity:.4;cursor:default;}
+  .del:disabled:active{color:var(--dim);}
 
   .empty{color:var(--dim);font-size:14px;text-align:center;padding:40px 10px;}
 
@@ -356,6 +393,8 @@
     font-weight:600;
     letter-spacing:.4px;
     pointer-events:none;
+    opacity:0;
+    transition:opacity .15s ease;
   }
   .swipe-hint-del{
     justify-content:flex-start;
@@ -369,6 +408,8 @@
     color:var(--dim);
     background:linear-gradient(270deg, rgba(255,255,255,.1), rgba(255,255,255,0) 70%);
   }
+  .task-wrap.hint-del .swipe-hint,
+  .task-wrap.hint-hide .swipe-hint{opacity:1;}
   .task-wrap.hint-del .swipe-hint-hide,
   .task-wrap.hint-hide .swipe-hint-del{display:none;}
 
@@ -492,9 +533,18 @@
     color:var(--dim);
     font-size:16px;
   }
-  .cal-cell.span-blue{border-color:#3b82f6;}
-  .cal-cell.span-yellow{border-color:#eab308;}
-  .cal-cell.span-red{border-color:#ef4444;}
+  .cal-cell{position:relative;}
+  .cal-cell::after{
+    content:"";
+    position:absolute;
+    top:5px;right:5px;
+    width:7px;height:7px;
+    border-radius:50%;
+    background:transparent;
+  }
+  .cal-cell.span-blue::after{background:#3b82f6;}
+  .cal-cell.span-yellow::after{background:#eab308;}
+  .cal-cell.span-red::after{background:#ef4444;}
   .cal-arrow-cell{
     background:var(--card);
     border:1.5px solid var(--border);
@@ -503,8 +553,9 @@
     font-weight:300;
     cursor:pointer;
   }
-  .cal-arrow-cell:hover{color:#fff;}
-  .cal-arrow-cell:active{color:#fff;border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));}
+  .cal-arrow-cell:hover{color:var(--text);}
+  .cal-arrow-cell:active{color:var(--text);border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--card));}
+  .month-nav-btn:hover{color:var(--accent);border-color:var(--accent);}
 
   /* ---- month view ---- */
   .month-nav{
@@ -601,6 +652,7 @@
     display:flex;
     flex-direction:column;
     gap:10px;
+    padding-top:14px;
   }
   .event-row{
     background:var(--card);
@@ -701,7 +753,7 @@
   .xp-track{
     position:relative;
     height:7px;
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     border-radius:6px;
     overflow:hidden;
@@ -734,7 +786,7 @@
     border-radius:8px;
     opacity:0;
     transition:opacity .25s ease, transform .25s ease;
-    z-index:50;
+    z-index:1000;
     text-align:center;
     max-width:90%;
   }
@@ -842,13 +894,18 @@
   }
   .modal-card input, .modal-card select{
     width:100%;
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:8px;
     padding:10px;
     font-size:15px;
     margin-bottom:12px;
+  }
+  .modal-card input[type=color]{
+    padding:4px;
+    height:42px;
+    cursor:pointer;
   }
   .modal-row{
     display:flex;
@@ -877,7 +934,7 @@
     flex:1;
     aspect-ratio:1/1;
     border-radius:8px;
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     color:var(--dim);
     font-size:12px;
@@ -903,7 +960,7 @@
     font-weight:600;
   }
   .modal-btn.secondary{
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     color:var(--text);
     border:1px solid var(--border);
   }
@@ -917,7 +974,7 @@
     position:fixed;
     inset:0;
     z-index:60;
-    background:var(--bg);
+    background:var(--card);
     padding:16px;
     padding-top:calc(16px + env(safe-area-inset-top));
     display:flex;
@@ -1053,7 +1110,7 @@
   .item-toggle{
     font-size:10px;
     color:var(--dim);
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     border-radius:6px;
     padding:5px 7px;
@@ -1084,7 +1141,7 @@
     height:30px;
     padding:0 8px;
     border-radius:8px;
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     display:flex;align-items:center;justify-content:center;
     font-weight:700;
@@ -1151,7 +1208,7 @@
     border-top:1px solid var(--border);
     margin:14px -16px -16px;
     padding:16px 16px calc(16px + env(safe-area-inset-bottom));
-    background:var(--bg);
+    background:var(--card);
   }
   .quest-timer{
     display:flex;
@@ -1436,7 +1493,7 @@
     transform:translateX(-50%) translateY(0);
   }
   .fab-choice-btn{
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:8px;
@@ -1451,7 +1508,7 @@
     position:fixed;
     inset:0;
     z-index:65;
-    background:var(--bg);
+    background:var(--card);
     padding:16px;
     padding-top:calc(16px + env(safe-area-inset-top));
     padding-bottom:calc(16px + env(safe-area-inset-bottom));
@@ -1578,12 +1635,22 @@
     font-size:13px;
     flex:0 0 auto;
   }
+  .nt-select{
+    width:100%;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:10px;
+    font-size:13px;
+    margin-top:2px;
+  }
   input[type=range]{
     -webkit-appearance:none;
     width:100%;
     height:6px;
     border-radius:6px;
-    background:#151515;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
   }
   input[type=range]::-webkit-slider-thumb{
@@ -1714,8 +1781,11 @@
   }
   .theme-swatches{
     display:flex;
+    flex-wrap:wrap;
     gap:16px;
-    padding:8px 0 4px;
+    padding:8px 8px 4px;
+    max-height:208px; /* 4 rows of 40px dots + 3*16px gaps */
+    overflow-y:auto;
   }
   .theme-swatch{
     width:40px;height:40px;
@@ -1728,8 +1798,8 @@
   }
   .theme-swatch:active{transform:scale(.9);}
   .theme-swatch.active{
-    border-color:#fff;
-    box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--border);
+    border-color:#fff !important;
+    box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--border) !important;
   }
   .theme-swatch.active::after{
     content:"✓";
@@ -1799,8 +1869,38 @@
     flex:1;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
-    padding:12px 16px calc(28px + env(safe-area-inset-bottom));
+    padding:12px 16px calc(64px + env(safe-area-inset-bottom));
   }
+  .shop-edit-notice{
+    position:absolute;
+    left:0;right:0;bottom:58px;
+    text-align:center;
+    font-size:12px;
+    font-weight:700;
+    color:var(--accent);
+    padding:8px;
+    background:color-mix(in srgb, var(--card) 92%, var(--accent) 8%);
+    border-top:1px solid var(--border);
+    display:none;
+    pointer-events:none;
+    z-index:2;
+  }
+  .shop-edit-notice.show{display:block;}
+  .shop-edit-btn{
+    position:absolute;
+    right:12px;bottom:12px;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    z-index:2;
+  }
+  .shop-edit-btn.active{background:#b33a3a !important;border-color:#b33a3a !important;color:#fff;}
+  .shop-item-name-edit{cursor:pointer;color:var(--accent);text-decoration:underline;}
   .shop-balance{
     display:flex;
     align-items:center;
@@ -1889,6 +1989,28 @@
   .shop-item-btn:active{transform:scale(.95);}
   .shop-item-btn.primary{background:var(--accent);border-color:var(--accent);color:#0d0d0d;}
   .shop-item-btn.owned{border-color:var(--accent);color:var(--accent);}
+  .shop-item-actions{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:stretch;
+  }
+  .shop-item-btn-modify{
+    background:transparent;
+    color:var(--dim);
+    font-size:11.5px;
+    padding:6px 11px;
+  }
+  .shop-item-create{
+    border-style:dashed;
+    background:transparent;
+  }
+  .shop-item-create .shop-item-preview{
+    border-style:dashed;
+    font-size:22px;
+    color:var(--dim);
+  }
   .settings-row{
     display:flex;
     align-items:center;
@@ -1984,7 +2106,7 @@
       inset:auto;
       top:16px;
       order:3;
-      z-index:auto;
+      z-index:2;
       width:480px;
       max-width:480px;
       margin:0;
@@ -2102,7 +2224,7 @@
     <div class="modal-title" id="confirmTitle">Are you sure you want to delete this quest?</div>
     <div class="modal-actions">
       <button type="button" class="modal-btn secondary" id="confirmCancel">Cancel</button>
-      <button type="button" class="modal-btn primary" id="confirmDelete" style="background:var(--danger);color:#fff;">Delete</button>
+      <button type="button" class="modal-btn primary" id="confirmDelete">Delete</button>
     </div>
   </div>
 </div>
@@ -2195,7 +2317,7 @@
 <div class="detail-view" id="monthView">
   <div class="detail-header">
     <div class="pane-grip" data-pane="monthView" title="Drag to move this panel">⠿</div>
-    <button class="back-btn" id="monthBackBtn">‹ Back</button>
+    <button class="back-btn" id="monthBackBtn">‹ Collapse</button>
     <div class="detail-title">Calendar</div>
   </div>
   <div class="month-nav">
@@ -2218,7 +2340,7 @@
 <div class="detail-view" id="hiddenView">
   <div class="detail-header">
     <div class="pane-grip" data-pane="hiddenView" title="Drag to move this panel">⠿</div>
-    <button class="back-btn" id="hiddenBackBtn">‹ Back</button>
+    <button class="back-btn" id="hiddenBackBtn">‹ Collapse</button>
     <div class="detail-title">Hidden quests</div>
   </div>
   <div class="detail-scroll">
@@ -2235,7 +2357,7 @@
 <div class="detail-view" id="dayView">
   <div class="detail-header">
     <div class="pane-grip" data-pane="dayView" title="Drag to move this panel">⠿</div>
-    <button class="back-btn" id="dayBackBtn">‹ Back</button>
+    <button class="back-btn" id="dayBackBtn">‹ Collapse</button>
     <div class="detail-title" id="dayViewTitle">Day</div>
     <div class="detail-header-actions">
       <button type="button" id="dayAddEventBtn" class="icon-add-btn" aria-label="Add event" title="Add event">+</button>
@@ -2290,6 +2412,22 @@
         <input type="range" id="ntDaySlider" min="1" max="5" value="1">
         <button type="button" id="ntDayCustomBtn" class="nt-custom-btn">Custom</button>
       </div>
+    </div>
+
+    <div class="nt-slider-group">
+      <div class="nt-slider-label">
+        <span>Week resets on</span>
+      </div>
+      <select id="ntWeekReset" class="nt-select" aria-label="Day this quest's week resets">
+        <option value="">Default (Monday)</option>
+        <option value="0">Sunday</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+      </select>
     </div>
   </div>
 
@@ -2949,9 +3087,17 @@ let pendingDelete = null;
 function openConfirmDelete(){
   document.getElementById("confirmOverlay").classList.add("active");
 }
-function openConfirmGeneric(title, actionLabel, fn){
+function openConfirmGeneric(title, actionLabel, fn, danger){
+  const btn = document.getElementById("confirmDelete");
+  btn.textContent = actionLabel;
+  if(danger){
+    btn.style.background = "var(--danger)";
+    btn.style.color = "#fff";
+  } else {
+    btn.style.background = "";
+    btn.style.color = "";
+  }
   document.getElementById("confirmTitle").textContent = title;
-  document.getElementById("confirmDelete").textContent = actionLabel;
   pendingDelete = fn;
   openConfirmDelete();
 }
@@ -2974,6 +3120,8 @@ function deleteQuest(taskId){
   if(t.test){ doDeleteQuest(taskId); return; }
   document.getElementById("confirmTitle").textContent = "Are you sure you want to delete this quest?";
   document.getElementById("confirmDelete").textContent = "Delete";
+  document.getElementById("confirmDelete").style.background = "var(--danger)";
+  document.getElementById("confirmDelete").style.color = "#fff";
   pendingDelete = () => doDeleteQuest(taskId);
   openConfirmDelete();
 }
@@ -3028,10 +3176,25 @@ function renderHiddenList(){
     meta.textContent = t.oneTime ? "one-time" : `${t.perDay}x/day · ${t.perWeek}x/week`;
     info.appendChild(name);
     info.appendChild(meta);
+    const lock = document.createElement("button");
+    lock.className = "del";
+    lock.textContent = t.locked ? "🔒" : "🔓";
+    lock.title = t.locked ? "Unlock — can be restored again" : "Lock — stays hidden until unlocked";
+    lock.onclick = () => {
+      const all = normalize(loadTasks());
+      const x = all.find(q => q.id === t.id);
+      if(x) x.locked = !x.locked;
+      saveTasks(all);
+      sfx.click();
+      render();
+      renderHiddenList();
+      updateHiddenBtn(loadTasks());
+    };
     const restore = document.createElement("button");
     restore.className = "del";
     restore.textContent = "↺";
-    restore.title = "Show again today";
+    restore.title = t.locked ? "Locked — unlock it first" : "Show again today";
+    restore.disabled = !!t.locked;
     restore.onclick = () => {
       const all = normalize(loadTasks());
       const x = all.find(q => q.id === t.id);
@@ -3048,6 +3211,7 @@ function renderHiddenList(){
     del.title = "Delete quest";
     del.onclick = () => deleteQuest(t.id);
     row.appendChild(info);
+    row.appendChild(lock);
     row.appendChild(restore);
     row.appendChild(del);
     listEl.appendChild(row);
@@ -3645,6 +3809,7 @@ function openEdit(taskId){
   wc.max = t.perWeek;
   document.getElementById("editPerWeek").value = t.perWeek;
   document.getElementById("editPerDay").value = t.perDay;
+  document.getElementById("editWeekReset").value = (t.weekResetDay === null || t.weekResetDay === undefined) ? "" : t.weekResetDay;
   document.getElementById("editRemindHours").value = (t.remindHours === null || t.remindHours === undefined) ? "" : t.remindHours;
   setEditMode(t.oneTime ? "once" : "repeat");
 
@@ -3696,6 +3861,9 @@ function saveEdit(){
     const wc = parseInt(document.getElementById("editWeekCount").value, 10);
     const weekCountSource = !isNaN(wc) ? wc : t.weekCount;
     t.weekCount = Math.max(0, Math.min(weekCountSource, t.perWeek));
+
+    const wrRaw = document.getElementById("editWeekReset").value;
+    t.weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
   }
 
   const remindRaw = parseFloat(document.getElementById("editRemindHours").value);
@@ -3725,11 +3893,19 @@ document.addEventListener("DOMContentLoaded", () => {
 function todayStr(d = new Date()){
   return d.toISOString().slice(0,10);
 }
-// Monday-based week key
+// Monday-based week key (default). Repeatable quests can set their own reset day
+// via task.weekResetDay (0=Sun..6=Sat); weekStrFor() anchors on that instead.
 function weekStr(d = new Date()){
   const date = new Date(d);
   const day = (date.getDay() + 6) % 7; // 0 = Monday
   date.setDate(date.getDate() - day);
+  return todayStr(date);
+}
+function weekStrFor(day, d = new Date()){
+  const anchor = (Number.isInteger(day) && day >= 0 && day <= 6) ? day : 1; // default Monday
+  const date = new Date(d);
+  const off = (date.getDay() + 7 - anchor) % 7; // 0 = reset day
+  date.setDate(date.getDate() - off);
   return todayStr(date);
 }
 function monthStr(d = new Date()){
@@ -3883,7 +4059,8 @@ function normalize(tasks){
       task.dayCount = 0;
       task.lastCheckedAt = null;
     }
-    if(task.weekKey !== w){
+    const tw = weekStrFor(task.weekResetDay);
+    if(task.weekKey !== tw){
       if(!task.oneTime && task.weekKey){
         logHistoryEvent({
           type: "week_result",
@@ -3895,7 +4072,7 @@ function normalize(tasks){
           hit: task.weekCount >= task.perWeek
         });
       }
-      task.weekKey = w;
+      task.weekKey = tw;
       task.weekCount = 0;
       task.lastCheckedAt = null;
     }
@@ -3908,8 +4085,10 @@ function normalize(tasks){
     if(typeof task.createdAt !== "number") task.createdAt = task.order || Date.now();
     if(typeof task.timerElapsedMs !== "number") task.timerElapsedMs = 0;
     if(typeof task.timerRunningSince !== "number") task.timerRunningSince = null;
-    if(task.hiddenUntil && task.hiddenUntil < t) delete task.hiddenUntil; // reappears the next day
+    if(task.hiddenUntil && !task.locked && task.hiddenUntil < t) delete task.hiddenUntil; // reappears the next day unless locked
     if(typeof task.hiddenUntil !== "string") task.hiddenUntil = null;
+    if(typeof task.locked !== "boolean") task.locked = false;
+    if(typeof task.weekResetDay !== "number" || task.weekResetDay < 0 || task.weekResetDay > 6) task.weekResetDay = null;
 
     // Migrate old plain-notes / separate-items model into unified noteBlocks
     if(!Array.isArray(task.noteBlocks)){
@@ -4307,6 +4486,7 @@ function resetNewTaskForm(){
   ntPerDay = 1;
   document.getElementById("ntDayVal").textContent = 1;
   document.getElementById("ntRemindHours").value = "";
+  document.getElementById("ntWeekReset").value = "";
   setNtMode("once");
   setNtPriority(3);
 }
@@ -4342,6 +4522,8 @@ function createNewTask(){
   const perDay = isOneTime ? 1 : ntPerDay;
   const remindRaw = parseFloat(document.getElementById("ntRemindHours").value);
   const remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
+  const wrRaw = document.getElementById("ntWeekReset").value;
+  const weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
 
   const tasks = loadTasks();
   tasks.push({
@@ -4355,7 +4537,8 @@ function createNewTask(){
     dayCount: 0,
     dayDate: todayStr(),
     weekCount: 0,
-    weekKey: weekStr(),
+    weekKey: weekStrFor(weekResetDay),
+    weekResetDay,
     notes,
     remindHours,
     oneTime: isOneTime,
@@ -4493,11 +4676,16 @@ function saveCustomDay(){
 
 /* ---------------- Backup / restore ---------------- */
 function exportData(){
+  const state = JSON.parse(localStorage.getItem(STATE_KEY) || '{"xp":0}');
   const data = {
     tasks: JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"),
-    state: JSON.parse(localStorage.getItem(STATE_KEY) || '{"xp":0}'),
+    state: state,
     events: JSON.parse(localStorage.getItem(EVENTS_KEY) || "[]"),
     history: JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"),
+    units: state.units || 0,
+    currentTheme: localStorage.getItem(THEME_KEY) || null,
+    ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
+    customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
     exportedAt: new Date().toISOString()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -4527,6 +4715,9 @@ function importDataFromFile(file){
     localStorage.setItem(STATE_KEY, JSON.stringify(data.state || { xp: 0 }));
     localStorage.setItem(EVENTS_KEY, JSON.stringify(data.events || []));
     localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history || []));
+    if(data.ownedThemes) localStorage.setItem(OWNED_KEY, JSON.stringify(data.ownedThemes));
+    if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
+    if(data.currentTheme) localStorage.setItem(THEME_KEY, data.currentTheme);
     location.reload();
   };
   reader.readAsText(file);
@@ -4611,8 +4802,7 @@ document.addEventListener("keydown", (e) => {
   const tag = e.target && e.target.tagName;
   if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
   if(e.key.toLowerCase() === "m"){
-    const btn = document.getElementById("testQuestBtn");
-    if(btn) btn.style.display = (btn.style.display === "none") ? "" : "none";
+    if(typeof adminTogglePanel === "function") adminTogglePanel();
   }
 });
 
@@ -5265,6 +5455,8 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---------------- Settings menu ---------------- */
 const THEME_KEY = "checklist_theme_v1";
 const OWNED_KEY = "checklist_owned_themes_v1";
+const CUSTOM_KEY = "checklist_custom_themes_v1";
+const CUSTOM_THEME_PRICE = 10;
 const ACCENTS = [
   { id: "emerald", name: "Emerald", color: "#4f9d69" },
   { id: "gold", name: "Royal Gold", color: "#c9a227" },
@@ -5302,6 +5494,28 @@ function loadOwnedThemes(){
 function saveOwnedThemes(arr){
   localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
 }
+function loadCustomThemes(){
+  try{
+    const v = JSON.parse(localStorage.getItem(CUSTOM_KEY));
+    if(Array.isArray(v)) return v;
+  }catch(e){}
+  return [];
+}
+function saveCustomThemes(arr){
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(arr));
+}
+function customThemeToTheme(t){
+  return {
+    id: t.id,
+    name: t.name,
+    color: t.accent,
+    paid: true,
+    custom: true,
+    bg: t.bg,
+    card: t.card,
+    border: t.border
+  };
+}
 function paidThemeToTheme(t){
   return {
     id: t.id,
@@ -5318,14 +5532,27 @@ function loadTheme(){
   if(free) return free;
   const paid = PAID_THEMES.find(a => a.id === id);
   if(paid) return paidThemeToTheme(paid);
+  const custom = loadCustomThemes().find(a => a.id === id);
+  if(custom) return customThemeToTheme(custom);
   return ACCENTS[0];
 }
 function applyTheme(t){
   const root = document.documentElement;
-  root.setAttribute("data-theme", t.id);
+  if(typeof applyAdminOverrides === "function") applyAdminOverrides();
+  root.setAttribute("data-theme", t.custom ? `custom-${t.id}` : t.id);
   root.style.setProperty("--accent", t.color);
+  if(t.custom){
+    root.style.setProperty("--bg", t.bg);
+    root.style.setProperty("--card", t.card);
+    root.style.setProperty("--border", t.border);
+  } else {
+    root.style.removeProperty("--bg");
+    root.style.removeProperty("--card");
+    root.style.removeProperty("--border");
+  }
   clearBackgroundImage();
   if(t.bgImage) setBackgroundImage(t.bgImage, t.bgImageOptions || {});
+  if(typeof applyAdminOverrides === "function") applyAdminOverrides();
 }
 
 // Framework for image-backed themes. Keep images on their own fixed layer and
@@ -5371,6 +5598,29 @@ function renderThemeSwatches(){
     });
     box.appendChild(sw);
   });
+  const owned = loadOwnedThemes();
+  const ownedThemes = [
+    ...PAID_THEMES.filter(t => owned.includes(t.id)).map(t => ({ id: t.id, name: t.name, bg: THEME_CSS[t.id].bg, accent: THEME_CSS[t.id].accent, border: THEME_CSS[t.id].border, source: t })),
+    ...loadCustomThemes().map(c => ({ id: c.id, name: c.name, bg: c.bg, accent: c.accent, border: c.border, source: c, custom: true }))
+  ];
+  ownedThemes.forEach(ot => {
+    const sw = document.createElement("button");
+    sw.type = "button";
+    sw.className = "theme-swatch" + (currentTheme.id === ot.id ? " active" : "");
+    sw.style.background = ot.bg;
+    sw.style.border = `3px solid ${ot.accent}`;
+    sw.style.boxShadow = `0 0 0 3px ${ot.border}`;
+    sw.title = ot.name;
+    sw.setAttribute("aria-label", ot.name);
+    sw.addEventListener("click", () => {
+      currentTheme = ot.custom ? customThemeToTheme(ot.source) : paidThemeToTheme(ot.source);
+      localStorage.setItem(THEME_KEY, ot.id);
+      applyTheme(currentTheme);
+      renderThemeSwatches();
+      sfx.click();
+    });
+    box.appendChild(sw);
+  });
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "theme-swatch theme-swatch-add";
@@ -5388,6 +5638,34 @@ function openShop(){
 function closeShop(){
   document.getElementById("shopView").classList.remove("active");
 }
+let shopEditMode = false;
+function setShopEditMode(on){
+  shopEditMode = !!on;
+  const btn = document.getElementById("shopEditBtn");
+  const notice = document.getElementById("shopEditNotice");
+  if(btn) btn.classList.toggle("active", shopEditMode);
+  if(btn) btn.textContent = shopEditMode ? "Cancel" : "Edit";
+  if(notice) notice.classList.toggle("show", shopEditMode);
+}
+function toggleShopEditMode(){
+  setShopEditMode(!shopEditMode);
+  renderShop();
+}
+function editThemeFromShop(t){
+  if(!t.custom && !loadOwnedThemes().includes(t.id)){
+    showToast("Buy this theme to edit it");
+    return;
+  }
+  currentTheme = t.custom ? customThemeToTheme(t) : paidThemeToTheme(t);
+  localStorage.setItem(THEME_KEY, t.id);
+  applyTheme(currentTheme);
+  closeShop();
+  const sview = document.getElementById("settingsView");
+  if(sview && sview.classList.contains("active")) closeSettings();
+  setShopEditMode(false);
+  sfx.click();
+  if(typeof adminShowPanel === "function") adminShowPanel();
+}
 function renderShop(){
   const balance = getUnits();
   document.getElementById("shopBalance").innerHTML =
@@ -5396,8 +5674,15 @@ function renderShop(){
   const box = document.getElementById("shopItems");
   box.innerHTML = "";
   const owned = loadOwnedThemes();
-  PAID_THEMES.forEach(t => {
-    const css = THEME_CSS[t.id];
+  const allThemes = [...PAID_THEMES, ...loadCustomThemes()].sort((a, b) => {
+    const oa = a.custom || owned.includes(a.id);
+    const ob = b.custom || owned.includes(b.id);
+    if(oa && !ob) return -1;
+    if(!oa && ob) return 1;
+    return 0;
+  });
+  allThemes.forEach(t => {
+    const css = t.custom ? { bg: t.bg, accent: t.accent, border: t.border } : THEME_CSS[t.id];
     const row = document.createElement("div");
     row.className = "shop-item";
 
@@ -5415,22 +5700,32 @@ function renderShop(){
     const info = document.createElement("div");
     info.className = "shop-item-info";
     const name = document.createElement("div");
-    name.className = "shop-item-name";
+    name.className = "shop-item-name" + (shopEditMode ? " shop-item-name-edit" : "");
     name.textContent = t.name;
+    if(shopEditMode){
+      const canEdit = t.custom || owned.includes(t.id);
+      name.title = canEdit ? "Choose to edit" : "Buy this theme first";
+      name.onclick = () => {
+        if(!canEdit){ showToast("Buy this theme to edit it"); return; }
+        editThemeFromShop(t);
+      };
+    }
     const desc = document.createElement("div");
     desc.className = "shop-item-desc";
-    desc.textContent = t.desc;
+    desc.textContent = t.custom ? "Custom theme" : t.desc;
     info.append(name, desc);
 
+    const btnWrap = document.createElement("div");
+    btnWrap.className = "shop-item-actions";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "shop-item-btn";
-    if(owned.includes(t.id)){
+    if(t.custom || owned.includes(t.id)){
       btn.classList.add("owned");
       btn.textContent = currentTheme.id === t.id ? "Equipped" : "Equip";
       btn.disabled = currentTheme.id === t.id;
       btn.onclick = () => {
-        currentTheme = paidThemeToTheme(t);
+        currentTheme = t.custom ? customThemeToTheme(t) : paidThemeToTheme(t);
         localStorage.setItem(THEME_KEY, t.id);
         applyTheme(currentTheme);
         renderShop();
@@ -5440,9 +5735,35 @@ function renderShop(){
       btn.textContent = `${t.price} ◇`;
       btn.onclick = () => buyTheme(t);
     }
-    row.append(prev, info, btn);
+    btnWrap.appendChild(btn);
+    row.append(prev, info, btnWrap);
     box.appendChild(row);
   });
+
+  const create = document.createElement("div");
+  create.className = "shop-item shop-item-create";
+  const createPrev = document.createElement("div");
+  createPrev.className = "shop-item-preview";
+  createPrev.textContent = "+";
+  const createInfo = document.createElement("div");
+  createInfo.className = "shop-item-info";
+  const createName = document.createElement("div");
+  createName.className = "shop-item-name";
+  createName.textContent = "New theme";
+  const createDesc = document.createElement("div");
+  createDesc.className = "shop-item-desc";
+  createDesc.textContent = "Create a blank theme to customize";
+  createInfo.append(createName, createDesc);
+  const createWrap = document.createElement("div");
+  createWrap.className = "shop-item-actions";
+  const createBtn = document.createElement("button");
+  createBtn.type = "button";
+  createBtn.className = "shop-item-btn";
+  createBtn.textContent = `Create · ${CUSTOM_THEME_PRICE} ◇`;
+  createBtn.onclick = () => { if(typeof adminCreateTheme === "function") adminCreateTheme(); };
+  createWrap.appendChild(createBtn);
+  create.append(createPrev, createInfo, createWrap);
+  box.appendChild(create);
 }
 function buyTheme(t){
   const state = loadState();
@@ -5494,6 +5815,7 @@ function resetAllData(){
   localStorage.removeItem(HISTORY_KEY);
   localStorage.removeItem(NOTIFIED_KEY);
   localStorage.removeItem(OWNED_KEY);
+  localStorage.removeItem(CUSTOM_KEY);
   location.reload();
 }
 function resetExp(){
@@ -5511,19 +5833,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("settingsBackBtn").addEventListener("click", closeSettings);
   document.getElementById("shopBackBtn").addEventListener("click", closeShop);
+  const shopEditBtn = document.getElementById("shopEditBtn");
+  if(shopEditBtn) shopEditBtn.addEventListener("click", toggleShopEditMode);
   document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
     openConfirmGeneric(
       "Reset all exp and units? Your level returns to 1, the bar empties and the unit balance resets. Quests, events and bought themes are kept.",
       "Reset exp",
-      resetExp
+      resetExp,
+      true
     );
   });
   document.getElementById("resetDataBtn").addEventListener("click", () => {
     openConfirmGeneric(
       "Erase your whole questbook? All quests, events and progress will be lost.",
       "Erase everything",
-      resetAllData
+      resetAllData,
+      true
     );
   });
 });
@@ -5719,6 +6045,18 @@ maybeAutoShowRetro();
       </div>
       <label class="modal-label">Done this week</label>
       <input type="number" id="editWeekCount" min="0">
+
+      <label class="modal-label">Week resets on</label>
+      <select id="editWeekReset">
+        <option value="">Default (Monday)</option>
+        <option value="0">Sunday</option>
+        <option value="1">Monday</option>
+        <option value="2">Tuesday</option>
+        <option value="3">Wednesday</option>
+        <option value="4">Thursday</option>
+        <option value="5">Friday</option>
+        <option value="6">Saturday</option>
+      </select>
     </div>
 
     <div class="ot-info" id="editOnceInfo">This quest disappears 5 hours after you check it off.</div>
@@ -5736,7 +6074,7 @@ maybeAutoShowRetro();
 <div class="detail-view" id="detailView">
   <div class="detail-header">
     <div class="pane-grip" data-pane="detailView" title="Drag to move this panel">⠿</div>
-    <button class="back-btn" id="backBtn">‹ Back</button>
+    <button class="back-btn" id="backBtn">‹ Collapse</button>
     <div class="detail-title" id="detailTitle">Task</div>
     <div class="detail-header-actions">
       <button type="button" id="addCheckItemBtn" class="icon-add-btn" aria-label="Add checklist item" title="Add checklist item">☑</button>
@@ -5849,6 +6187,8 @@ maybeAutoShowRetro();
       <div class="shop-balance" id="shopBalance"></div>
       <div id="shopItems"></div>
     </div>
+    <div class="shop-edit-notice" id="shopEditNotice">Choose which theme to edit</div>
+    <button type="button" class="shop-edit-btn" id="shopEditBtn">Edit</button>
   </div>
 </div>
 
@@ -5867,6 +6207,534 @@ maybeAutoShowRetro();
   <button type="button" class="notes-ctx-btn" id="ctxSelectAll" role="menuitem">Select all</button>
   <button type="button" class="notes-ctx-btn" id="ctxCopyAll" role="menuitem">Copy all</button>
 </div>
+
+<style>
+  #adminPanel{
+    position:fixed;left:10px;bottom:10px;z-index:2147483000;
+    width:min(260px,calc(100vw - 20px));
+    max-height:min(72vh,460px);
+    background:rgba(15,15,15,.97);color:#e8e8e8;
+    border:1px solid #3a3a3a;border-radius:10px;
+    box-shadow:0 8px 28px rgba(0,0,0,.5);
+    padding:10px 12px 12px;
+    font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:none;
+    box-sizing:border-box;
+    -webkit-user-select:none;
+    user-select:none;
+    overflow:hidden;
+  }
+  #adminPanel.open{display:flex;flex-direction:column;}
+  #adminPanel *{box-sizing:border-box;}
+  .admin-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;cursor:move;touch-action:none;flex:0 0 auto;}
+  .admin-title{font-weight:700;letter-spacing:.5px;font-size:12px;}
+  .admin-close{border:none;background:transparent;color:#9a9a9a;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;}
+  .admin-close:hover{color:#fff;}
+  .admin-theme-name{color:#9a9a9a;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;}
+  .admin-pages{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
+  .admin-page{display:none;flex:1 1 auto;min-height:0;overflow:hidden;flex-direction:column;}
+  .admin-page.active{display:flex;flex-direction:column;}
+  .admin-page.active > :first-child{margin-top:auto;}
+  .admin-row{display:flex;align-items:center;gap:8px;margin:6px 0;}
+  .admin-label{width:80px;flex:0 0 auto;color:#c8c8c8;font-size:11px;}
+  .admin-color{width:30px;height:26px;padding:0;border:1px solid #3a3a3a;border-radius:5px;background:none;cursor:pointer;flex:0 0 auto;}
+  .admin-hex{flex:1;min-width:0;background:#242424;border:1px solid #3a3a3a;color:#e8e8e8;border-radius:5px;padding:4px 6px;font:12px ui-monospace,Consolas,monospace;}
+  .admin-name{flex:1;min-width:0;background:#242424;border:1px solid #3a3a3a;color:#e8e8e8;border-radius:5px;padding:4px 6px;font:12px inherit;}
+  .admin-name:disabled{opacity:.5;cursor:not-allowed;}
+  .admin-name-lock{flex:0 0 auto;color:#9a9a9a;font-size:13px;line-height:1;padding:0 2px;}
+  .admin-reset{flex:0 0 auto;width:26px;height:26px;border:1px solid #3a3a3a;background:#242424;color:#ccc;border-radius:5px;cursor:pointer;font-size:13px;line-height:1;padding:0;}
+  .admin-reset:hover{color:#fff;border-color:#5a5a5a;}
+  .admin-select{flex:1;min-width:0;background:#242424;border:1px solid #3a3a3a;color:#e8e8e8;border-radius:5px;padding:4px 6px;font:12px inherit;}
+  .admin-range-row{display:flex;align-items:center;gap:8px;margin:7px 0;}
+  .admin-range{flex:1;min-width:0;accent-color:#4fae57;}
+  .admin-range-val{width:34px;flex:0 0 auto;text-align:right;color:#9a9a9a;font-size:10px;}
+  .admin-page-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:10px;flex:0 0 auto;margin-top:auto;}
+  .admin-nav{border:1px solid #3a3a3a;background:#2e2e2e;color:#e8e8e8;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+  .admin-nav:hover{background:#3c3c3c;}
+  .admin-nav:disabled{opacity:.35;cursor:default;background:#2e2e2e;pointer-events:none;}
+  .admin-done{background:#2f9e44;color:#fff;border:1px solid #38b64e;border-radius:6px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;}
+  .admin-done:hover{background:#3ab252;}
+  .admin-note{color:#777;font-size:10px;line-height:1.5;margin:8px 0 4px;}
+</style>
+
+<div id="adminPanel" class="admin-panel">
+  <div class="admin-head" id="adminHead" title="Drag to move">
+    <span class="admin-title">Customize Theme</span>
+    <button type="button" class="admin-close" id="adminCloseBtn" aria-label="Close">&times;</button>
+  </div>
+  <div class="admin-pages">
+    <div class="admin-page active" id="adminPage1">
+      <div class="admin-row">
+        <span class="admin-label">Name</span>
+        <input type="text" id="adminNameInput" class="admin-name" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Theme name">
+        <span class="admin-name-lock" id="adminNameLock" title="Official theme — name can't change">&#128274;</span>
+      </div>
+      <div id="adminRows1"></div>
+      <div class="admin-page-foot">
+        <button type="button" class="admin-nav" disabled aria-disabled="true">&larr;</button>
+        <button type="button" class="admin-nav" id="adminNext1">&rarr;</button>
+      </div>
+    </div>
+    <div class="admin-page" id="adminPage2">
+      <div id="adminRows2"></div>
+      <div class="admin-page-foot">
+        <button type="button" class="admin-nav" id="adminPrev2">&larr;</button>
+        <button type="button" class="admin-nav" id="adminNext2">&rarr;</button>
+      </div>
+    </div>
+    <div class="admin-page" id="adminPage3">
+      <div class="admin-range-row">
+        <span class="admin-label">Image</span>
+        <select id="adminImgSelect" class="admin-select">
+          <option value="none">No image</option>
+          <option value="parchment">Parchment</option>
+          <option value="upload">Upload image&#8230;</option>
+        </select>
+      </div>
+      <div class="admin-note">Opacity / blur / darken apply to the image; transparency applies per UI surface.</div>
+      <div class="admin-range-row">
+        <span class="admin-label">Image opacity</span>
+        <input type="range" class="admin-range" id="adminImgOpacity" min="0" max="1" step="0.01">
+        <span class="admin-range-val" id="adminImgOpacityVal"></span>
+      </div>
+      <div class="admin-range-row">
+        <span class="admin-label">Blur</span>
+        <input type="range" class="admin-range" id="adminImgBlur" min="0" max="40" step="1">
+        <span class="admin-range-val" id="adminImgBlurVal"></span>
+      </div>
+      <div class="admin-range-row">
+        <span class="admin-label">Darken</span>
+        <input type="range" class="admin-range" id="adminImgScrim" min="0" max="1" step="0.01">
+        <span class="admin-range-val" id="adminImgScrimVal"></span>
+      </div>
+      <div class="admin-range-row">
+        <span class="admin-label">Background</span>
+        <input type="range" class="admin-range" id="adminAlphaBg" min="0" max="1" step="0.01">
+        <span class="admin-range-val" id="adminAlphaBgVal"></span>
+      </div>
+      <div class="admin-range-row">
+        <span class="admin-label">Cards</span>
+        <input type="range" class="admin-range" id="adminAlphaCard" min="0" max="1" step="0.01">
+        <span class="admin-range-val" id="adminAlphaCardVal"></span>
+      </div>
+      <div class="admin-range-row">
+        <span class="admin-label">Panels</span>
+        <input type="range" class="admin-range" id="adminAlphaPanel" min="0" max="1" step="0.01">
+        <span class="admin-range-val" id="adminAlphaPanelVal"></span>
+      </div>
+      <div class="admin-page-foot">
+        <button type="button" class="admin-nav" id="adminPrev3">&larr;</button>
+        <button type="button" class="admin-done" id="adminDoneBtn">Done</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="adminImgFile" accept="image/*" style="display:none">
+</div>
+
+<script>
+(function(){
+  const KEY = "qb-admin-overrides";
+  const FIELDS = [
+    { label:"Background", prop:"--bg",     page:1 },
+    { label:"Card",       prop:"--card",   page:1 },
+    { label:"Accent",     prop:"--accent", page:2 },
+    { label:"Border",     prop:"--border", page:2 },
+    { label:"Text",       prop:"--text",   page:2 },
+    { label:"Dim",        prop:"--dim",    page:2 }
+  ];
+  const panel = document.getElementById("adminPanel");
+  const rowsEl1 = document.getElementById("adminRows1");
+  const rowsEl2 = document.getElementById("adminRows2");
+  const nameInput = document.getElementById("adminNameInput");
+  const nameLock = document.getElementById("adminNameLock");
+  const headEl = document.getElementById("adminHead");
+  const pages = [document.getElementById("adminPage1"), document.getElementById("adminPage2"), document.getElementById("adminPage3")];
+  const imgSelect = document.getElementById("adminImgSelect");
+  const imgFile = document.getElementById("adminImgFile");
+  const imgOpacity = document.getElementById("adminImgOpacity");
+  const imgOpacityVal = document.getElementById("adminImgOpacityVal");
+  const imgBlur = document.getElementById("adminImgBlur");
+  const imgBlurVal = document.getElementById("adminImgBlurVal");
+  const imgScrim = document.getElementById("adminImgScrim");
+  const imgScrimVal = document.getElementById("adminImgScrimVal");
+  const alphaBg = document.getElementById("adminAlphaBg");
+  const alphaBgVal = document.getElementById("adminAlphaBgVal");
+  const alphaCard = document.getElementById("adminAlphaCard");
+  const alphaCardVal = document.getElementById("adminAlphaCardVal");
+  const alphaPanel = document.getElementById("adminAlphaPanel");
+  const alphaPanelVal = document.getElementById("adminAlphaPanelVal");
+  let open = false;
+  let adminPendingCreate = null;
+
+  function goPage(n){
+    pages.forEach((p, i) => p.classList.toggle("active", i === n - 1));
+  }
+
+  function syncMeta(){
+    if(!currentTheme) return;
+    const custom = !!currentTheme.custom;
+    nameInput.disabled = !custom;
+    nameInput.value = currentTheme.name || "";
+    nameLock.style.display = custom ? "none" : "inline-block";
+    nameLock.title = custom ? "" : "Official theme — name can't change";
+  }
+  nameInput.addEventListener("change", () => {
+    if(!currentTheme || !currentTheme.custom) return;
+    const v = nameInput.value.trim().slice(0, 24);
+    if(!v){ nameInput.value = currentTheme.name; return; }
+    const custom = loadCustomThemes();
+    const rec = custom.find(c => c.id === currentTheme.id);
+    if(rec){ rec.name = v; saveCustomThemes(custom); }
+    currentTheme.name = v;
+    syncMeta();
+    renderThemeSwatches();
+    if(typeof renderShop === "function") renderShop();
+    sfx.click();
+    showToast("Theme renamed");
+  });
+
+  let dragActive = false, dragStartX = 0, dragStartY = 0, dragPanelLeft = 0, dragPanelTop = 0;
+  function initDrag(){
+    if(!headEl) return;
+    headEl.addEventListener("pointerdown", (e) => {
+      if(e.target.closest(".admin-close")) return;
+      dragActive = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const r = panel.getBoundingClientRect();
+      dragPanelLeft = r.left;
+      dragPanelTop = r.top;
+      panel.style.bottom = "auto";
+      panel.style.left = r.left + "px";
+      panel.style.top = r.top + "px";
+      try{ headEl.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+    });
+    headEl.addEventListener("pointermove", (e) => {
+      if(!dragActive) return;
+      const nx = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, dragPanelLeft + e.clientX - dragStartX));
+      const ny = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, dragPanelTop + e.clientY - dragStartY));
+      panel.style.left = nx + "px";
+      panel.style.top = ny + "px";
+    });
+    const endDrag = (e) => {
+      if(!dragActive) return;
+      dragActive = false;
+      try{ headEl.releasePointerCapture(e.pointerId); }catch(_){}
+    };
+    headEl.addEventListener("pointerup", endDrag);
+    headEl.addEventListener("pointercancel", endDrag);
+  }
+
+  function themeKey(){
+    const t = currentTheme;
+    return t ? (t.custom ? "custom-" + t.id : t.id) : "none";
+  }
+  function load(){
+    try{ const v = JSON.parse(localStorage.getItem(KEY)); if(v && typeof v === "object") return v; }catch(e){}
+    return {};
+  }
+  function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+  function toHex(v){
+    if(typeof v !== "string") return "#000000";
+    v = v.trim();
+    if(/^#[0-9a-fA-F]{3}$/.test(v)) return "#" + v.slice(1).split("").map(c=>c+c).join("").toLowerCase();
+    if(/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
+    const el = document.createElement("span");
+    el.style.color = v;
+    document.body.appendChild(el);
+    const r = getComputedStyle(el).color;
+    el.remove();
+    const m = r.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if(!m) return "#000000";
+    return "#" + [m[1],m[2],m[3]].map(n=>Math.max(0,Math.min(255,+n)).toString(16).padStart(2,"0")).join("");
+  }
+  function currentColor(prop){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+    return v ? toHex(v) : "#000000";
+  }
+  function syncInputs(prop, value){
+    for(const f of FIELDS){
+      if(f.prop !== prop) continue;
+      if(f._colorEl) f._colorEl.value = value;
+      if(f._hexEl) f._hexEl.value = value;
+    }
+  }
+  function setVal(prop, value){
+    const store = load();
+    const key = themeKey();
+    if(!store[key]) store[key] = {};
+    store[key][prop] = value;
+    save(store);
+    document.documentElement.style.setProperty(prop, value);
+    syncInputs(prop, value);
+  }
+  function buildRows(){
+    rowsEl1.innerHTML = "";
+    rowsEl2.innerHTML = "";
+    for(const f of FIELDS){
+      const row = document.createElement("div");
+      row.className = "admin-row";
+      const lab = document.createElement("span");
+      lab.className = "admin-label";
+      lab.textContent = f.label;
+      const color = document.createElement("input");
+      color.type = "color"; color.className = "admin-color";
+      color.value = currentColor(f.prop);
+      const hex = document.createElement("input");
+      hex.type = "text"; hex.className = "admin-hex"; hex.maxLength = 7; hex.spellcheck = false;
+      hex.value = color.value;
+      const reset = document.createElement("button");
+      reset.type = "button"; reset.className = "admin-reset"; reset.title = "Reset " + f.label + " to theme default";
+      reset.textContent = "\u21BA";
+      color.addEventListener("input", () => setVal(f.prop, color.value));
+      hex.addEventListener("input", () => {
+        const h = hex.value.trim();
+        if(/^#?[0-9a-fA-F]{3}$/.test(h) || /^#?[0-9a-fA-F]{6}$/.test(h)) setVal(f.prop, (h[0] === "#" ? h : "#" + h));
+      });
+      hex.addEventListener("blur", () => { hex.value = currentColor(f.prop); });
+      reset.addEventListener("click", () => resetProp(f.prop));
+      f._colorEl = color; f._hexEl = hex;
+      row.appendChild(lab); row.appendChild(color); row.appendChild(hex); row.appendChild(reset);
+      (f.page === 1 ? rowsEl1 : rowsEl2).appendChild(row);
+    }
+  }
+  function pct(v){
+    const n = Math.min(1, Math.max(0, parseFloat(v) || 0));
+    return Math.round(n * 100) + "%";
+  }
+  function parseScrim(v){
+    const m = String(v).match(/rgba?\([^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+)/);
+    return m ? Math.min(1, Math.max(0, parseFloat(m[1]) || 0)) : 0;
+  }
+  function ensureImageDefaults(){
+    const rec = load()[themeKey()] || {};
+    if(!rec["--bg-image-opacity"] || rec["--bg-image-opacity"] === "0") setVal("--bg-image-opacity", "0.34");
+    if(!rec["--bg-image-blur"]) setVal("--bg-image-blur", "0px");
+    if(!rec["--bg-image-scrim"] || rec["--bg-image-scrim"] === "rgba(0,0,0,0)") setVal("--bg-image-scrim", "rgba(0,0,0,0.42)");
+  }
+  function repopulatePage3(){
+    const cs = getComputedStyle(document.documentElement);
+    const img = cs.getPropertyValue("--bg-image").trim();
+    if(!img || img === "none") imgSelect.value = "none";
+    else if(img.indexOf("parchment.jpeg") !== -1) imgSelect.value = "parchment";
+    else imgSelect.value = "upload";
+    imgOpacity.value = parseFloat(cs.getPropertyValue("--bg-image-opacity")) || 0;
+    imgOpacityVal.textContent = pct(imgOpacity.value);
+    imgBlur.value = parseInt(cs.getPropertyValue("--bg-image-blur"), 10) || 0;
+    imgBlurVal.textContent = imgBlur.value + "px";
+    imgScrim.value = parseScrim(cs.getPropertyValue("--bg-image-scrim"));
+    imgScrimVal.textContent = pct(imgScrim.value);
+    alphaBg.value = parseFloat(cs.getPropertyValue("--alpha-bg")) || 1;
+    alphaBgVal.textContent = pct(alphaBg.value);
+    alphaCard.value = parseFloat(cs.getPropertyValue("--alpha-card")) || 1;
+    alphaCardVal.textContent = pct(alphaCard.value);
+    alphaPanel.value = parseFloat(cs.getPropertyValue("--alpha-panel")) || 1;
+    alphaPanelVal.textContent = pct(alphaPanel.value);
+  }
+  function repopulate(){
+    syncMeta();
+    for(const f of FIELDS){
+      const v = currentColor(f.prop);
+      if(f._colorEl) f._colorEl.value = v;
+      if(f._hexEl) f._hexEl.value = v;
+    }
+    repopulatePage3();
+  }
+  function openPanel(){
+    open = true;
+    syncMeta();
+    buildRows();
+    repopulatePage3();
+    goPage(1);
+    panel.classList.add("open");
+    fitPanel();
+  }
+  function showPanel(){
+    if(open){ syncMeta(); buildRows(); repopulatePage3(); return; }
+    openPanel();
+    if(!panel.style.left){
+      const r = panel.getBoundingClientRect();
+      panel.style.bottom = "auto";
+      panel.style.left = "10px";
+      panel.style.top = Math.max(0, window.innerHeight - r.height - 10) + "px";
+    }
+  }
+  function fitPanel(){
+    if(!open) return;
+    let max = 0;
+    for(const el of pages){
+      const was = el.classList.contains("active");
+      el.classList.add("active");
+      max = Math.max(max, el.scrollHeight);
+      if(!was) el.classList.remove("active");
+    }
+    const other = panel.clientHeight - panel.querySelector(".admin-pages").clientHeight;
+    const cap = Math.max(0, Math.min(window.innerHeight * 0.72, 460) - other);
+    panel.querySelector(".admin-pages").style.height = Math.min(max, cap) + "px";
+  }
+  window.addEventListener("resize", fitPanel);
+  function closePanel(){
+    open = false;
+    panel.classList.remove("open");
+  }
+  function togglePanel(){
+    if(open) closePanel(); else openPanel();
+  }
+  function startCreateTheme(){
+    const balance = getUnits();
+    if(balance < CUSTOM_THEME_PRICE){
+      showToast(`Not enough units — need ${CUSTOM_THEME_PRICE - balance} more`);
+      return;
+    }
+    const n = loadCustomThemes().filter(c => (c.name || "").indexOf("New theme") === 0).length;
+    const t = {
+      id: `custom-${Date.now()}`,
+      name: n === 0 ? "New theme" : "New theme " + (n + 1),
+      bg: "#121212",
+      accent: "#4f9d69",
+      card: "#1c1c1c",
+      border: "#2b2b2b",
+      custom: true
+    };
+    const customThemes = loadCustomThemes();
+    customThemes.push(t);
+    saveCustomThemes(customThemes);
+    const owned = loadOwnedThemes();
+    owned.push(t.id);
+    saveOwnedThemes(owned);
+    adminPendingCreate = { id: t.id, prevThemeId: localStorage.getItem(THEME_KEY) };
+    currentTheme = customThemeToTheme(t);
+    localStorage.setItem(THEME_KEY, t.id);
+    applyTheme(currentTheme);
+    closeShop();
+    const sview = document.getElementById("settingsView");
+    if(sview && sview.classList.contains("active")) closeSettings();
+    setShopEditMode(false);
+    sfx.click();
+    showPanel();
+  }
+  function confirmPanel(){
+    if(adminPendingCreate){
+      const id = adminPendingCreate.id;
+      const state = loadState();
+      state.units = Math.max(0, (state.units || 0) - CUSTOM_THEME_PRICE);
+      saveState(state);
+      renderLevelBar();
+      const rec = loadCustomThemes().find(c => c.id === id);
+      adminPendingCreate = null;
+      closePanel();
+      sfx.complete();
+      showToast(`${rec ? rec.name : "Theme"} created and equipped`);
+      return;
+    }
+    closePanel();
+  }
+  function cancelPanel(){
+    if(adminPendingCreate){
+      const id = adminPendingCreate.id;
+      saveCustomThemes(loadCustomThemes().filter(c => c.id !== id));
+      saveOwnedThemes(loadOwnedThemes().filter(o => o !== id));
+      try{
+        const store = load();
+        if(store && store[id]) delete store[id];
+        save(store || {});
+      }catch(e){}
+      const prevId = adminPendingCreate.prevThemeId;
+      adminPendingCreate = null;
+      if(prevId){
+        localStorage.setItem(THEME_KEY, prevId);
+        currentTheme = loadTheme();
+      }else{
+        localStorage.removeItem(THEME_KEY);
+        currentTheme = ACCENTS[0];
+      }
+      applyTheme(currentTheme);
+      closePanel();
+      sfx.click();
+      showToast("Theme creation cancelled");
+      return;
+    }
+    closePanel();
+  }
+  function resetProp(prop){
+    const store = load();
+    const key = themeKey();
+    if(store[key]){
+      delete store[key][prop];
+      if(Object.keys(store[key]).length === 0) delete store[key];
+    }
+    save(store);
+    applyTheme(currentTheme);
+    repopulate();
+  }
+  function applyOverrides(){
+    const store = load();
+    const o = store[themeKey()];
+    const root = document.documentElement;
+    const touched = new Set();
+    for(const k of Object.keys(store)){
+      for(const p of Object.keys(store[k])) touched.add(p);
+    }
+    for(const p of touched){
+      if(o && o[p] !== undefined) root.style.setProperty(p, o[p]);
+      else root.style.removeProperty(p);
+    }
+    if(open) repopulate();
+  }
+
+  imgSelect.addEventListener("change", () => {
+    const v = imgSelect.value;
+    if(v === "upload"){ imgFile.click(); repopulatePage3(); return; }
+    if(v === "none"){
+      setVal("--bg-image", "none");
+      setVal("--bg-image-opacity", "0");
+      repopulatePage3();
+      return;
+    }
+    setVal("--bg-image", `url("backdrops/${v}.jpeg")`);
+    ensureImageDefaults();
+    repopulatePage3();
+  });
+  imgFile.addEventListener("change", () => {
+    const f = imgFile.files && imgFile.files[0];
+    imgFile.value = "";
+    if(!f) return;
+    if(f.size > 2.5 * 1024 * 1024){ showToast("Image too large (max 2.5 MB)"); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      setVal("--bg-image", `url("${rd.result}")`);
+      ensureImageDefaults();
+      repopulatePage3();
+      showToast("Image applied");
+    };
+    rd.readAsDataURL(f);
+  });
+  imgOpacity.addEventListener("input", () => { setVal("--bg-image-opacity", String(imgOpacity.value)); imgOpacityVal.textContent = pct(imgOpacity.value); });
+  imgBlur.addEventListener("input", () => { setVal("--bg-image-blur", imgBlur.value + "px"); imgBlurVal.textContent = imgBlur.value + "px"; });
+  imgScrim.addEventListener("input", () => { setVal("--bg-image-scrim", `rgba(0,0,0,${imgScrim.value})`); imgScrimVal.textContent = pct(imgScrim.value); });
+  alphaBg.addEventListener("input", () => { setVal("--alpha-bg", String(alphaBg.value)); alphaBgVal.textContent = pct(alphaBg.value); });
+  alphaCard.addEventListener("input", () => { setVal("--alpha-card", String(alphaCard.value)); alphaCardVal.textContent = pct(alphaCard.value); });
+  alphaPanel.addEventListener("input", () => { setVal("--alpha-panel", String(alphaPanel.value)); alphaPanelVal.textContent = pct(alphaPanel.value); });
+
+  window.applyAdminOverrides = applyOverrides;
+  window.adminTogglePanel = togglePanel;
+  window.adminShowPanel = showPanel;
+  window.adminResetProp = resetProp;
+  window.adminRepopulate = repopulate;
+  window.adminCreateTheme = startCreateTheme;
+
+  document.getElementById("adminCloseBtn").addEventListener("click", cancelPanel);
+  document.getElementById("adminDoneBtn").addEventListener("click", confirmPanel);
+  document.getElementById("adminNext1").addEventListener("click", () => goPage(2));
+  document.getElementById("adminPrev2").addEventListener("click", () => goPage(1));
+  document.getElementById("adminNext2").addEventListener("click", () => goPage(3));
+  document.getElementById("adminPrev3").addEventListener("click", () => goPage(2));
+  initDrag();
+
+  applyOverrides();
+})();
+</script>
 
 </body>
 </html>
