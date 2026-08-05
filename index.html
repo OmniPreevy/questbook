@@ -2808,6 +2808,7 @@ function refundUnits(state, amount){
         }
         if(changed) localStorage.setItem("qb-admin-overrides", JSON.stringify(store));
       }catch(e){}
+      if(typeof window.adminClearUploads === "function"){ window.adminClearUploads(p.id); window.adminClearUploads("custom-" + p.id); }
     }
     if(localStorage.getItem(THEME_KEY) === p.id){
       localStorage.setItem(THEME_KEY, ACCENTS[0].id);
@@ -5917,6 +5918,9 @@ document.addEventListener("DOMContentLoaded", () => {
     else openSettings();
   });
   document.getElementById("settingsBackBtn").addEventListener("click", closeSettings);
+  document.getElementById("settingsView").addEventListener("click", (e) => {
+    if(e.target === e.currentTarget) closeSettings();
+  });
   document.getElementById("shopBackBtn").addEventListener("click", closeShop);
   const shopEditBtn = document.getElementById("shopEditBtn");
   if(shopEditBtn) shopEditBtn.addEventListener("click", toggleShopEditMode);
@@ -6330,6 +6334,9 @@ maybeAutoShowRetro();
   .admin-reset{flex:0 0 auto;width:26px;height:26px;border:1px solid #3a3a3a;background:#242424;color:#ccc;border-radius:5px;cursor:pointer;font-size:13px;line-height:1;padding:0;}
   .admin-reset:hover{color:#fff;border-color:#5a5a5a;}
   .admin-select{flex:1;min-width:0;background:#242424;border:1px solid #3a3a3a;color:#e8e8e8;border-radius:5px;padding:4px 6px;font:12px inherit;}
+  .admin-upload-btn{flex:0 0 auto;background:#2e2e2e;border:1px solid #3a3a3a;color:#e8e8e8;border-radius:5px;padding:4px 8px;font:12px inherit;cursor:pointer;}
+  .admin-upload-btn:hover{background:#3a3a3a;}
+  .admin-upload-btn:active{background:#242424;}
   .admin-range-row{display:flex;align-items:center;gap:8px;margin:7px 0;}
   .admin-range{flex:1;min-width:0;accent-color:#4fae57;}
   .admin-range-val{width:34px;flex:0 0 auto;text-align:right;color:#9a9a9a;font-size:10px;}
@@ -6378,10 +6385,10 @@ maybeAutoShowRetro();
           <option value="neon_pulse">Neon Pulse</option>
           <option value="pink_cyan_anime">Pink &amp; Cyan Anime</option>
           <option value="purple_sunset">Purple Sunset</option>
-          <option value="red_sportscar">Red Sportscar</option>
           <option value="red_sun_rooftop">Red Sun Rooftop</option>
-          <option value="upload">Upload image&#8230;</option>
+          <option value="custom" disabled>Custom upload</option>
         </select>
+        <button type="button" class="admin-upload-btn" id="adminImgUploadBtn">Upload…</button>
       </div>
       <div class="admin-note">Opacity / blur / darken apply to the image; transparency applies per UI surface.</div>
       <div class="admin-range-row">
@@ -6450,7 +6457,6 @@ maybeAutoShowRetro();
     neon_pulse: "neon_pulse.png",
     pink_cyan_anime: "pink_cyan_anime.jpg",
     purple_sunset: "purple_sunset.jpg",
-    red_sportscar: "red_sportscar.jpeg",
     red_sun_rooftop: "red_sun_rooftop.jpg"
   };
   const imgOpacity = document.getElementById("adminImgOpacity");
@@ -6537,6 +6543,65 @@ maybeAutoShowRetro();
     return {};
   }
   function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+  let imageObjectUrl = null;
+  function revokeImageUrl(){
+    if(imageObjectUrl){ try{ URL.revokeObjectURL(imageObjectUrl); }catch(e){} imageObjectUrl = null; }
+  }
+  function openBgImageDB(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open("qb-bg-images", 1);
+      req.onupgradeneeded = () => {
+        if(!req.result.objectStoreNames.contains("images")) req.result.createObjectStore("images");
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function dbPutImage(id, blob){
+    return openBgImageDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction("images", "readwrite");
+      tx.objectStore("images").put(blob, id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+  function dbGetImage(id){
+    return openBgImageDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction("images", "readonly");
+      const req = tx.objectStore("images").get(id);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+  function dbClearImages(prefix){
+    return openBgImageDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction("images", "readwrite");
+      const store = tx.objectStore("images");
+      const req = store.getAllKeys();
+      req.onsuccess = () => {
+        for(const k of req.result){
+          if(String(k).indexOf(prefix) === 0) store.delete(k);
+        }
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+  function resolveStoredImage(bgValue){
+    const m = bgValue && String(bgValue).match(/qbimg:\/\/([\w\-:.]+)/);
+    if(!m){ revokeImageUrl(); return; }
+    dbGetImage(m[1]).then(blob => {
+      if(!blob) return;
+      revokeImageUrl();
+      const url = URL.createObjectURL(blob);
+      imageObjectUrl = url;
+      document.documentElement.style.setProperty("--bg-image", `url("${url}")`);
+    }).catch(() => {});
+  }
+  function clearStoredUploads(key){
+    if(!key) return;
+    try{ dbClearImages("bg_" + key + "_"); }catch(e){}
+  }
   function toHex(v){
     if(typeof v !== "string") return "#000000";
     v = v.trim();
@@ -6563,6 +6628,7 @@ maybeAutoShowRetro();
     }
   }
   function setVal(prop, value){
+    if(prop === "--bg-image" && String(value).indexOf("qbimg://") === -1) revokeImageUrl();
     const store = load();
     const key = themeKey();
     if(!store[key]) store[key] = {};
@@ -6621,7 +6687,7 @@ maybeAutoShowRetro();
     if(!img || img === "none") imgSelect.value = "none";
     else{
       const hit = Object.keys(BACKDROP_FILES).find(k => img.indexOf("backdrops/" + BACKDROP_FILES[k]) !== -1);
-      imgSelect.value = hit || "upload";
+      imgSelect.value = hit || "custom";
     }
     imgOpacity.value = parseFloat(cs.getPropertyValue("--bg-image-opacity")) || 0;
     imgOpacityVal.textContent = pct(imgOpacity.value);
@@ -6740,6 +6806,7 @@ maybeAutoShowRetro();
       const id = adminPendingCreate.id;
       saveCustomThemes(loadCustomThemes().filter(c => c.id !== id));
       saveOwnedThemes(loadOwnedThemes().filter(o => o !== id));
+      clearStoredUploads(id);
       try{
         const store = load();
         if(store && store[id]) delete store[id];
@@ -6763,6 +6830,7 @@ maybeAutoShowRetro();
     closePanel();
   }
   function resetProp(prop){
+    if(prop === "--bg-image") clearStoredUploads(themeKey());
     const store = load();
     const key = themeKey();
     if(store[key]){
@@ -6785,12 +6853,13 @@ maybeAutoShowRetro();
       if(o && o[p] !== undefined) root.style.setProperty(p, o[p]);
       else root.style.removeProperty(p);
     }
+    resolveStoredImage(o && o["--bg-image"]);
     if(open) repopulate();
   }
 
   imgSelect.addEventListener("change", () => {
     const v = imgSelect.value;
-    if(v === "upload"){ imgFile.click(); repopulatePage3(); return; }
+    clearStoredUploads(themeKey());
     if(v === "none"){
       setVal("--bg-image", "none");
       setVal("--bg-image-opacity", "0");
@@ -6801,19 +6870,23 @@ maybeAutoShowRetro();
     ensureImageDefaults();
     repopulatePage3();
   });
+  const imgUploadBtn = document.getElementById("adminImgUploadBtn");
+  imgUploadBtn.addEventListener("click", () => imgFile.click());
   imgFile.addEventListener("change", () => {
     const f = imgFile.files && imgFile.files[0];
     imgFile.value = "";
     if(!f) return;
-    if(f.size > 2.5 * 1024 * 1024){ showToast("Image too large (max 2.5 MB)"); return; }
-    const rd = new FileReader();
-    rd.onload = () => {
-      setVal("--bg-image", `url("${rd.result}")`);
-      ensureImageDefaults();
-      repopulatePage3();
-      showToast("Image applied");
-    };
-    rd.readAsDataURL(f);
+    if(f.size > 50 * 1024 * 1024){ showToast("Image too large (max 50 MB)"); return; }
+    const prefix = "bg_" + themeKey() + "_";
+    dbClearImages(prefix).then(() => {
+      const id = prefix + Date.now();
+      return dbPutImage(id, f).then(() => {
+        setVal("--bg-image", `qbimg://${id}`);
+        ensureImageDefaults();
+        repopulatePage3();
+        showToast("Image applied");
+      });
+    }).catch(() => showToast("Couldn't save image"));
   });
   imgOpacity.addEventListener("input", () => { setVal("--bg-image-opacity", String(imgOpacity.value)); imgOpacityVal.textContent = pct(imgOpacity.value); });
   imgBlur.addEventListener("input", () => { setVal("--bg-image-blur", imgBlur.value + "px"); imgBlurVal.textContent = imgBlur.value + "px"; });
@@ -6828,6 +6901,7 @@ maybeAutoShowRetro();
   window.adminResetProp = resetProp;
   window.adminRepopulate = repopulate;
   window.adminCreateTheme = startCreateTheme;
+  window.adminClearUploads = clearStoredUploads;
 
   document.getElementById("adminCloseBtn").addEventListener("click", cancelPanel);
   document.getElementById("adminDoneBtn").addEventListener("click", confirmPanel);
