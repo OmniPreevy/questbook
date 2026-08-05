@@ -170,6 +170,31 @@
     position:relative;
     z-index:2;
   }
+  .page-flourish{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:2;
+  }
+  .page-flourish::before,
+  .page-flourish::after{
+    content:"";
+    position:absolute;
+    top:14px;bottom:14px;
+    width:1px;
+    background:linear-gradient(to bottom,
+      transparent,
+      color-mix(in srgb, var(--border) 70%, transparent) 15%,
+      color-mix(in srgb, var(--border) 70%, transparent) 85%,
+      transparent);
+    opacity:.55;
+  }
+  .page-flourish::before{
+    left:max(4px, calc(50% - min(240px, calc(50vw - 16px)) - 10px));
+  }
+  .page-flourish::after{
+    right:max(4px, calc(50% - min(240px, calc(50vw - 16px)) - 10px));
+  }
   /* Per-surface transparency (admin page 3). Defaults are fully opaque = no visual change. */
   html{
     background:color-mix(in srgb, var(--bg) calc(var(--alpha-bg,1)*100%), transparent);
@@ -2181,6 +2206,8 @@
 </style>
 </head>
 <body>
+
+<div class="page-flourish" aria-hidden="true"></div>
 
 <div class="app-main">
 <h1><span class="drop-cap">Q</span>uest <span class="drop-cap">B</span>ook</h1>
