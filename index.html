@@ -4940,13 +4940,21 @@ function addTestQuest(){
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("testQuestBtn").addEventListener("click", addTestQuest);
 });
+let admin = false;
 document.addEventListener("keydown", (e) => {
   const tag = e.target && e.target.tagName;
   if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
   if(e.key.toLowerCase() === "m"){
+    admin = !admin;
     const btn = document.getElementById("testQuestBtn");
-    if(btn) btn.style.display = (btn.style.display === "none") ? "" : "none";
-    if(typeof adminTogglePanel === "function") adminTogglePanel();
+    if(admin){
+      if(btn) btn.style.display = "";
+      if(typeof adminShowPanel === "function") adminShowPanel();
+    } else {
+      if(btn) btn.style.display = "none";
+      const panel = document.getElementById("adminPanel");
+      if(panel && panel.classList.contains("open") && typeof adminTogglePanel === "function") adminTogglePanel();
+    }
   }
 });
 
