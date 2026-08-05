@@ -4881,7 +4881,15 @@ document.addEventListener("keydown", (e) => {
   const tag = e.target && e.target.tagName;
   if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
   if(e.key.toLowerCase() === "m"){
-    if(typeof adminTogglePanel === "function") adminTogglePanel();
+    const settingsOpen = document.getElementById("settingsView").classList.contains("active");
+    const adminOpen = document.getElementById("adminPanel").classList.contains("open");
+    if(settingsOpen || adminOpen){
+      if(settingsOpen) closeSettings();
+      if(adminOpen && typeof adminTogglePanel === "function") adminTogglePanel();
+    } else {
+      openSettings();
+      if(typeof adminShowPanel === "function") adminShowPanel();
+    }
   }
 });
 
