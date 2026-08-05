@@ -175,7 +175,7 @@
     background:color-mix(in srgb, var(--bg) calc(var(--alpha-bg,1)*100%), transparent);
   }
   .task-wrap{
-    background:color-mix(in srgb, var(--bg) calc(var(--alpha-bg,1)*100%), transparent) !important;
+    background:transparent !important;
   }
   .task, .task-wrap .task, .swipe-toast, .hidden-row, .cal-cell, .cal-arrow-cell,
   .month-nav-btn, .month-cell:not(.other-month), .event-row, .event-bring, .levelbar,
@@ -413,6 +413,10 @@
   .task-wrap.hint-hide .swipe-hint{opacity:1;}
   .task-wrap.hint-del .swipe-hint-hide,
   .task-wrap.hint-hide .swipe-hint-del{display:none;}
+  .task-wrap.hint-del .task,
+  .task-wrap.hint-hide .task{
+    background:var(--card) !important;
+  }
 
   /* ---- toast over the week strip ---- */
   .swipe-toast{
