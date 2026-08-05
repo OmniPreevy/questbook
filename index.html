@@ -2759,7 +2759,7 @@ function addXp(amount){
   const after = getLevelInfo(state.xp).level;
   // Each level-up banks one unit (the hexagon balance); falling levels refund it.
   if(after > before) state.units = (state.units || 0) + (after - before);
-  else if(after < before) state.units = Math.max(0, (state.units || 0) - (before - after));
+  else if(after < before) refundUnits(state, before - after);
   saveState(state);
 
   if(after > before){
@@ -2771,6 +2771,49 @@ function addXp(amount){
     renderLevelBar();
   }
   return after > before; // callers can skip a smaller chime if the big level-up fanfare already played
+}
+
+function refundUnits(state, amount){
+  // Pay a de-level cost back from the unit balance. If the balance can't cover
+  // it, walk purchases back (newest first) until it can — the spent units come
+  // out of the bought themes instead of silently dropping the balance to zero.
+  let units = state.units || 0;
+  if(amount <= 0 || units >= amount){
+    state.units = Math.max(0, units - amount);
+    return;
+  }
+  const purchases = loadPurchases();
+  const refunded = [];
+  while(units < amount && purchases.length){
+    const p = purchases.pop();
+    units += p.price;
+    refunded.push(p);
+    saveOwnedThemes(loadOwnedThemes().filter(o => o !== p.id));
+    if(p.kind === "custom"){
+      saveCustomThemes(loadCustomThemes().filter(c => c.id !== p.id));
+      try{
+        const store = JSON.parse(localStorage.getItem("qb-admin-overrides")) || {};
+        let changed = false;
+        for(const k of [p.id, "custom-" + p.id]){
+          if(store[k]){ delete store[k]; changed = true; }
+        }
+        if(changed) localStorage.setItem("qb-admin-overrides", JSON.stringify(store));
+      }catch(e){}
+    }
+    if(localStorage.getItem(THEME_KEY) === p.id){
+      localStorage.setItem(THEME_KEY, ACCENTS[0].id);
+      currentTheme = ACCENTS[0];
+      applyTheme(currentTheme);
+    }
+  }
+  savePurchases(purchases);
+  state.units = Math.max(0, units - amount);
+  if(refunded.length){
+    if(typeof renderShop === "function") renderShop();
+    if(typeof renderThemeSwatches === "function") renderThemeSwatches();
+    const total = refunded.reduce((sum, r) => sum + r.price, 0);
+    showToast(`Not enough units to refund XP — ${refunded.map(r => r.name).join(", ")} refunded (+${total} ◇)`);
+  }
 }
 
 function getUnits(){
@@ -3860,7 +3903,14 @@ function saveEdit(){
 
     const wc = parseInt(document.getElementById("editWeekCount").value, 10);
     const weekCountSource = !isNaN(wc) ? wc : t.weekCount;
+    const prevWeekCount = t.weekCount;
     t.weekCount = Math.max(0, Math.min(weekCountSource, t.perWeek));
+    // Keep total XP in step with the manual weekly count: each completed day
+    // is worth (per-day target x quest reward) XP, same as ticking the box.
+    const weekDelta = t.weekCount - prevWeekCount;
+    if(weekDelta !== 0){
+      addXp(weekDelta * t.perDay * xpReward(t));
+    }
 
     const wrRaw = document.getElementById("editWeekReset").value;
     t.weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
@@ -5504,6 +5554,24 @@ function loadCustomThemes(){
 function saveCustomThemes(arr){
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(arr));
 }
+// Ordered log of paid purchases so de-levels can walk back the most recent
+// purchase when the unit balance can't cover the refund on its own.
+const PURCHASES_KEY = "checklist_purchases_v1";
+function loadPurchases(){
+  try{
+    const v = JSON.parse(localStorage.getItem(PURCHASES_KEY));
+    if(Array.isArray(v)) return v;
+  }catch(e){}
+  return [];
+}
+function savePurchases(arr){
+  localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr));
+}
+function logPurchase(p){
+  const arr = loadPurchases();
+  arr.push(p);
+  savePurchases(arr);
+}
 function customThemeToTheme(t){
   return {
     id: t.id,
@@ -5783,6 +5851,7 @@ function buyTheme(t){
       const owned = loadOwnedThemes();
       owned.push(t.id);
       saveOwnedThemes(owned);
+      logPurchase({ id: t.id, name: t.name, price: t.price, kind: "shop", ts: Date.now() });
       currentTheme = paidThemeToTheme(t);
       localStorage.setItem(THEME_KEY, t.id);
       applyTheme(currentTheme);
@@ -6617,11 +6686,12 @@ maybeAutoShowRetro();
   function confirmPanel(){
     if(adminPendingCreate){
       const id = adminPendingCreate.id;
+      const rec = loadCustomThemes().find(c => c.id === id);
       const state = loadState();
       state.units = Math.max(0, (state.units || 0) - CUSTOM_THEME_PRICE);
       saveState(state);
       renderLevelBar();
-      const rec = loadCustomThemes().find(c => c.id === id);
+      logPurchase({ id: id, name: rec ? rec.name : "Custom theme", price: CUSTOM_THEME_PRICE, kind: "custom", ts: Date.now() });
       adminPendingCreate = null;
       closePanel();
       sfx.complete();
