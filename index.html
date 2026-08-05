@@ -1011,6 +1011,39 @@
     background:var(--accent);
     color:#0d0d0d;
   }
+  .trash-card{max-width:420px;}
+  .trash-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .trash-head .modal-title{margin-bottom:0;}
+  .trash-empty-btn{
+    flex:0 0 auto;
+    background:none;
+    border:1px solid var(--danger);
+    border-radius:8px;
+    padding:6px 12px;
+    color:var(--danger);
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .trash-empty-btn:hover{background:color-mix(in srgb, var(--danger) 18%, transparent);}
+  .trash-list{max-height:50vh;overflow-y:auto;}
+  .trash-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+  .trash-row .info{flex:1;min-width:0;cursor:default;}
+  .trash-row .deleted-at{font-size:12px;color:var(--dim);margin-top:2px;}
 
   /* ---- task notes / detail page ---- */
   .detail-view{
@@ -2213,6 +2246,7 @@
 <div class="backup-row">
   <button type="button" id="retroBtn" class="backup-btn">Last week's retro</button>
   <button type="button" id="testQuestBtn" class="backup-btn" style="display:none;" title="Temporary: create a lorem ipsum test quest">Lorem quest</button>
+  <button type="button" id="trashBtn" class="backup-btn" title="Recently deleted quests">🗑 <span id="trashCount" style="display:none;"></span></button>
   <button type="button" id="settingsBtn" class="backup-btn backup-right" title="Settings">⚙ Settings</button>
   <input type="file" id="importFile" accept="application/json" style="display:none;">
 </div>
@@ -2277,6 +2311,20 @@
     <div class="modal-actions">
       <button type="button" class="modal-btn secondary" id="confirmCancel">Cancel</button>
       <button type="button" class="modal-btn primary" id="confirmDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="trashOverlay">
+  <div class="modal-card trash-card">
+    <div class="trash-head">
+      <div class="modal-title">Recently deleted</div>
+      <button type="button" class="trash-empty-btn" id="trashEmptyBtn">Empty</button>
+    </div>
+    <div class="trash-list" id="trashList"></div>
+    <div class="empty" id="trashEmptyMsg" style="display:none;">Nothing deleted yet.</div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="trashCloseBtn">Close</button>
     </div>
   </div>
 </div>
@@ -3203,7 +3251,10 @@ function closeConfirm(){
 }
 
 function doDeleteQuest(taskId){
-  saveTasks(normalize(loadTasks()).filter(x => x.id !== taskId));
+  const tasks = normalize(loadTasks());
+  const t = tasks.find(x => x.id === taskId);
+  if(t) pushToTrash(t);
+  saveTasks(tasks.filter(x => x.id !== taskId));
   sfx.del();
   render();
   if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
@@ -3220,6 +3271,71 @@ function deleteQuest(taskId){
   document.getElementById("confirmDelete").style.color = "#fff";
   pendingDelete = () => doDeleteQuest(taskId);
   openConfirmDelete();
+}
+
+function openTrash(){
+  renderTrashList();
+  document.getElementById("trashOverlay").classList.add("active");
+}
+function closeTrash(){
+  document.getElementById("trashOverlay").classList.remove("active");
+}
+function renderTrashList(){
+  const list = loadTrash();
+  const listEl = document.getElementById("trashList");
+  const empty = document.getElementById("trashEmptyMsg");
+  listEl.innerHTML = "";
+  if(list.length === 0){
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  list.forEach((entry, i) => {
+    const t = entry.task || {};
+    const row = document.createElement("div");
+    row.className = "trash-row";
+    const info = document.createElement("div");
+    info.className = "info";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = t.name || "Unnamed quest";
+    const meta = document.createElement("div");
+    meta.className = "deleted-at";
+    meta.textContent = "deleted " + new Date(entry.deletedAt).toLocaleDateString();
+    info.appendChild(name);
+    info.appendChild(meta);
+    const restore = document.createElement("button");
+    restore.className = "del";
+    restore.textContent = "↺";
+    restore.title = "Restore quest";
+    restore.onclick = () => restoreFromTrash(i);
+    row.appendChild(info);
+    row.appendChild(restore);
+    listEl.appendChild(row);
+  });
+}
+function restoreFromTrash(i){
+  const list = loadTrash();
+  if(!list[i]) return;
+  const t = list[i].task;
+  list.splice(i, 1);
+  const tasks = loadTasks();
+  if(t && !tasks.some(x => x.id === t.id)) tasks.push(t);
+  saveTasks(tasks);
+  saveTrash(list);
+  sfx.pop();
+  render();
+  renderTrashList();
+  if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+  if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+}
+function emptyTrash(){
+  const list = loadTrash();
+  if(list.length === 0) return;
+  saveTrash([]);
+  sfx.del();
+  renderTrashList();
+  showSwipeToast("trash emptied");
 }
 
 function hideQuestSwipe(taskId){
@@ -4144,6 +4260,28 @@ function saveTasks(tasks){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
+const TRASH_KEY = "qb_recent_deleted";
+const TRASH_LIMIT = 20;
+function loadTrash(){
+  try{ return JSON.parse(localStorage.getItem(TRASH_KEY)) || []; }catch(e){ return []; }
+}
+function saveTrash(list){
+  localStorage.setItem(TRASH_KEY, JSON.stringify(list));
+  updateTrashBtn(list);
+}
+function pushToTrash(task){
+  const list = loadTrash();
+  list.unshift({ deletedAt: Date.now(), task });
+  saveTrash(list.slice(0, TRASH_LIMIT));
+}
+function updateTrashBtn(list){
+  const btn = document.getElementById("trashCount");
+  if(!btn) return;
+  const n = list ? list.length : loadTrash().length;
+  btn.style.display = n ? "" : "none";
+  btn.textContent = n;
+}
+
 const ONE_TIME_LINGER_MS = 5 * 60 * 60 * 1000; // one-time quests vanish 5 hours after being checked off
 
 function normalize(tasks){
@@ -4333,6 +4471,7 @@ function render(){
   list.innerHTML = "";
 
   updateHiddenBtn(tasks);
+  updateTrashBtn();
   updateAutoHideBtn();
   const autoHide = autoHideDoneEnabled();
   const now = Date.now();
@@ -4740,6 +4879,12 @@ document.addEventListener("DOMContentLoaded", () => {
       closeConfirm();
       render();
     }
+  });
+  document.getElementById("trashBtn").addEventListener("click", openTrash);
+  document.getElementById("trashCloseBtn").addEventListener("click", closeTrash);
+  document.getElementById("trashEmptyBtn").addEventListener("click", emptyTrash);
+  document.getElementById("trashOverlay").addEventListener("click", (e) => {
+    if(e.target === e.currentTarget) closeTrash();
   });
   document.getElementById("ntCancel").addEventListener("click", closeNewTaskView);
   document.getElementById("ntCreate").addEventListener("click", createNewTask);
