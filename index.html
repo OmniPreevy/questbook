@@ -4553,6 +4553,7 @@ function collapseQuestList(){
   expandBtn.innerHTML = `<span class="chev">▾</span> Show ${wraps.length - QUEST_COLLAPSE_LIMIT} more`;
   if(out.length === 0){ render(); return; }
   let collapseDone = false;
+  let finishedCount = 0;
   const finish = () => {
     if(collapseDone) return;
     collapseDone = true;
@@ -4562,9 +4563,12 @@ function collapseQuestList(){
     w.classList.remove("qb-row-in");
     w.classList.add("qb-row-out");
     w.style.animationDelay = ((out.length - 1 - i) * 45) + "ms";
-    w.addEventListener("animationend", finish, { once:true });
+    w.addEventListener("animationend", () => {
+      finishedCount++;
+      if(finishedCount >= out.length) finish();
+    }, { once:true });
   });
-  setTimeout(finish, out.length * 45 + 450);
+  setTimeout(finish, (out.length - 1) * 45 + 400);
 }
 
 /* ---------------- New quest (add task) view ---------------- */
