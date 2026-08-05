@@ -128,7 +128,7 @@
       radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-gutter:stable;}
   html,body{
     margin:0;padding:0;
     background:var(--bg);
@@ -321,6 +321,13 @@
   @keyframes qbRowIn{
     from{opacity:0; max-height:0; transform:translateY(-10px);}
     to{opacity:1; max-height:200px; transform:translateY(0);}
+  }
+  .task-wrap.qb-row-out{
+    animation:qbRowOut .3s ease-in forwards;
+  }
+  @keyframes qbRowOut{
+    from{opacity:1; max-height:200px; transform:translateY(0);}
+    to{opacity:0; max-height:0; transform:translateY(-10px);}
   }
 
   /* ---- swipeable quest rows ----
@@ -4538,6 +4545,28 @@ function render(){
   }
 }
 
+function collapseQuestList(){
+  const wraps = Array.from(document.querySelectorAll("#list .task-wrap"));
+  const out = wraps.slice(QUEST_COLLAPSE_LIMIT);
+  const expandBtn = document.getElementById("listExpandBtn");
+  expandBtn.classList.remove("expanded");
+  expandBtn.innerHTML = `<span class="chev">▾</span> Show ${wraps.length - QUEST_COLLAPSE_LIMIT} more`;
+  if(out.length === 0){ render(); return; }
+  let collapseDone = false;
+  const finish = () => {
+    if(collapseDone) return;
+    collapseDone = true;
+    render();
+  };
+  out.forEach((w, i) => {
+    w.classList.remove("qb-row-in");
+    w.classList.add("qb-row-out");
+    w.style.animationDelay = ((out.length - 1 - i) * 45) + "ms";
+    w.addEventListener("animationend", finish, { once:true });
+  });
+  setTimeout(finish, out.length * 45 + 450);
+}
+
 /* ---------------- New quest (add task) view ---------------- */
 let ntPriority = 3;
 let ntPerDay = 1;
@@ -4652,9 +4681,14 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("listExpandBtn").addEventListener("click", () => {
-    questListExpanded = !questListExpanded;
-    expandAnimating = questListExpanded;
-    render();
+    if(questListExpanded){
+      questListExpanded = false;
+      collapseQuestList();
+    } else {
+      questListExpanded = true;
+      expandAnimating = true;
+      render();
+    }
   });
   document.getElementById("autoHideBtn").addEventListener("click", toggleAutoHideDone);
   updateAutoHideBtn();
