@@ -315,6 +315,13 @@
   .list-expand-btn.expanded .chev{
     transform:rotate(180deg);
   }
+  .task-wrap.qb-row-in{
+    animation:qbRowIn .38s ease-out backwards;
+  }
+  @keyframes qbRowIn{
+    from{opacity:0; max-height:0; transform:translateY(-10px);}
+    to{opacity:1; max-height:200px; transform:translateY(0);}
+  }
 
   /* ---- swipeable quest rows ----
      The card slides over tinted hint layers: dragging right reveals
@@ -4281,6 +4288,7 @@ function moveTask(taskId, direction){
 
 const QUEST_COLLAPSE_LIMIT = 3;
 let questListExpanded = false;
+let expandAnimating = false;
 
 function render(){
   let tasks = normalize(loadTasks());
@@ -4315,6 +4323,8 @@ function render(){
 
   const sorted = getSortedTasks(visible);
   const shouldCollapse = !questListExpanded && sorted.length > QUEST_COLLAPSE_LIMIT;
+  const expanding = expandAnimating && !shouldCollapse;
+  expandAnimating = false;
 
   sorted.forEach((task, idx) => {
     const weekDone = !task.oneTime && task.weekCount >= task.perWeek;
@@ -4497,6 +4507,10 @@ function render(){
     if(!shouldCollapse || idx < QUEST_COLLAPSE_LIMIT){
       const wrap = document.createElement("div");
       wrap.className = "task-wrap";
+      if(expanding && idx >= QUEST_COLLAPSE_LIMIT){
+        wrap.classList.add("qb-row-in");
+        wrap.style.animationDelay = ((idx - QUEST_COLLAPSE_LIMIT) * 45) + "ms";
+      }
       const delHint = document.createElement("div");
       delHint.className = "swipe-hint swipe-hint-del";
       delHint.textContent = "Delete";
@@ -4639,6 +4653,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("listExpandBtn").addEventListener("click", () => {
     questListExpanded = !questListExpanded;
+    expandAnimating = questListExpanded;
     render();
   });
   document.getElementById("autoHideBtn").addEventListener("click", toggleAutoHideDone);
