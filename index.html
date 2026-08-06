@@ -3384,7 +3384,11 @@ function showSwipeToast(text){
 function updateHiddenBtn(tasks){
   const btn = document.getElementById("hiddenBtn");
   const count = document.getElementById("hiddenCount");
-  const n = tasks.filter(t => t.hiddenUntil).length;
+  const now = Date.now();
+  const finished = autoHideDoneEnabled()
+    ? tasks.filter(t => !t.hiddenUntil && isCheckedOff(t) && now - (t.lastCheckedAt || 0) >= DONE_SETTLE_MS)
+    : [];
+  const n = tasks.filter(t => t.hiddenUntil).length + finished.length;
   btn.classList.toggle("show", n > 0);
   if(count) count.textContent = n;
 }
@@ -3522,6 +3526,29 @@ function clearFabPos(){
   if(fab && fab.style.left) fab.style.left = "";
   if(pop && pop.style.left) pop.style.left = "";
 }
+
+// On narrow screens (mobile browser zoom) "Quest Book" can wrap onto two lines.
+// Keep it on one line and shrink the font until it fits beside the level HUD.
+let fitTitleTimer = null;
+function fitTitle(){
+  clearTimeout(fitTitleTimer);
+  fitTitleTimer = setTimeout(() => {
+    const h = document.querySelector("h1");
+    if(!h) return;
+    h.style.whiteSpace = "nowrap";
+    h.style.fontSize = "";
+    const base = parseFloat(getComputedStyle(h).fontSize);
+    if(h.scrollWidth <= h.clientWidth) return;
+    let size = base;
+    while(size > 12 && h.scrollWidth > h.clientWidth){
+      size -= 0.5;
+      h.style.fontSize = size + "px";
+    }
+  }, 120);
+}
+window.addEventListener("resize", fitTitle);
+document.addEventListener("DOMContentLoaded", fitTitle);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 window.addEventListener("resize", () => {
   if(window.innerWidth < 1024){
     clearFabPos();
@@ -4034,6 +4061,7 @@ function openEdit(taskId){
   const t = tasks.find(x => x.id === taskId);
   if(!t) return;
   editingTaskId = taskId;
+  updateWeekResetLabels();
 
   document.getElementById("editName").value = t.name;
   document.getElementById("editPriority").value = t.priority;
@@ -4147,6 +4175,26 @@ function weekStrFor(day, d = new Date()){
   const off = (date.getDay() + 7 - anchor) % 7; // 0 = reset day
   date.setDate(date.getDate() - off);
   return todayStr(date);
+}
+// Days until each weekday (0=Sun..6=Sat) from today: "tomorrow", "in 2 days", etc.
+function daysUntilWeekday(day, d = new Date()){
+  const today = d.getDay(); // 0=Sun..6=Sat
+  const diff = ((day - today) % 7 + 7) % 7;
+  if(diff === 0) return "today";
+  if(diff === 1) return "tomorrow";
+  return `in ${diff} days`;
+}
+function updateWeekResetLabels(d = new Date()){
+  const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  ["ntWeekReset", "editWeekReset"].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.querySelectorAll("option").forEach(opt => {
+      if(opt.value === ""){ opt.textContent = "Default (Monday)"; return; }
+      const day = parseInt(opt.value, 10);
+      opt.textContent = `${names[day]} (${daysUntilWeekday(day, d)})`;
+    });
+  });
 }
 function monthStr(d = new Date()){
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -4798,6 +4846,7 @@ function setNtPriority(p){
 
 function openNewTaskView(){
   resetNewTaskForm();
+  updateWeekResetLabels();
   document.getElementById("newTaskView").classList.add("active");
 }
 function closeNewTaskView(){
