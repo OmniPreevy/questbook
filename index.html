@@ -229,6 +229,7 @@
     padding-bottom:22px;
     max-width:calc(100% - 137px);
     color:#f0f0f0;
+    text-shadow:0 2px 6px rgba(0,0,0,.7);
   }
   h1 .drop-cap{
     font-family:'Cinzel Decorative', 'Cinzel', Georgia, serif;
@@ -296,7 +297,7 @@
   .task.week-done .box{background:var(--dim);border-color:var(--dim);cursor:default;}
 
   .info{flex:1;min-width:0;cursor:pointer;}
-  .name{font-size:15px;font-weight:500;}
+  .name{font-size:15px;font-weight:500;text-shadow:0 1px 3px rgba(0,0,0,.65);}
   .task.done .name{text-decoration:line-through;color:var(--dim);}
   .meta{font-size:12px;color:var(--dim);margin-top:2px;}
 
@@ -423,6 +424,44 @@
     will-change:transform;
     background:var(--card);
   }
+  .task-wrap.hint-del .task,
+  .task-wrap.hint-hide .task{
+    background:var(--card) !important;
+  }
+  .task-wrap .task{z-index:2;}
+  /* ---- swipe overlay ----
+     While a card is swiped, two horizontal lines clamp the row and the strip
+     between them greys out. Swiping right (delete) drives the strip from grey
+     to red and fades in ✕ marks; swiping left (hide) stacks "////" lines one
+     by one from the top line downward. Progress 0..1 rides on --del-prog /
+     --hide-prog so the effect scales with finger distance. */
+  .swipe-ovl{
+    position:absolute;
+    inset:0;
+    z-index:3;
+    border-radius:10px;
+    pointer-events:none;
+    overflow:hidden;
+    opacity:0;
+    transition:opacity .12s ease;
+  }
+  .task-wrap.hint-del .swipe-ovl,
+  .task-wrap.hint-hide .swipe-ovl{opacity:1;}
+  .swipe-line-top,
+  .swipe-line-bottom{
+    position:absolute;
+    left:0;right:0;
+    height:2px;
+    background:color-mix(in srgb, var(--dim) calc((1 - var(--del-prog,0)) * 100%), var(--danger));
+    opacity:0;
+    transition:opacity .12s ease;
+  }
+  .swipe-line-top{top:0;}
+  .swipe-line-bottom{bottom:0;}
+  .task-wrap.hint-del .swipe-line-top,
+  .task-wrap.hint-del .swipe-line-bottom,
+  .task-wrap.hint-hide .swipe-line-top,
+  .task-wrap.hint-hide .swipe-line-bottom{opacity:1;}
   .swipe-hint{
     position:absolute;
     inset:0;
@@ -434,6 +473,7 @@
     pointer-events:none;
     opacity:0;
     transition:opacity .15s ease;
+    z-index:4;
   }
   .swipe-hint-del{
     justify-content:flex-start;
@@ -451,10 +491,93 @@
   .task-wrap.hint-hide .swipe-hint{opacity:1;}
   .task-wrap.hint-del .swipe-hint-hide,
   .task-wrap.hint-hide .swipe-hint-del{display:none;}
-  .task-wrap.hint-del .task,
-  .task-wrap.hint-hide .task{
-    background:var(--card) !important;
+  .swipe-band{
+    position:absolute;
+    top:2px;bottom:2px;
+    left:0;right:0;
+    background:color-mix(in srgb, rgba(128,128,128,.35) calc((1 - var(--del-prog,0)) * 100%), rgba(181,80,79,.42));
+    transition:background .05s linear;
   }
+  /* Hide-swipe slashes — one horizontal row that lights up outward from the
+     middle as the swipe progresses */
+  .swipe-marks-slash{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .swipe-marks-slash span{
+    position:absolute;
+    top:48%;
+    width:8%;
+    height:2px;
+    background:var(--dim);
+    transform:rotate(-45deg);
+    transform-origin:center;
+    opacity:0;
+  }
+  /* One horizontal row of slashes. The center one is number 0 and appears
+     first; the slashes directly to its right and left are 1, then the next
+     ones out are 2, 3, 4 — so lines light up outward from the middle as the
+     swipe progresses. */
+  .swipe-marks-slash span:nth-child(1){left:50%;}
+  .swipe-marks-slash span:nth-child(2){left:40%;}
+  .swipe-marks-slash span:nth-child(3){left:60%;}
+  .swipe-marks-slash span:nth-child(4){left:30%;}
+  .swipe-marks-slash span:nth-child(5){left:70%;}
+  .swipe-marks-slash span:nth-child(6){left:20%;}
+  .swipe-marks-slash span:nth-child(7){left:80%;}
+  .swipe-marks-slash span:nth-child(8){left:10%;}
+  .swipe-marks-slash span:nth-child(9){left:90%;}
+  .swipe-marks-slash span:nth-child(1){opacity:clamp(0, calc((var(--hide-prog,0) - .02) * 4.5), 1);}
+  .swipe-marks-slash span:nth-child(2),
+  .swipe-marks-slash span:nth-child(3){opacity:clamp(0, calc((var(--hide-prog,0) - .13) * 4.5), 1);}
+  .swipe-marks-slash span:nth-child(4),
+  .swipe-marks-slash span:nth-child(5){opacity:clamp(0, calc((var(--hide-prog,0) - .24) * 4.5), 1);}
+  .swipe-marks-slash span:nth-child(6),
+  .swipe-marks-slash span:nth-child(7){opacity:clamp(0, calc((var(--hide-prog,0) - .35) * 4.5), 1);}
+  .swipe-marks-slash span:nth-child(8),
+  .swipe-marks-slash span:nth-child(9){opacity:clamp(0, calc((var(--hide-prog,0) - .46) * 4.5), 1);}
+
+  /* Delete-swipe slashes — same outward-from-the-middle row, driven by the
+     delete progress and sitting on the right side of the card */
+  .swipe-marks-slash-del{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .swipe-marks-slash-del span{
+    position:absolute;
+    top:48%;
+    width:8%;
+    height:2px;
+    background:color-mix(in srgb, var(--dim) calc((1 - var(--del-prog,0)) * 100%), var(--danger));
+    transform:rotate(45deg);
+    transform-origin:center;
+    opacity:0;
+  }
+  /* mirrored from the hide row: the hide slashes are 8% wide with left:50%, so
+     their stroke sits at 54% (4% right of center); these shift the row so each
+     slash's stroke sits at 46% (4% left of center) and flip to "\" */
+  .swipe-marks-slash-del span:nth-child(1){left:42%;}
+  .swipe-marks-slash-del span:nth-child(2){left:32%;}
+  .swipe-marks-slash-del span:nth-child(3){left:52%;}
+  .swipe-marks-slash-del span:nth-child(4){left:22%;}
+  .swipe-marks-slash-del span:nth-child(5){left:62%;}
+  .swipe-marks-slash-del span:nth-child(6){left:12%;}
+  .swipe-marks-slash-del span:nth-child(7){left:72%;}
+  .swipe-marks-slash-del span:nth-child(8){left:2%;}
+  .swipe-marks-slash-del span:nth-child(9){left:82%;}
+  .swipe-marks-slash-del span:nth-child(1){opacity:clamp(0, calc((var(--del-prog,0) - .02) * 4.5), 1);}
+  .swipe-marks-slash-del span:nth-child(2),
+  .swipe-marks-slash-del span:nth-child(3){opacity:clamp(0, calc((var(--del-prog,0) - .13) * 4.5), 1);}
+  .swipe-marks-slash-del span:nth-child(4),
+  .swipe-marks-slash-del span:nth-child(5){opacity:clamp(0, calc((var(--del-prog,0) - .24) * 4.5), 1);}
+  .swipe-marks-slash-del span:nth-child(6),
+  .swipe-marks-slash-del span:nth-child(7){opacity:clamp(0, calc((var(--del-prog,0) - .35) * 4.5), 1);}
+  .swipe-marks-slash-del span:nth-child(8),
+  .swipe-marks-slash-del span:nth-child(9){opacity:clamp(0, calc((var(--del-prog,0) - .46) * 4.5), 1);}
 
   /* ---- toast over the week strip ---- */
   .swipe-toast{
@@ -2675,6 +2798,30 @@ const sfx = {
   del(){ tone({freq: 340, dur: 0.1, type: "sine", peak: 0.09, glideTo: 150}); },
   pop(){ tone({freq: 480, dur: 0.09, type: "sine", peak: 0.15, glideTo: 680}); },
   click(){ tone({freq: 600, dur: 0.035, type: "square", peak: 0.05}); },
+  gun(){
+    // gunshot — sharp noise crack + a deep kick underneath
+    const ctx = ensureAudio();
+    if(!soundOn || !ctx || ctx.state === "suspended") return;
+    const t0 = ctx.currentTime;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.09, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i = 0; i < d.length; i++){
+      const e = Math.pow(1 - i / d.length, 1.6);
+      d[i] = (Math.random() * 2 - 1) * e;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "highpass";
+    bp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.value = 0.5;
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(masterGain);
+    src.start(t0);
+    tone({freq: 120, delay: 0, dur: 0.22, type: "sine", peak: 0.32, glideTo: 45});
+  },
   levelUp(){
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => // C5 E5 G5 C6
       tone({freq: f, delay: i * 0.09, dur: 0.3, type: "triangle", peak: 0.22})
@@ -3172,6 +3319,8 @@ function attachSwipe(wrap, taskEl, task){
     startY = e.clientY;
     dx = 0;
     active = false;
+    wrap.style.setProperty("--del-prog", 0);
+    wrap.style.setProperty("--hide-prog", 0);
   });
 
   wrap.addEventListener("pointermove", (e) => {
@@ -3191,10 +3340,16 @@ function attachSwipe(wrap, taskEl, task){
     if(!active) return;
     dx = x;
     const w = wrap.clientWidth || 320;
-    const tx = Math.max(-w, Math.min(w, dx));
+    // the card can't be dragged past the position it would sit at on commit,
+    // so the row never passes the commit spot while waiting to confirm
+    const limit = w * 0.6;
+    const tx = Math.max(-limit, Math.min(limit, dx));
     taskEl.style.transform = "translateX(" + tx + "px)";
+    const prog = Math.min(1, Math.abs(tx) / w);
     wrap.classList.toggle("hint-del", tx > 8);
     wrap.classList.toggle("hint-hide", tx < -8);
+    wrap.style.setProperty("--del-prog", tx > 0 ? prog : 0);
+    wrap.style.setProperty("--hide-prog", tx < 0 ? prog : 0);
   });
 
   const release = (e) => {
@@ -3214,13 +3369,15 @@ function attachSwipe(wrap, taskEl, task){
     swipeGuardTimer = setTimeout(() => { justSwiped = false; }, 350);
     const w = wrap.clientWidth || 320;
     if(commit){
-      // stop halfway — the card stays put and only the committed hint shows,
-      // so "Delete" and "Hide" never both appear in the empty row
-      const target = (dx > 0 ? w : -w) * 0.5;
+      // stop just past halfway — the card stays put and only the committed
+      // hint shows, so "Delete" and "Hide" never both appear in the empty row
+      const target = (dx > 0 ? w : -w) * 0.6;
       taskEl.style.transition = "transform .22s ease";
       taskEl.style.transform = "translateX(" + target + "px)";
       wrap.classList.toggle("hint-del", dx > 0);
       wrap.classList.toggle("hint-hide", dx < 0);
+      wrap.style.setProperty("--del-prog", dx > 0 ? 1 : 0);
+      wrap.style.setProperty("--hide-prog", dx < 0 ? 1 : 0);
       taskEl.setAttribute("aria-busy", "true");
       if(dx > 0){
         deleteQuest(task.id);
@@ -3229,6 +3386,8 @@ function attachSwipe(wrap, taskEl, task){
       }
     } else {
       wrap.classList.remove("hint-del", "hint-hide");
+      wrap.style.setProperty("--del-prog", 0);
+      wrap.style.setProperty("--hide-prog", 0);
       taskEl.style.transition = "transform .22s ease";
       taskEl.style.transform = "translateX(0px)";
     }
@@ -3277,6 +3436,7 @@ function doDeleteQuest(taskId){
   if(t) pushToTrash(t);
   saveTasks(tasks.filter(x => x.id !== taskId));
   sfx.del();
+  sfx.gun();
   render();
   if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
   if(document.getElementById("dayView").classList.contains("active")) renderDayView();
@@ -4751,6 +4911,16 @@ function render(){
         wrap.classList.add("qb-row-in");
         wrap.style.animationDelay = ((idx - QUEST_COLLAPSE_LIMIT) * 45) + "ms";
       }
+      const ovl = document.createElement("div");
+      ovl.className = "swipe-ovl";
+      ovl.setAttribute("aria-hidden", "true");
+      ovl.innerHTML =
+        '<div class="swipe-line-top"></div>' +
+        '<div class="swipe-line-bottom"></div>' +
+        '<div class="swipe-band"></div>' +
+        '<div class="swipe-marks-slash">' + "<span></span>".repeat(9) + '</div>' +
+        '<div class="swipe-marks-slash-del">' + "<span></span>".repeat(9) + '</div>';
+      wrap.appendChild(ovl);
       const delHint = document.createElement("div");
       delHint.className = "swipe-hint swipe-hint-del";
       delHint.textContent = "Delete";
