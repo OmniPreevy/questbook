@@ -1,10 +1,12 @@
 /* Quest Book service worker
    - network-first for page loads: the newest HTML always wins (updates push)
+   - the navigation fetch is cache-busted so GitHub Pages' CDN can't serve a
+     stale index.html; every page load pulls fresh from the origin
    - fonts/icons/manifest are bundled in the repo and precached (offline-ready)
    Bump the CACHE name (e.g. "questbook-v2") whenever you want to force a
    clean refresh of every cached asset. */
 
-const CACHE = "questbook-v1";
+const CACHE = "questbook-v2";
 const APP_URL = "./index.html";
 
 async function precache(){
@@ -42,9 +44,11 @@ self.addEventListener("message", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if(e.request.mode === "navigate"){
-    // network-first so updates arrive on every load; fall back to cache offline
+    // network-first so updates arrive on every load; the version query string
+    // defeats GitHub Pages' CDN cache so the freshest HTML is fetched each time
+    const busted = e.request.url + (e.request.url.indexOf("?") === -1 ? "?" : "&") + "qbv=" + Date.now();
     e.respondWith(
-      fetch(e.request).then((res) => {
+      fetch(busted).then((res) => {
         const clone = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, clone));
         return res;
