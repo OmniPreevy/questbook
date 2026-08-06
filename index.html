@@ -537,6 +537,25 @@
     padding:0;
     flex:0 0 auto;
   }
+  .section-header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  #trashBtn{position:relative;}
+  #trashCount{
+    position:absolute;
+    top:-5px;right:-5px;
+    min-width:16px;height:16px;
+    padding:0 4px;
+    border-radius:8px;
+    background:var(--danger);
+    color:#fff;
+    font-size:10px;
+    line-height:16px;
+    text-align:center;
+    box-sizing:border-box;
+  }
   .cal-grid{
     display:grid;
     grid-template-columns:repeat(4, minmax(0, 1fr));
@@ -2246,7 +2265,6 @@
 <div class="backup-row">
   <button type="button" id="retroBtn" class="backup-btn">Last week's retro</button>
   <button type="button" id="testQuestBtn" class="backup-btn" style="display:none;" title="Temporary: create a lorem ipsum test quest">Lorem quest</button>
-  <button type="button" id="trashBtn" class="backup-btn" title="Recently deleted quests">🗑 <span id="trashCount" style="display:none;"></span></button>
   <button type="button" id="settingsBtn" class="backup-btn backup-right" title="Settings">⚙ Settings</button>
   <input type="file" id="importFile" accept="application/json" style="display:none;">
 </div>
@@ -2270,7 +2288,10 @@
 
 <div class="section-header">
   <div class="section-title">Quests</div>
-  <button type="button" class="section-add-btn" id="questAddBtn" aria-label="Add quest">+</button>
+  <div class="section-header-actions">
+    <button type="button" class="section-add-btn" id="trashBtn" aria-label="Recently deleted quests" title="Recently deleted quests">🗑<span id="trashCount" style="display:none;"></span></button>
+    <button type="button" class="section-add-btn" id="questAddBtn" aria-label="Add quest">+</button>
+  </div>
 </div>
 <div class="list-wrap" id="listWrap">
   <div id="list"></div>
