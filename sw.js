@@ -6,7 +6,7 @@
    Bump the CACHE name (e.g. "questbook-v2") whenever you want to force a
    clean refresh of every cached asset. */
 
-const CACHE = "questbook-v2";
+const CACHE = "questbook-v3";
 const APP_URL = "./index.html";
 
 async function precache(){
