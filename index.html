@@ -6114,7 +6114,7 @@ const PAID_THEMES = [
     name: "Parchment",
     price: 5,
     desc: "A light paper-and-ink look for bright rooms.",
-    bgImage: "backdrops/parchment.webp",
+    bgImage: "backdrops/parchment.jpeg",
     bgImageOptions: { opacity: .72, blur: "0px", scrim: "rgba(244,236,216,.24)" }
   },
   {
@@ -7211,10 +7211,11 @@ maybeAutoShowRetro();
   const imgFile = document.getElementById("adminImgFile");
   // Backdrops are discovered at runtime, never hardcoded: the Pages workflow
   // writes backdrops/manifest.json listing the files actually present, and we
-  // only surface images that successfully load. Renamed files (e.g. the WebP
-  // formerly named parchment.jpeg) are remapped so saved themes still match.
+  // only surface images that successfully load. Renamed files are remapped so
+  // saved themes still match (e.g. the parchment backdrop was renamed from
+  // .webp to .jpeg, so old references to the .webp name still resolve).
   const backdrops = new Map();
-  const BACKDROP_ALIASES = { "backdrops/parchment.jpeg": "backdrops/parchment.webp" };
+  const BACKDROP_ALIASES = { "backdrops/parchment.webp": "backdrops/parchment.jpeg" };
   function backdropLabel(file){
     const base = file.replace(/\.[^.]+$/, "");
     return base.split(/[_\-.]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
