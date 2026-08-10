@@ -528,7 +528,6 @@
   .swipe-marks-slash span:nth-child(6){left:20%;}
   .swipe-marks-slash span:nth-child(7){left:80%;}
   .swipe-marks-slash span:nth-child(8){left:10%;}
-  .swipe-marks-slash span:nth-child(9){left:90%;}
   .swipe-marks-slash span:nth-child(1){opacity:clamp(0, calc((var(--hide-prog,0) - .02) * 4.5), 1);}
   .swipe-marks-slash span:nth-child(2),
   .swipe-marks-slash span:nth-child(3){opacity:clamp(0, calc((var(--hide-prog,0) - .13) * 4.5), 1);}
@@ -536,8 +535,7 @@
   .swipe-marks-slash span:nth-child(5){opacity:clamp(0, calc((var(--hide-prog,0) - .24) * 4.5), 1);}
   .swipe-marks-slash span:nth-child(6),
   .swipe-marks-slash span:nth-child(7){opacity:clamp(0, calc((var(--hide-prog,0) - .35) * 4.5), 1);}
-  .swipe-marks-slash span:nth-child(8),
-  .swipe-marks-slash span:nth-child(9){opacity:clamp(0, calc((var(--hide-prog,0) - .46) * 4.5), 1);}
+  .swipe-marks-slash span:nth-child(8){opacity:clamp(0, calc((var(--hide-prog,0) - .46) * 4.5), 1);}
 
   /* Delete-swipe slashes — same outward-from-the-middle row, driven by the
      delete progress and sitting on the right side of the card */
@@ -567,8 +565,7 @@
   .swipe-marks-slash-del span:nth-child(5){left:62%;}
   .swipe-marks-slash-del span:nth-child(6){left:12%;}
   .swipe-marks-slash-del span:nth-child(7){left:72%;}
-  .swipe-marks-slash-del span:nth-child(8){left:2%;}
-  .swipe-marks-slash-del span:nth-child(9){left:82%;}
+  .swipe-marks-slash-del span:nth-child(8){left:82%;}
   .swipe-marks-slash-del span:nth-child(1){opacity:clamp(0, calc((var(--del-prog,0) - .02) * 4.5), 1);}
   .swipe-marks-slash-del span:nth-child(2),
   .swipe-marks-slash-del span:nth-child(3){opacity:clamp(0, calc((var(--del-prog,0) - .13) * 4.5), 1);}
@@ -576,8 +573,7 @@
   .swipe-marks-slash-del span:nth-child(5){opacity:clamp(0, calc((var(--del-prog,0) - .24) * 4.5), 1);}
   .swipe-marks-slash-del span:nth-child(6),
   .swipe-marks-slash-del span:nth-child(7){opacity:clamp(0, calc((var(--del-prog,0) - .35) * 4.5), 1);}
-  .swipe-marks-slash-del span:nth-child(8),
-  .swipe-marks-slash-del span:nth-child(9){opacity:clamp(0, calc((var(--del-prog,0) - .46) * 4.5), 1);}
+  .swipe-marks-slash-del span:nth-child(8){opacity:clamp(0, calc((var(--del-prog,0) - .46) * 4.5), 1);}
 
   /* ---- toast over the week strip ---- */
   .swipe-toast{
@@ -3665,9 +3661,11 @@ function openHiddenView(){
   document.getElementById("hiddenView").classList.add("active");
   closeLeftPanes("hiddenView");
   if(!threePaneAvailable()) closeRightPanes(null);
+  balancePaneLayout();
 }
 function closeHiddenView(){
   document.getElementById("hiddenView").classList.remove("active");
+  balancePaneLayout();
 }
 function positionFab(){
   if(window.innerWidth < 1024) return;
@@ -3710,6 +3708,7 @@ window.addEventListener("resize", fitTitle);
 document.addEventListener("DOMContentLoaded", fitTitle);
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 window.addEventListener("resize", () => {
+  syncPaneBackLabels();
   if(window.innerWidth < 1024){
     clearFabPos();
     return;
@@ -3721,6 +3720,7 @@ window.addEventListener("resize", () => {
     return el && el.classList.contains("active");
   });
   if(rightActive && !threePaneAvailable()) closeLeftPanes();
+  balancePaneLayout();
 });
 
 new MutationObserver(positionFab).observe(document.body, {
@@ -3750,12 +3750,14 @@ function openDetail(taskId){
   restartQuestTimerInterval(task);
   closeRightPanes("detailView");
   if(!threePaneAvailable()) closeLeftPanes();
+  balancePaneLayout();
 }
 
 function closeDetail(){
   document.getElementById("detailView").classList.remove("active");
   currentDetailTaskId = null;
   clearInterval(questTimerInterval);
+  balancePaneLayout();
 }
 
 function flashSaved(){
@@ -4918,8 +4920,8 @@ function render(){
         '<div class="swipe-line-top"></div>' +
         '<div class="swipe-line-bottom"></div>' +
         '<div class="swipe-band"></div>' +
-        '<div class="swipe-marks-slash">' + "<span></span>".repeat(9) + '</div>' +
-        '<div class="swipe-marks-slash-del">' + "<span></span>".repeat(9) + '</div>';
+        '<div class="swipe-marks-slash">' + "<span></span>".repeat(8) + '</div>' +
+        '<div class="swipe-marks-slash-del">' + "<span></span>".repeat(8) + '</div>';
       wrap.appendChild(ovl);
       const delHint = document.createElement("div");
       delHint.className = "swipe-hint swipe-hint-del";
@@ -5213,6 +5215,7 @@ function exportData(){
     currentTheme: localStorage.getItem(THEME_KEY) || null,
     ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
     customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
+    themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}"),
     exportedAt: new Date().toISOString()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -5244,6 +5247,7 @@ function importDataFromFile(file){
     localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history || []));
     if(data.ownedThemes) localStorage.setItem(OWNED_KEY, JSON.stringify(data.ownedThemes));
     if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
+    if(data.themeOverrides) localStorage.setItem("qb-admin-overrides", JSON.stringify(data.themeOverrides));
     if(data.currentTheme) localStorage.setItem(THEME_KEY, data.currentTheme);
     location.reload();
   };
@@ -5697,9 +5701,11 @@ function openMonthView(){
   document.getElementById("monthView").classList.add("active");
   closeLeftPanes("monthView");
   if(!threePaneAvailable()) closeRightPanes(null);
+  balancePaneLayout();
 }
 function closeMonthView(){
   document.getElementById("monthView").classList.remove("active");
+  balancePaneLayout();
 }
 function shiftMonth(delta){
   monthViewMonth += delta;
@@ -5762,11 +5768,13 @@ function openDayView(dayKey, dateObj){
   document.getElementById("dayView").classList.add("active");
   closeRightPanes("dayView");
   if(!threePaneAvailable()) closeLeftPanes();
+  balancePaneLayout();
 }
 function closeDayView(){
   document.getElementById("dayView").classList.remove("active");
   currentDayKey = null;
   currentDayDateObj = null;
+  balancePaneLayout();
 }
 
 function repeatSummary(ev){
@@ -6148,7 +6156,8 @@ function renderThemeSwatches(){
     const sw = document.createElement("button");
     sw.type = "button";
     sw.className = "theme-swatch" + (a.id === currentTheme.id ? " active" : "");
-    sw.style.background = a.color;
+    const ov = (typeof window.adminGetOverride === "function") ? window.adminGetOverride(a.id, "--accent") : null;
+    sw.style.background = ov || a.color;
     sw.title = a.name;
     sw.setAttribute("aria-label", a.name);
     sw.addEventListener("click", () => {
@@ -6169,9 +6178,14 @@ function renderThemeSwatches(){
     const sw = document.createElement("button");
     sw.type = "button";
     sw.className = "theme-swatch" + (currentTheme.id === ot.id ? " active" : "");
-    sw.style.background = ot.bg;
-    sw.style.border = `3px solid ${ot.accent}`;
-    sw.style.boxShadow = `0 0 0 3px ${ot.border}`;
+    const key = ot.custom ? "custom-" + ot.id : ot.id;
+    const ov = (typeof window.adminGetOverride === "function") ? window.adminGetOverride : null;
+    const bg = ov ? (ov(key, "--bg") || ot.bg) : ot.bg;
+    const accent = ov ? (ov(key, "--accent") || ot.accent) : ot.accent;
+    const border = ov ? (ov(key, "--border") || ot.border) : ot.border;
+    sw.style.background = bg;
+    sw.style.border = `3px solid ${accent}`;
+    sw.style.boxShadow = `0 0 0 3px ${border}`;
     sw.title = ot.name;
     sw.setAttribute("aria-label", ot.name);
     sw.addEventListener("click", () => {
@@ -6244,7 +6258,14 @@ function renderShop(){
     return 0;
   });
   allThemes.forEach(t => {
-    const css = t.custom ? { bg: t.bg, accent: t.accent, border: t.border } : THEME_CSS[t.id];
+    const key = t.custom ? "custom-" + t.id : t.id;
+    const ov = (typeof window.adminGetOverride === "function") ? window.adminGetOverride : null;
+    const base = t.custom ? { bg: t.bg, accent: t.accent, border: t.border } : THEME_CSS[t.id];
+    const css = {
+      bg: ov ? (ov(key, "--bg") || base.bg) : base.bg,
+      accent: ov ? (ov(key, "--accent") || base.accent) : base.accent,
+      border: ov ? (ov(key, "--border") || base.border) : base.border
+    };
     const row = document.createElement("div");
     row.className = "shop-item";
 
@@ -6448,6 +6469,28 @@ function applyPaneLayout(){
     if(el) el.style.order = i;
   });
 }
+function syncPaneBackLabels(){
+  const label = window.innerWidth < 1024 ? "\u2039 Back" : "\u2039 Collapse";
+  ["monthBackBtn", "hiddenBackBtn", "dayBackBtn", "backBtn"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.textContent !== label) el.textContent = label;
+  });
+}
+function balancePaneLayout(){
+  applyPaneLayout();
+  if(window.innerWidth < 1024) return;
+  const month = document.getElementById("monthView");
+  const main = document.querySelector(".app-main");
+  if(!month || !main) return;
+  const rightOpen = rightPaneIds().some(id => {
+    const el = document.getElementById(id);
+    return el && el.classList.contains("active");
+  });
+  if(month.classList.contains("active") && !rightOpen){
+    const mainOrder = parseInt(getComputedStyle(main).order, 10) || 2;
+    month.style.order = mainOrder + 1;
+  }
+}
 function visibleRowItems(exceptId){
   const out = [];
   for(const id of ROW_ITEMS){
@@ -6511,7 +6554,7 @@ function dropPaneAt(e){
   const ti = target ? layout.indexOf(target) : layout.length;
   layout.splice(ti, 0, dragState.paneId);
   savePaneLayout(layout);
-  applyPaneLayout();
+  balancePaneLayout();
 }
 function endPaneDrag(e){
   if(!dragState) return;
@@ -6533,6 +6576,7 @@ function cancelPaneDrag(){
 }
 document.addEventListener("DOMContentLoaded", () => {
   applyPaneLayout();
+  syncPaneBackLabels();
   document.querySelectorAll(".pane-grip").forEach(grip => {
     const paneId = grip.dataset.pane;
     grip.addEventListener("pointerdown", (e) => startPaneDrag(e, paneId));
@@ -6542,7 +6586,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 applyPaneLayout();
-/* ------------------------------------------- */
+syncPaneBackLabels();
 
 render();
 renderLevelBar();
@@ -6794,8 +6838,11 @@ maybeAutoShowRetro();
   #adminPanel *{box-sizing:border-box;}
   .admin-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px;cursor:move;touch-action:none;flex:0 0 auto;}
   .admin-title{font-weight:700;letter-spacing:.5px;font-size:12px;}
+  .admin-head-btns{display:flex;align-items:center;gap:6px;}
   .admin-close{border:none;background:transparent;color:#9a9a9a;font-size:15px;cursor:pointer;padding:0 4px;line-height:1;}
   .admin-close:hover{color:#fff;}
+  .admin-confirm{color:#6fbf73;font-size:16px;}
+  .admin-confirm:hover{color:#8fd692;}
   .admin-theme-name{color:#9a9a9a;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;}
   .admin-pages{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
   .admin-page{display:none;flex:1 1 auto;min-height:0;overflow:hidden;flex-direction:column;}
@@ -6829,7 +6876,10 @@ maybeAutoShowRetro();
 <div id="adminPanel" class="admin-panel">
   <div class="admin-head" id="adminHead" title="Drag to move">
     <span class="admin-title">Customize Theme</span>
-    <button type="button" class="admin-close" id="adminCloseBtn" aria-label="Close">&times;</button>
+    <span class="admin-head-btns">
+      <button type="button" class="admin-close admin-confirm" id="adminCheckBtn" aria-label="Apply and close">&check;</button>
+      <button type="button" class="admin-close" id="adminCloseBtn" aria-label="Close">&times;</button>
+    </span>
   </div>
   <div class="admin-pages">
     <div class="admin-page active" id="adminPage1">
@@ -7104,6 +7154,16 @@ maybeAutoShowRetro();
       if(f._hexEl) f._hexEl.value = value;
     }
   }
+  function refreshPreviewSwatches(){
+    if(typeof renderThemeSwatches === "function"){
+      const sview = document.getElementById("settingsView");
+      if(!sview || sview.classList.contains("active")) renderThemeSwatches();
+    }
+    if(typeof renderShop === "function"){
+      const shview = document.getElementById("shopView");
+      if(shview && shview.classList.contains("active")) renderShop();
+    }
+  }
   function setVal(prop, value){
     if(prop === "--bg-image" && String(value).indexOf("qbimg://") === -1) revokeImageUrl();
     const store = load();
@@ -7113,6 +7173,7 @@ maybeAutoShowRetro();
     save(store);
     document.documentElement.style.setProperty(prop, value);
     syncInputs(prop, value);
+    refreshPreviewSwatches();
   }
   function buildRows(){
     rowsEl1.innerHTML = "";
@@ -7317,6 +7378,7 @@ maybeAutoShowRetro();
     save(store);
     applyTheme(currentTheme);
     repopulate();
+    refreshPreviewSwatches();
   }
   function applyOverrides(){
     const store = load();
@@ -7373,6 +7435,10 @@ maybeAutoShowRetro();
   alphaPanel.addEventListener("input", () => { setVal("--alpha-panel", String(alphaPanel.value)); alphaPanelVal.textContent = pct(alphaPanel.value); });
 
   window.applyAdminOverrides = applyOverrides;
+  window.adminGetOverride = function(key, prop){
+    const s = load()[key];
+    return s && s[prop] !== undefined ? s[prop] : null;
+  };
   window.adminTogglePanel = togglePanel;
   window.adminShowPanel = showPanel;
   window.adminResetProp = resetProp;
@@ -7381,6 +7447,7 @@ maybeAutoShowRetro();
   window.adminClearUploads = clearStoredUploads;
 
   document.getElementById("adminCloseBtn").addEventListener("click", cancelPanel);
+  document.getElementById("adminCheckBtn").addEventListener("click", confirmPanel);
   document.getElementById("adminDoneBtn").addEventListener("click", confirmPanel);
   document.getElementById("adminNext1").addEventListener("click", () => goPage(2));
   document.getElementById("adminPrev2").addEventListener("click", () => goPage(1));
