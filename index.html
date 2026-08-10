@@ -156,7 +156,19 @@
     --dim:#000000;
     --alpha-card:.16;
     --alpha-panel:.05;
-    --shop-btn-color:#dfdfe7;
+    --shop-btn-color:#000080;
+  }
+  [data-theme="invertednight"]{
+    --accent:#1d269f;
+    --bg:#121212;
+    --card:#00021f;
+    --border:#ff4c38;
+    --alpha-bg:1;
+    --alpha-card:.57;
+    --alpha-panel:.57;
+    --shop-btn-bg:#02041e;
+    --shop-btn-color:#ff4c38;
+    --shop-panel-border:#ff4c38;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-gutter:stable;}
@@ -6110,7 +6122,8 @@ const THEME_CSS = {
   parchment: { bg: "#ece4d2", accent: "#8a5a2b", border: "#d6c9ab", card: "#fff0d1", text: "#2b241a", dim: "#474033" },
   neon:      { bg: "#0a0a12", accent: "#ff2d78", border: "#26263c", card: "#131320", text: "#e8e8e8", dim: "#787878" },
   redmoon:   { bg: "#4d0000", accent: "#ff0000", border: "#4d0000", card: "#190000", text: "#e8e8e8", dim: "#787878", panelBg: "#000000", panelBorder: "#c70000", btnBg: "#1c1c1c", btnColor: "#ff0000", showBg: "#1a0f0f", showAccent: "#a71111" },
-  spectral:  { bg: "#ffd1fd", accent: "#85caff", border: "#cea1c4", card: "#9694e5", text: "#e8e8e8", dim: "#000000", panelBg: "#9694e5", panelBorder: "#cea1c4", btnBg: "#9694e5", btnColor: "#dfdfe7", showBg: "#ffd1fd", showAccent: "#85caff" }
+  spectral:  { bg: "#ffd1fd", accent: "#85caff", border: "#cea1c4", card: "#9694e5", text: "#e8e8e8", dim: "#000000", panelBg: "#9694e5", panelBorder: "#cea1c4", btnBg: "#9694e5", btnColor: "#000080", showBg: "#ffd1fd", showAccent: "#85caff" },
+  invertednight: { bg: "#121212", accent: "#1d269f", border: "#ff4c38", card: "#00021f", text: "#e8e8e8", dim: "#787878", panelBg: "#00021f", panelBorder: "#ff4c38", btnBg: "#02041e", btnColor: "#ff4c38", showBg: "#00021f", showAccent: "#1d269f" }
 };
 const PAID_THEMES = [
   { id: "nocturne",  name: "Nocturne",   price: 5,  desc: "A midnight indigo restyle under starlit gold." },
@@ -6145,6 +6158,14 @@ const PAID_THEMES = [
     desc: "Soft pastel pink and cyan light.",
     bgImage: "backdrops/pink_cyan_anime.jpg",
     bgImageOptions: { opacity: 1, blur: "6px", scrim: "rgba(0,0,0,.42)" }
+  },
+  {
+    id: "invertednight",
+    name: "Inverted Night",
+    price: 15,
+    desc: "Deep navy with ember-orange edges under a purple dusk.",
+    bgImage: "backdrops/purple_sunset.jpg",
+    bgImageOptions: { opacity: .84, blur: "6px", scrim: "rgba(0,0,0,.38)" }
   }
 ];
 let currentTheme = loadTheme();
