@@ -6422,10 +6422,10 @@ function renderShop(){
       panelBg: get("--shop-panel-bg", base.card),
       panelBorder: get("--shop-panel-border", base.border),
       btnBg: get("--shop-btn-bg", base.bg),
-      btnColor: get("--shop-btn-color", base.accent),
-      showBg: get("--shop-show-bg", pal.bg),
-      showAccent: get("--shop-show-accent", pal.accent)
+      btnColor: get("--shop-btn-color", base.accent)
     };
+    pal.showBg = get("--shop-show-bg", pal.bg);
+    pal.showAccent = get("--shop-show-accent", pal.accent);
     const row = document.createElement("div");
     row.className = "shop-item";
     const rowVars = {
