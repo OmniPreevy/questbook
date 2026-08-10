@@ -6045,7 +6045,7 @@ const PAID_THEMES = [
     name: "Parchment",
     price: 10,
     desc: "A light paper-and-ink look for bright rooms.",
-    bgImage: "backdrops/parchment.jpeg",
+    bgImage: "backdrops/parchment.webp",
     bgImageOptions: { opacity: .72, blur: "0px", scrim: "rgba(244,236,216,.24)" }
   },
   {
@@ -6929,13 +6929,6 @@ maybeAutoShowRetro();
         <span class="admin-label">Image</span>
         <select id="adminImgSelect" class="admin-select">
           <option value="none">No image</option>
-          <option value="parchment">Parchment</option>
-          <option value="cyan_amaranth">Cyan Amaranth</option>
-          <option value="ignis">Ignis</option>
-          <option value="neon_pulse">Neon Pulse</option>
-          <option value="pink_cyan_anime">Pink &amp; Cyan Anime</option>
-          <option value="purple_sunset">Purple Sunset</option>
-          <option value="red_sun_rooftop">Red Sun Rooftop</option>
           <option value="custom" disabled>Custom upload</option>
         </select>
         <button type="button" class="admin-upload-btn" id="adminImgUploadBtn">Upload…</button>
@@ -7000,15 +6993,48 @@ maybeAutoShowRetro();
   const pages = [document.getElementById("adminPage1"), document.getElementById("adminPage2"), document.getElementById("adminPage3")];
   const imgSelect = document.getElementById("adminImgSelect");
   const imgFile = document.getElementById("adminImgFile");
-  const BACKDROP_FILES = {
-    parchment: "parchment.jpeg",
-    cyan_amaranth: "cyan_amaranth.png",
-    ignis: "ignis_by_kokinnwakashuu_din9br1.png",
-    neon_pulse: "neon_pulse.png",
-    pink_cyan_anime: "pink_cyan_anime.jpg",
-    purple_sunset: "purple_sunset.jpg",
-    red_sun_rooftop: "red_sun_rooftop.jpg"
-  };
+  // Backdrops are discovered at runtime, never hardcoded: the Pages workflow
+  // writes backdrops/manifest.json listing the files actually present, and we
+  // only surface images that successfully load. Renamed files (e.g. the WebP
+  // formerly named parchment.jpeg) are remapped so saved themes still match.
+  const backdrops = new Map();
+  const BACKDROP_ALIASES = { "backdrops/parchment.jpeg": "backdrops/parchment.webp" };
+  function backdropLabel(file){
+    const base = file.replace(/\.[^.]+$/, "");
+    return base.split(/[_\-.]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  }
+  function resolveBackdropAlias(img){
+    return BACKDROP_ALIASES[img] || img;
+  }
+  function rebuildBackdropOptions(){
+    const custom = imgSelect.querySelector('option[value="custom"]');
+    imgSelect.innerHTML = "";
+    imgSelect.appendChild(document.createElement("option"));
+    imgSelect.options[0].value = "none";
+    imgSelect.options[0].textContent = "No image";
+    for(const [file, label] of backdrops){
+      const opt = document.createElement("option");
+      opt.value = file;
+      opt.textContent = label;
+      imgSelect.appendChild(opt);
+    }
+    imgSelect.appendChild(custom);
+  }
+  async function loadBackdrops(){
+    let files = [];
+    try{
+      const res = await fetch("backdrops/manifest.json", { cache: "no-store" });
+      if(res.ok) files = await res.json();
+    }catch(e){}
+    await Promise.all((Array.isArray(files) ? files : []).map(file => new Promise(resolve => {
+      const im = new Image();
+      im.onload = () => { backdrops.set(file, backdropLabel(file)); resolve(); };
+      im.onerror = () => resolve();
+      im.src = "backdrops/" + encodeURI(file);
+    })));
+    rebuildBackdropOptions();
+    if(open) repopulatePage3();
+  }
   const imgOpacity = document.getElementById("adminImgOpacity");
   const imgOpacityVal = document.getElementById("adminImgOpacityVal");
   const imgBlur = document.getElementById("adminImgBlur");
@@ -7244,10 +7270,10 @@ maybeAutoShowRetro();
   }
   function repopulatePage3(){
     const cs = getComputedStyle(document.documentElement);
-    const img = cs.getPropertyValue("--bg-image").trim();
+    const img = resolveBackdropAlias(cs.getPropertyValue("--bg-image").trim());
     if(!img || img === "none") imgSelect.value = "none";
     else{
-      const hit = Object.keys(BACKDROP_FILES).find(k => img.indexOf("backdrops/" + BACKDROP_FILES[k]) !== -1);
+      const hit = [...backdrops.keys()].find(f => img.indexOf("backdrops/" + f) !== -1);
       imgSelect.value = hit || "custom";
     }
     imgOpacity.value = parseFloat(cs.getPropertyValue("--bg-image-opacity")) || 0;
@@ -7428,7 +7454,7 @@ maybeAutoShowRetro();
       repopulatePage3();
       return;
     }
-    setVal("--bg-image", `url("backdrops/${BACKDROP_FILES[v]}")`);
+    setVal("--bg-image", `url("backdrops/${v}")`);
     ensureImageDefaults();
     repopulatePage3();
   });
@@ -7479,6 +7505,7 @@ maybeAutoShowRetro();
   initDrag();
 
   applyOverrides();
+  loadBackdrops();
 })();
 </script>
 

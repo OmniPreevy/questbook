@@ -6,7 +6,7 @@
    Bump the CACHE name (e.g. "questbook-v2") whenever you want to force a
    clean refresh of every cached asset. */
 
-const CACHE = "questbook-v3";
+const CACHE = "questbook-v4";
 const APP_URL = "./index.html";
 
 async function precache(){
@@ -57,15 +57,19 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // stale-while-revalidate for everything else
+  // stale-while-revalidate for everything else; never cache or serve error
+  // responses (a stale 404 from an outage must not shadow the real file)
   e.respondWith(
     caches.match(e.request).then((cached) => {
+      const ok = cached && cached.ok;
       const fresh = fetch(e.request).then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
+        if(res.ok){
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+        }
         return res;
-      }).catch(() => cached);
-      return cached || fresh;
+      }).catch(() => (ok ? cached : undefined));
+      return (ok ? cached : undefined) || fresh;
     })
   );
 });

@@ -25,6 +25,17 @@ jobs:
         uses: actions/checkout@v5
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Build backdrops manifest
+        run: |
+          python3 - <<'PY'
+          import json, os
+          exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif")
+          files = sorted(f for f in os.listdir("backdrops")
+                         if os.path.isfile(os.path.join("backdrops", f))
+                         and f.lower().endswith(exts))
+          with open("backdrops/manifest.json", "w") as fh:
+              json.dump(files, fh)
+          PY
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
