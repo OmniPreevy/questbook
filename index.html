@@ -6216,7 +6216,7 @@ function loadTheme(){
 }
 function applyTheme(t){
   const root = document.documentElement;
-  if(typeof applyAdminOverrides === "function") applyAdminOverrides();
+  if(typeof applyAdminOverrides === "function") applyAdminOverrides(true);
   root.setAttribute("data-theme", t.custom ? `custom-${t.id}` : t.id);
   root.style.setProperty("--accent", t.color);
   if(t.custom){
@@ -7685,19 +7685,28 @@ maybeAutoShowRetro();
     repopulate();
     refreshPreviewSwatches();
   }
-  function applyOverrides(){
-    const store = load();
-    const o = store[themeKey()];
+  const ADMIN_PROPS = [
+    "--bg", "--card", "--border", "--accent", "--text", "--dim",
+    "--shop-show-bg", "--shop-show-accent", "--shop-panel-bg", "--shop-panel-border",
+    "--shop-btn-bg", "--shop-btn-color",
+    "--alpha-bg", "--alpha-card", "--alpha-panel",
+    "--bg-image", "--bg-image-opacity", "--bg-image-blur", "--bg-image-scale",
+    "--bg-image-position", "--bg-image-size", "--bg-image-scrim"
+  ];
+  // Apply the stored overrides for the current theme. When `reset` is true
+  // (i.e. right before a theme is re-applied) every admin-managed property is
+  // cleared first so a previous theme's inline overrides can't leak across.
+  // Without the reset, only the current theme's own overrides are (re)applied,
+  // so applyTheme's fresh --bg-image and friends are never clobbered by
+  // overrides that belong to some other theme.
+  function applyOverrides(reset){
+    const o = load()[themeKey()] || {};
     const root = document.documentElement;
-    const touched = new Set();
-    for(const k of Object.keys(store)){
-      for(const p of Object.keys(store[k])) touched.add(p);
+    if(reset){
+      for(const p of ADMIN_PROPS) root.style.removeProperty(p);
     }
-    for(const p of touched){
-      if(o && o[p] !== undefined) root.style.setProperty(p, o[p]);
-      else root.style.removeProperty(p);
-    }
-    resolveStoredImage(o && o["--bg-image"]);
+    for(const p of Object.keys(o)) root.style.setProperty(p, o[p]);
+    resolveStoredImage(o["--bg-image"]);
     if(open) repopulate();
   }
 
