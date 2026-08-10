@@ -5374,6 +5374,29 @@ function saveEvents(events){
   localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
 }
 
+// Date string of the Sunday that ended last week (Mon-Sun weeks). Anything that
+// could last occur before this day can never appear in the calendar again.
+function lastWeekSundayStr(){
+  const monday = new Date(previousWeekKey() + "T00:00:00");
+  monday.setDate(monday.getDate() + 6);
+  return dateToStr(monday);
+}
+
+// Drop events that can no longer occur: one-off events whose day is in the past
+// and repeating events whose repeatUntil has passed. Repeating events without a
+// repeatUntil never end and are always kept. Runs on load so old events (including
+// stale ones brought in by an imported backup) leave no traces in storage.
+function pruneEndedEvents(){
+  const cutoff = lastWeekSundayStr();
+  const events = loadEvents();
+  const kept = events.filter(ev => {
+    const last = ev.repeat ? (ev.repeatUntil || "") : (ev.day || "");
+    return !last || last >= cutoff;
+  });
+  if(kept.length !== events.length) saveEvents(kept);
+}
+pruneEndedEvents();
+
 // Does this event occur on the given date? Handles both one-off and
 // repeating events (repeat runs from event.day up to event.repeatUntil,
 // inclusive, on whichever weekdays are checked).
