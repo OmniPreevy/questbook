@@ -55,7 +55,7 @@
     --shop-btn-bg:var(--bg);
     --shop-btn-color:var(--accent);
   }
-  /* Theme palettes — switch via the accent picker in Settings.
+  /* Theme palettes - switch via the accent picker in Settings.
      Each theme can tint the page background, cards and borders,
      so future themes can restyle the whole app from here. */
   [data-theme="gold"]{
@@ -83,7 +83,7 @@
     --border:#2b2538;
   }
   /* Paid themes (unlocked in the Theme Shop). These restyle more than the
-     accent — whole-surface palettes, tinted glows, and light mode. */
+     accent - whole-surface palettes, tinted glows, and light mode. */
   [data-theme="nocturne"]{
     --accent:#c9b458;
     --bg:#0d1220;
@@ -520,7 +520,7 @@
     background:color-mix(in srgb, rgba(128,128,128,.35) calc((1 - var(--del-prog,0)) * 100%), rgba(181,80,79,.42));
     transition:background .05s linear;
   }
-  /* Hide-swipe slashes — one horizontal row that lights up outward from the
+  /* Hide-swipe slashes - one horizontal row that lights up outward from the
      middle as the swipe progresses */
   .swipe-marks-slash{
     position:absolute;
@@ -540,7 +540,7 @@
   }
   /* One horizontal row of slashes. The center one is number 0 and appears
      first; the slashes directly to its right and left are 1, then the next
-     ones out are 2, 3, 4 — so lines light up outward from the middle as the
+     ones out are 2, 3, 4 - so lines light up outward from the middle as the
      swipe progresses. */
   .swipe-marks-slash span:nth-child(1){left:50%;}
   .swipe-marks-slash span:nth-child(2){left:40%;}
@@ -559,7 +559,7 @@
   .swipe-marks-slash span:nth-child(7){opacity:clamp(0, calc((var(--hide-prog,0) - .35) * 4.5), 1);}
   .swipe-marks-slash span:nth-child(8){opacity:clamp(0, calc((var(--hide-prog,0) - .46) * 4.5), 1);}
 
-  /* Delete-swipe slashes — same outward-from-the-middle row, driven by the
+  /* Delete-swipe slashes - same outward-from-the-middle row, driven by the
      delete progress and sitting on the right side of the card */
   .swipe-marks-slash-del{
     position:absolute;
@@ -1676,7 +1676,7 @@
     75%{opacity:1; transform:scale(1.15) rotate(0deg);}
     100%{opacity:1; transform:scale(1) rotate(0deg);}
   }
-  .lvup-unit{
+  .lvup-credit{
     margin-top:14px;
     font-family:'Cinzel', Georgia, serif;
     font-size:15px;
@@ -1686,7 +1686,7 @@
     text-transform:uppercase;
     opacity:0;
   }
-  .lvup-overlay.active .lvup-unit{
+  .lvup-overlay.active .lvup-credit{
     animation:tagIn .5s ease 1.05s forwards;
   }
 
@@ -2442,7 +2442,7 @@
 <div class="notify-hint" id="notifyHint"></div>
 
 <div class="level-hud" id="levelHud">
-  <div class="level-icon" id="levelIcon" title="Units — you earn one per level-up, spend them in the theme shop">
+  <div class="level-icon" id="levelIcon" title="Credits: you earn one per level-up, spend them in the theme shop">
     <svg viewBox="0 0 40 44" class="level-icon-svg">
       <polygon points="20,1 38,11.5 38,32.5 20,43 2,32.5 2,11.5" />
     </svg>
@@ -2580,7 +2580,7 @@
     <div class="detail-title">Weekly retro</div>
   </div>
   <div class="detail-scroll">
-    <div class="retro-range" id="retroRange">Week of —</div>
+    <div class="retro-range" id="retroRange">Week of -</div>
 
     <div class="retro-grid">
       <div class="retro-card">
@@ -2602,7 +2602,7 @@
     </div>
 
     <div class="retro-xp" id="retroXp">0 XP earned that week</div>
-    <div class="empty" id="retroEmptyMsg" style="display:none;">Nothing logged for that week yet — check back after using the app a bit.</div>
+    <div class="empty" id="retroEmptyMsg" style="display:none;">Nothing logged for that week yet - check back after using the app a bit.</div>
   </div>
 </div>
 
@@ -2754,7 +2754,7 @@ const STATE_KEY = "checklist_state_v1";
 const AUTO_HIDE_DONE_KEY = "checklist_autohide_done_v1";
 const EVENTS_KEY = "checklist_events_v1";
 
-// Manual name tables — avoids relying on toLocaleDateString/Intl, which can
+// Manual name tables - avoids relying on toLocaleDateString/Intl, which can
 // be unreliable or missing full locale data on some Android WebViews and
 // silently produce empty output for specific dates.
 const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -2763,22 +2763,22 @@ const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep
 const MONTH_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /* ================================================================
-   Feedback FX — synthesized sound (Web Audio, no asset files) +
+   Feedback FX - synthesized sound (Web Audio, no asset files) +
    canvas particle bursts + floating "+XP" text + checkbox pop-bounce.
 
    Design intent: a small, consistent sound/motion vocabulary so each
-   cue stays meaningful instead of turning into noise —
+   cue stays meaningful instead of turning into noise -
      sfx.tick()      small forward progress (note check, counter, partial quest tick)
      sfx.complete()  a quest's daily/one-time target is fully met
-     sfx.untick()    quiet, neutral — unchecking a note item (never punishing)
-     sfx.undo()      quiet, neutral — undoing quest progress/XP
-     sfx.del()       soft downward blip — deleting something
-     sfx.pop()       light blip — creating a new item/quest
-     sfx.click()     tiny neutral click — minor UI toggles
-     sfx.levelUp()   the big one — ascending fanfare
+     sfx.untick()    quiet, neutral - unchecking a note item (never punishing)
+     sfx.undo()      quiet, neutral - undoing quest progress/XP
+     sfx.del()       soft downward blip - deleting something
+     sfx.pop()       light blip - creating a new item/quest
+     sfx.click()     tiny neutral click - minor UI toggles
+     sfx.levelUp()   the big one - ascending fanfare
    Tones are short, soft (sine/triangle), and quiet by default on purpose:
    these fire dozens of times a day, so anything harsh gets muted fast.
-   Everything here is additive — it never blocks or delays the underlying
+   Everything here is additive - it never blocks or delays the underlying
    state change/render it's attached to.
 ================================================================ */
 const SOUND_KEY = "checklist_sound_v1";
@@ -2838,7 +2838,7 @@ const sfx = {
   tick(){ tone({freq: 720, dur: 0.07, type: "triangle", peak: 0.14, glideTo: 940}); },
   untick(){ tone({freq: 360, dur: 0.06, type: "sine", peak: 0.07, glideTo: 280}); },
   complete(){
-    [523.25, 659.25, 783.99].forEach((f, i) => // C5 E5 G5 — bright major pluck
+    [523.25, 659.25, 783.99].forEach((f, i) => // C5 E5 G5 - bright major pluck
       tone({freq: f, delay: i * 0.055, dur: 0.17, type: "triangle", peak: 0.2})
     );
   },
@@ -2847,7 +2847,7 @@ const sfx = {
   pop(){ tone({freq: 480, dur: 0.09, type: "sine", peak: 0.15, glideTo: 680}); },
   click(){ tone({freq: 600, dur: 0.035, type: "square", peak: 0.05}); },
   gun(){
-    // gunshot — sharp noise crack + a deep kick underneath
+    // gunshot - sharp noise crack + a deep kick underneath
     const ctx = ensureAudio();
     if(!soundOn || !ctx || ctx.state === "suspended") return;
     const t0 = ctx.currentTime;
@@ -2923,7 +2923,7 @@ function stepFx(now){
   }
   fxRafId = fxParticles.length ? requestAnimationFrame(stepFx) : null;
 }
-// Small radial burst from a point — used for check/complete/counter taps.
+// Small radial burst from a point - used for check/complete/counter taps.
 function burstAt(x, y, opts = {}){
   if(REDUCE_MOTION || !fxCtx) return;
   const {
@@ -2942,7 +2942,7 @@ function burstAt(x, y, opts = {}){
     });
   }
 }
-// Gentle confetti fall across the top of the screen — the level-up moment.
+// Gentle confetti fall across the top of the screen - the level-up moment.
 function confettiRain(colors, durationMs = 1600){
   if(REDUCE_MOTION || !fxCtx) return;
   const endAt = performance.now() + durationMs;
@@ -2962,7 +2962,7 @@ function confettiRain(colors, durationMs = 1600){
   })();
 }
 
-// Floating "+N XP" text that rises and fades — the clearest reward signal.
+// Floating "+N XP" text that rises and fades - the clearest reward signal.
 function floatText(x, y, text, color){
   if(REDUCE_MOTION || typeof x !== "number") return;
   const el = document.createElement("div");
@@ -2975,7 +2975,7 @@ function floatText(x, y, text, color){
   setTimeout(() => el.remove(), 900);
 }
 
-// Quick scale-bounce on any element — cheap, high-value "juice".
+// Quick scale-bounce on any element - cheap, high-value "juice".
 function popEl(el){
   if(!el || REDUCE_MOTION) return;
   el.classList.remove("pop-anim");
@@ -3025,7 +3025,7 @@ function xpReward(task){
 const LEVEL_REWARDS = {};
 
 // Cycles through a rich palette so every level reads as visually distinct.
-// Add more colors here any time — indexing just wraps around.
+// Add more colors here any time - indexing just wraps around.
 const LEVEL_COLORS = [
   "#4f9d69", "#3d8fb0", "#c9a23d", "#8a5fc9", "#c9527a", "#4fb0a3",
   "#5b7fd4", "#d45b78", "#43a86e", "#c9a13b", "#6f6fc9", "#3fa7b0",
@@ -3042,11 +3042,11 @@ function loadState(){
   try{
     const s = JSON.parse(localStorage.getItem(STATE_KEY));
     if(s && typeof s.xp === "number"){
-      if(typeof s.units !== "number") s.units = 0;
+      if(typeof s.credits !== "number") s.credits = (typeof s.units === "number") ? s.units : 0;
       return s;
     }
   }catch(e){}
-  return { xp: 0, units: 0 };
+  return { xp: 0, credits: 0 };
 }
 function saveState(state){
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
@@ -3073,9 +3073,9 @@ function addXp(amount){
   const before = getLevelInfo(state.xp).level;
   state.xp = Math.max(0, state.xp + amount);
   const after = getLevelInfo(state.xp).level;
-  // Each level-up banks one unit (the hexagon balance); falling levels refund it.
-  if(after > before) state.units = (state.units || 0) + (after - before);
-  else if(after < before) refundUnits(state, before - after);
+  // Each level-up banks one credit (the hexagon balance); falling levels refund it.
+  if(after > before) state.credits = (state.credits || 0) + (after - before);
+  else if(after < before) refundCredits(state, before - after);
   saveState(state);
 
   if(after > before){
@@ -3089,20 +3089,20 @@ function addXp(amount){
   return after > before; // callers can skip a smaller chime if the big level-up fanfare already played
 }
 
-function refundUnits(state, amount){
-  // Pay a de-level cost back from the unit balance. If the balance can't cover
-  // it, walk purchases back (newest first) until it can — the spent units come
+function refundCredits(state, amount){
+  // Pay a de-level cost back from the credit balance. If the balance can't cover
+  // it, walk purchases back (newest first) until it can - the spent credits come
   // out of the bought themes instead of silently dropping the balance to zero.
-  let units = state.units || 0;
-  if(amount <= 0 || units >= amount){
-    state.units = Math.max(0, units - amount);
+  let credits = state.credits || 0;
+  if(amount <= 0 || credits >= amount){
+    state.credits = Math.max(0, credits - amount);
     return;
   }
   const purchases = loadPurchases();
   const refunded = [];
-  while(units < amount && purchases.length){
+  while(credits < amount && purchases.length){
     const p = purchases.pop();
-    units += p.price;
+    credits += p.price;
     refunded.push(p);
     saveOwnedThemes(loadOwnedThemes().filter(o => o !== p.id));
     if(p.kind === "custom"){
@@ -3124,17 +3124,17 @@ function refundUnits(state, amount){
     }
   }
   savePurchases(purchases);
-  state.units = Math.max(0, units - amount);
+  state.credits = Math.max(0, credits - amount);
   if(refunded.length){
     if(typeof renderShop === "function") renderShop();
     if(typeof renderThemeSwatches === "function") renderThemeSwatches();
     const total = refunded.reduce((sum, r) => sum + r.price, 0);
-    showToast(`Not enough units to refund XP — ${refunded.map(r => r.name).join(", ")} refunded (+${total} ◇)`);
+    showToast(`Not enough credits to refund XP - ${refunded.map(r => r.name).join(", ")} refunded (+${total} ◇)`);
   }
 }
 
-function getUnits(){
-  return loadState().units || 0;
+function getCredits(){
+  return loadState().credits || 0;
 }
 
 function onLevelUp(before, after){
@@ -3174,7 +3174,7 @@ function showLevelUpOverlay(before, after){
   oldNum.textContent = before;
   newNum.textContent = after;
   const gained = after - before;
-  document.getElementById("lvupUnit").textContent = gained === 1 ? "+1 unit" : `+${gained} units`;
+  document.getElementById("lvupCredit").textContent = gained === 1 ? "+1 credit" : `+${gained} credits`;
   overlay.style.setProperty("--lvl-color", getLevelColor(after));
 
   // restart CSS animations reliably
@@ -3201,7 +3201,7 @@ function renderLevelBar(){
   const color = getLevelColor(level);
   const pct = Math.min(100, (xpIntoLevel / xpForNext) * 100);
   document.getElementById("levelHud").style.setProperty("--lvl-color", color);
-  document.getElementById("levelIconNum").textContent = getUnits();
+  document.getElementById("levelIconNum").textContent = getCredits();
   document.getElementById("xpLabel").textContent = `Lv ${level} · ${xpIntoLevel} / ${xpForNext} XP`;
 
   const fill = document.getElementById("xpFill");
@@ -3220,7 +3220,7 @@ function animateXpGain(prevXp, targetXp){
   const color = getLevelColor(targetInfo.level);
 
   document.getElementById("levelHud").style.setProperty("--lvl-color", color);
-  document.getElementById("levelIconNum").textContent = getUnits();
+  document.getElementById("levelIconNum").textContent = getCredits();
   document.getElementById("xpLabel").textContent = `Lv ${targetInfo.level} · ${targetInfo.xpIntoLevel} / ${targetInfo.xpForNext} XP`;
 
   const fill = document.getElementById("xpFill");
@@ -3233,7 +3233,7 @@ function animateXpGain(prevXp, targetXp){
   fill.style.width = `${prevPct}%`;
   void fill.offsetWidth; // force reflow so the browser locks in the starting width
 
-  // darker projection jumps ahead to the target immediately — the "preview"
+  // darker projection jumps ahead to the target immediately - the "preview"
   projection.style.transition = "width .15s ease";
   projection.style.width = `${targetPct}%`;
 
@@ -3381,7 +3381,7 @@ function attachSwipe(wrap, taskEl, task){
         taskEl.style.transition = "none";
         try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
       } else if(Math.abs(y) > 8){
-        startX = null; // vertical scroll — hand back to the page
+        startX = null; // vertical scroll - hand back to the page
         return;
       }
     }
@@ -3417,7 +3417,7 @@ function attachSwipe(wrap, taskEl, task){
     swipeGuardTimer = setTimeout(() => { justSwiped = false; }, 350);
     const w = wrap.clientWidth || 320;
     if(commit){
-      // stop just past halfway — the card stays put and only the committed
+      // stop just past halfway - the card stays put and only the committed
       // hint shows, so "Delete" and "Hide" never both appear in the empty row
       const target = (dx > 0 ? w : -w) * 0.6;
       taskEl.style.transition = "transform .22s ease";
@@ -3444,7 +3444,7 @@ function attachSwipe(wrap, taskEl, task){
   wrap.addEventListener("pointerup", release);
   wrap.addEventListener("pointercancel", release);
 
-  // a swipe ends in a click on the (already animated) row — swallow it so it
+  // a swipe ends in a click on the (already animated) row - swallow it so it
   // can't open the detail view or toggle the box while the row flies away
   wrap.addEventListener("click", (e) => {
     if(justSwiped){
@@ -3624,7 +3624,7 @@ function renderHiddenList(){
     const lock = document.createElement("button");
     lock.className = "del";
     lock.textContent = t.locked ? "🔒" : "🔓";
-    lock.title = t.locked ? "Unlock — can be restored again" : "Lock — stays hidden until unlocked";
+    lock.title = t.locked ? "Unlock - can be restored again" : "Lock - stays hidden until unlocked";
     lock.onclick = () => {
       const all = normalize(loadTasks());
       const x = all.find(q => q.id === t.id);
@@ -3638,7 +3638,7 @@ function renderHiddenList(){
     const restore = document.createElement("button");
     restore.className = "del";
     restore.textContent = "↺";
-    restore.title = t.locked ? "Locked — unlock it first" : "Show again today";
+    restore.title = t.locked ? "Locked - unlock it first" : "Show again today";
     restore.disabled = !!t.locked;
     restore.onclick = () => {
       const all = normalize(loadTasks());
@@ -3662,7 +3662,7 @@ function renderHiddenList(){
     listEl.appendChild(row);
   });
 
-  // Finished quests — shown below the divider when auto-hide is on
+  // Finished quests - shown below the divider when auto-hide is on
   const autoHide = autoHideDoneEnabled();
   const now = Date.now();
   const finished = autoHide
@@ -3833,7 +3833,7 @@ function withCurrentTask(fn){
   saveTasks(all);
 }
 
-let lastCursorInfo = null; // { blockId, pos } — kept fresh via focus/click/keyup on text lines
+let lastCursorInfo = null; // { blockId, pos } - kept fresh via focus/click/keyup on text lines
 let pendingFocus = null;   // where to put the cursor after the next re-render
 
 function ensureTrailingTextBlock(t){
@@ -3856,7 +3856,7 @@ function insertBlockAtFocusOrEnd(newBlock){
       const before = fullVal.slice(0, cursorPos);
       const after = fullVal.slice(cursorPos);
 
-      // only keep surrounding text blocks that actually hold something —
+      // only keep surrounding text blocks that actually hold something -
       // this is what stops empty blank lines from piling up on repeat inserts
       const replacement = [];
       if(before !== "") replacement.push({ id: generateId(), type: "text", content: before });
@@ -3877,12 +3877,12 @@ function insertBlockAtFocusOrEnd(newBlock){
 }
 
 // Lets Backspace at the very start of a text line merge it into the
-// previous block (or delete it, if empty) instead of being stuck forever —
+// previous block (or delete it, if empty) instead of being stuck forever -
 // this is what makes stray blank lines actually removable.
 function handleBackspaceAtStart(blockId){
   withCurrentTask(t => {
     const idx = t.noteBlocks.findIndex(b => b.id === blockId);
-    if(idx <= 0) return; // nothing before it — nothing to merge into
+    if(idx <= 0) return; // nothing before it - nothing to merge into
     const prev = t.noteBlocks[idx - 1];
     const cur = t.noteBlocks[idx];
 
@@ -3893,12 +3893,12 @@ function handleBackspaceAtStart(blockId){
       pendingFocus = { kind: "text", blockId: prev.id, pos: mergedPos };
     } else if(cur.type === "text" && cur.content === ""){
       // previous is a checklist/counter item and this line is an empty
-      // separator — safe to just drop the blank line
+      // separator - safe to just drop the blank line
       t.noteBlocks.splice(idx, 1);
       pendingFocus = { kind: "label", blockId: prev.id };
     }
     // deleting/merging a line can leave a checklist/counter item as the
-    // very last block — always keep one text line at the end so there's
+    // very last block - always keep one text line at the end so there's
     // still somewhere to place the cursor and keep writing
     ensureTrailingTextBlock(t);
   });
@@ -3997,7 +3997,7 @@ function resetCounterBlock(blockId){
 }
 
 function updateBlockLabel(blockId, value){
-  // silent persist — no re-render, so the input keeps focus while typing
+  // silent persist - no re-render, so the input keeps focus while typing
   withCurrentTask(t => {
     const b = t.noteBlocks.find(x => x.id === blockId);
     if(!b) return;
@@ -4311,7 +4311,7 @@ function saveEdit(){
   t.oneTime = editMode === "once";
 
   if(t.oneTime){
-    // one-time quests don't track weekly/daily progress — reset cleanly if switching into this mode
+    // one-time quests don't track weekly/daily progress - reset cleanly if switching into this mode
     if(switchingMode){
       t.perWeek = 1;
       t.perDay = 1;
@@ -4423,7 +4423,7 @@ function computePeriodKey(mode, d = new Date()){
 
 /* ---------------- Activity history (for weekly retrospectives) ----------------
    Quests reset their weekly count, and one-time quests delete themselves a
-   few hours after completion — so by the time a retrospective would want to
+   few hours after completion - so by the time a retrospective would want to
    look back, the live task data may already be gone. This is a small
    append-only log that survives both, giving retrospectives something
    reliable to read from. */
@@ -4437,7 +4437,7 @@ function loadHistory(){
   return [];
 }
 function saveHistory(h){
-  // cap growth — keep the most recent ~1000 entries, plenty for many weeks
+  // cap growth - keep the most recent ~1000 entries, plenty for many weeks
   if(h.length > 1000) h = h.slice(h.length - 1000);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
 }
@@ -4448,7 +4448,7 @@ function logHistoryEvent(entry){
 }
 
 // Returns the Monday date string of the ISO week that comes right before
-// the week containing `d` (defaults to today) — i.e. "last week".
+// the week containing `d` (defaults to today) - i.e. "last week".
 function previousWeekKey(d = new Date()){
   const thisMonday = new Date(weekStr(d) + "T00:00:00");
   thisMonday.setDate(thisMonday.getDate() - 7);
@@ -4467,7 +4467,7 @@ function computeWeeklyStats(weekKey){
   const questsHit = weekResults.filter(e => e.hit).length;
   const questsMissed = weekResults.filter(e => !e.hit).length;
 
-  // events occurring anywhere in that Mon–Sun window
+  // events occurring anywhere in that Mon-Sun window
   const monday = new Date(weekKey + "T00:00:00");
   let eventsOccurred = 0;
   const events = loadEvents();
@@ -4485,7 +4485,7 @@ function weekRangeLabel(weekKey){
   const monday = new Date(weekKey + "T00:00:00");
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  return `Week of ${MONTH_ABBR[monday.getMonth()]} ${monday.getDate()} – ${MONTH_ABBR[sunday.getMonth()]} ${sunday.getDate()}`;
+  return `Week of ${MONTH_ABBR[monday.getMonth()]} ${monday.getDate()} - ${MONTH_ABBR[sunday.getMonth()]} ${sunday.getDate()}`;
 }
 
 function openRetroView(weekKey){
@@ -4832,7 +4832,7 @@ function render(){
     info.appendChild(name);
     info.appendChild(meta);
 
-    // up/down reorder buttons — only move within same priority tier
+    // up/down reorder buttons - only move within same priority tier
     const orderBtns = document.createElement("div");
     orderBtns.className = "order-btns";
     const upBtn = document.createElement("button");
@@ -4890,7 +4890,7 @@ function render(){
         }
       };
     } else if(weekDone){
-      // done for the week — tap the box to undo the final completed day
+      // done for the week - tap the box to undo the final completed day
       box.onclick = (e) => {
         e.stopPropagation();
         const all = normalize(loadTasks());
@@ -4937,7 +4937,7 @@ function render(){
           if(dayFullyDone) scheduleDoneReposition();
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
         } else {
-          // today's target was already fully met — tap again to undo the whole day
+          // today's target was already fully met - tap again to undo the whole day
           const earnedToday = t.dayCount * xpReward(t);
           t.weekCount = Math.max(0, t.weekCount - 1);
           t.dayCount = 0;
@@ -5263,7 +5263,7 @@ function exportData(){
     state: state,
     events: JSON.parse(localStorage.getItem(EVENTS_KEY) || "[]"),
     history: JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"),
-    units: state.units || 0,
+    credits: state.credits || 0,
     currentTheme: localStorage.getItem(THEME_KEY) || null,
     ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
     customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
@@ -5562,7 +5562,7 @@ function exportIcs(){
 
 /* ---------------- Reminders (best-effort, app must be open) ----------------
    There's no service worker here (file:// pages can't register one), so
-   these only fire while this tab/app is actually open — not in the
+   these only fire while this tab/app is actually open - not in the
    background or with the app closed. Good enough for "keep it open on
    your desk" use; not a substitute for a real OS-level calendar reminder. */
 const NOTIFIED_KEY = "checklist_notified_v1";
@@ -5575,7 +5575,7 @@ function loadNotified(){
   return {};
 }
 function saveNotified(n){
-  // keep this from growing forever — drop anything older than 3 days
+  // keep this from growing forever - drop anything older than 3 days
   const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
   Object.keys(n).forEach(k => { if(n[k] < cutoff) delete n[k]; });
   localStorage.setItem(NOTIFIED_KEY, JSON.stringify(n));
@@ -5593,7 +5593,7 @@ function checkReminders(){
   const todayKey = todayStr();
   let changed = false;
 
-  // Events — remind N hours before start. Checks today plus the next few
+  // Events - remind N hours before start. Checks today plus the next few
   // days, since a large remindHours value (e.g. 24+) needs to fire before
   // "today" even matches the event's actual day.
   loadEvents().forEach(ev => {
@@ -5655,10 +5655,10 @@ function updateNotifyHint(){
   }
   if(Notification.permission === "granted"){
     btn.style.display = "none";
-    hint.textContent = "Notifications on — only while this app is open in your browser.";
+    hint.textContent = "Notifications on - only while this app is open in your browser.";
   } else if(Notification.permission === "denied"){
     btn.style.display = "none";
-    hint.textContent = "Notifications blocked — re-enable them in your browser's site settings.";
+    hint.textContent = "Notifications blocked - re-enable them in your browser's site settings.";
   } else {
     btn.style.display = "";
     hint.textContent = "Notifications only fire while this app is open.";
@@ -5717,7 +5717,7 @@ function renderCalendar(){
     const times = document.createElement("div");
     if(dayEvents.length === 0){
       times.className = "cal-times cal-times-empty";
-      times.textContent = "—";
+      times.textContent = "-";
     } else {
       const first = dayEvents[0];
       const last = dayEvents[dayEvents.length - 1];
@@ -5756,7 +5756,7 @@ function renderCalendar(){
 }
 
 // Re-render every view that reflects events, but only the ones that are
-// actually open — so adding/editing/deleting an event updates the week
+// actually open - so adding/editing/deleting an event updates the week
 // strip, the month grid, and the day list in one shot.
 function refreshOpenViews(){
   renderCalendar();
@@ -5771,8 +5771,7 @@ let monthViewMonth = null; // 0-indexed
 
 function openMonthView(){
   if(window.innerWidth >= 1024 && paneRightOpen() && paneHiddenOpen()){
-    showToast("Close the left pane first");
-    return;
+    closeHiddenView();
   }
   const now = new Date();
   monthViewYear = now.getFullYear();
@@ -5890,10 +5889,10 @@ function renderDayView(){
     info.className = "info";
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = ev.name || `${formatTime12h(ev.startTime)} – ${formatTime12h(endTime)}`;
+    name.textContent = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)}`;
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `${formatTime12h(ev.startTime)} – ${formatTime12h(endTime)} · ${ev.durationMinutes} min` + repeatSummary(ev);
+    meta.textContent = `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)} · ${ev.durationMinutes} min` + repeatSummary(ev);
     info.appendChild(name);
     info.appendChild(meta);
 
@@ -5930,7 +5929,7 @@ function renderDayView(){
 function bringEventToQuests(ev){
   const dateObj = currentDayDateObj || new Date((currentDayKey || todayStr()) + "T00:00:00");
   const note = `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`;
-  const name = ev.name || `${formatTime12h(ev.startTime)} – ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
+  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
   const tasks = loadTasks();
   tasks.push({
     id: generateId(),
@@ -6153,7 +6152,7 @@ function saveCustomThemes(arr){
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(arr));
 }
 // Ordered log of paid purchases so de-levels can walk back the most recent
-// purchase when the unit balance can't cover the refund on its own.
+// purchase when the credit balance can't cover the refund on its own.
 const PURCHASES_KEY = "checklist_purchases_v1";
 function loadPurchases(){
   try{
@@ -6285,7 +6284,7 @@ function renderThemeSwatches(){
     const base = ov || a.color;
     sw.style.background = base;
     if(a.id === currentTheme.id){
-      const ring = swatchOutline(base);
+      const ring = "#0d0d0d";
       sw.style.borderColor = ring;
       sw.style.boxShadow = `0 0 0 3px ${base}, 0 0 0 5px ${ring}`;
     }
@@ -6374,22 +6373,22 @@ function editThemeFromShop(t){
   if(typeof adminShowPanel === "function") adminShowPanel();
 }
 function renderShop(){
-  const balance = getUnits();
+  const balance = getCredits();
   const shopBalanceEl = document.getElementById("shopBalance");
   shopBalanceEl.innerHTML =
     `<div class="hex-mini"><svg viewBox="0 0 20 23"><polygon points="10,1 19,6.5 19,16.5 10,22 1,16.5 1,6.5"/></svg><span>${balance}</span></div>` +
-    `<span>${balance === 1 ? "1 unit" : balance + " units"}</span>` +
-    `<button type="button" class="shop-give-btn" id="shopGiveBtn" aria-label="Give 5 units">+</button>`;
+    `<span>${balance === 1 ? "1 credit" : balance + " credits"}</span>` +
+    `<button type="button" class="shop-give-btn" id="shopGiveBtn" aria-label="Give 5 credits">+</button>`;
   const giveBtn = document.getElementById("shopGiveBtn");
   if(giveBtn) giveBtn.addEventListener("click", () => {
     if(!admin) return;
     const st = loadState();
-    st.units = (st.units || 0) + 5;
+    st.credits = (st.credits || 0) + 5;
     saveState(st);
     renderLevelBar();
     renderShop();
     sfx.click();
-    showToast("+5 units");
+    showToast("+5 credits");
   });
   const box = document.getElementById("shopItems");
   box.innerHTML = "";
@@ -6520,17 +6519,17 @@ function renderShop(){
 }
 function buyTheme(t){
   const state = loadState();
-  const units = state.units || 0;
-  if(units < t.price){
-    showToast(`Not enough units — need ${t.price - units} more`);
+  const credits = state.credits || 0;
+  if(credits < t.price){
+    showToast(`Not enough credits - need ${t.price - credits} more`);
     return;
   }
   openConfirmGeneric(
-    `Buy the ${t.name} theme for ${t.price} units?`,
+    `Buy the ${t.name} theme for ${t.price} credits?`,
     "Buy",
     () => {
       const s = loadState();
-      s.units = Math.max(0, (s.units || 0) - t.price);
+      s.credits = Math.max(0, (s.credits || 0) - t.price);
       saveState(s);
       renderLevelBar();
       const owned = loadOwnedThemes();
@@ -6577,7 +6576,7 @@ function resetAllData(){
 function resetExp(){
   const state = loadState();
   state.xp = 0;
-  state.units = 0;
+  state.credits = 0;
   saveState(state);
   renderLevelBar();
   sfx.undo();
@@ -6601,7 +6600,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
     openConfirmGeneric(
-      "Reset all exp and units? Your level returns to 1, the bar empties and the unit balance resets. Quests, events and bought themes are kept.",
+      "Reset all exp and credits? Your level returns to 1, the bar empties and the credit balance resets. Quests, events and bought themes are kept.",
       "Reset exp",
       resetExp,
       true
@@ -6936,7 +6935,7 @@ maybeAutoShowRetro();
 
       <div class="settings-section">
         <div class="settings-section-title">Appearance</div>
-        <div class="settings-sub">Pick an accent colour, or press + to spend units in the theme shop.</div>
+        <div class="settings-sub">Pick an accent colour, or press + to spend credits in the theme shop.</div>
         <div class="theme-swatches" id="themeSwatches"></div>
       </div>
 
@@ -6992,7 +6991,7 @@ maybeAutoShowRetro();
       </div>
 
       <div class="settings-danger-zone">
-        <div class="settings-sub">Danger zone — these can't be undone.</div>
+        <div class="settings-sub">Danger zone - these can't be undone.</div>
         <div class="settings-danger-row">
           <button type="button" class="settings-action settings-action-danger" id="resetExpBtn">Reset exp</button>
           <button type="button" class="settings-action settings-action-danger" id="resetDataBtn">Reset all data</button>
@@ -7029,7 +7028,7 @@ maybeAutoShowRetro();
     <span class="lvup-num lvup-old" id="lvupOld">1</span>
     <span class="lvup-num lvup-new" id="lvupNew">2</span>
   </div>
-  <div class="lvup-unit" id="lvupUnit"></div>
+  <div class="lvup-credit" id="lvupCredit"></div>
 </div>
 
 <div class="notes-ctx" id="notesCtxMenu" role="menu">
@@ -7105,7 +7104,7 @@ maybeAutoShowRetro();
       <div class="admin-row">
         <span class="admin-label">Name</span>
         <input type="text" id="adminNameInput" class="admin-name" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Theme name">
-        <span class="admin-name-lock" id="adminNameLock" title="Official theme — name can't change">&#128274;</span>
+        <span class="admin-name-lock" id="adminNameLock" title="Official theme - name can't change">&#128274;</span>
       </div>
       <div id="adminRows1"></div>
       <div class="admin-page-foot">
@@ -7262,7 +7261,7 @@ maybeAutoShowRetro();
     nameInput.disabled = !custom;
     nameInput.value = currentTheme.name || "";
     nameLock.style.display = custom ? "none" : "inline-block";
-    nameLock.title = custom ? "" : "Official theme — name can't change";
+    nameLock.title = custom ? "" : "Official theme - name can't change";
   }
   nameInput.addEventListener("change", () => {
     if(!currentTheme || !currentTheme.custom) return;
@@ -7550,9 +7549,9 @@ maybeAutoShowRetro();
   }
   function startCreateTheme(free){
     if(!free){
-      const balance = getUnits();
+      const balance = getCredits();
       if(balance < CUSTOM_THEME_PRICE){
-        showToast(`Not enough units — need ${CUSTOM_THEME_PRICE - balance} more`);
+        showToast(`Not enough credits - need ${CUSTOM_THEME_PRICE - balance} more`);
         return;
       }
     }
@@ -7591,7 +7590,7 @@ maybeAutoShowRetro();
       const rec = loadCustomThemes().find(c => c.id === id);
       if(!adminPendingCreate.free){
         const state = loadState();
-        state.units = Math.max(0, (state.units || 0) - CUSTOM_THEME_PRICE);
+        state.credits = Math.max(0, (state.credits || 0) - CUSTOM_THEME_PRICE);
         saveState(state);
         renderLevelBar();
         logPurchase({ id: id, name: rec ? rec.name : "Custom theme", price: CUSTOM_THEME_PRICE, kind: "custom", ts: Date.now() });
