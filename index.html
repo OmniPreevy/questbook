@@ -7254,7 +7254,7 @@ maybeAutoShowRetro();
       </div>
     </div>
   </div>
-  <input type="file" id="adminImgFile" accept="image/*" style="display:none">
+  <input type="file" id="adminImgFile" style="display:none">
 </div>
 
 <script>
@@ -7803,6 +7803,7 @@ maybeAutoShowRetro();
     const f = imgFile.files && imgFile.files[0];
     imgFile.value = "";
     if(!f) return;
+    if(!f.type || f.type.indexOf("image/") !== 0){ showToast("Please choose an image file"); return; }
     if(f.size > 50 * 1024 * 1024){ showToast("Image too large (max 50 MB)"); return; }
     const prefix = "bg_" + themeKey() + "_";
     dbClearImages(prefix).then(() => {
