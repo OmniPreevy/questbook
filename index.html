@@ -2126,9 +2126,15 @@
     z-index:2;
   }
   .shop-edit-notice.show{display:block;}
-  .shop-edit-btn{
+  .shop-footer{
     position:absolute;
     right:12px;bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    z-index:2;
+  }
+  .shop-edit-btn{
     background:var(--card);
     border:1px solid var(--border);
     color:var(--text);
@@ -2137,9 +2143,20 @@
     font-size:13px;
     font-weight:600;
     cursor:pointer;
-    z-index:2;
   }
   .shop-edit-btn.active{background:#b33a3a !important;border-color:#b33a3a !important;color:#fff;}
+  .shop-free-btn{
+    display:none;
+    background:color-mix(in srgb, var(--accent) 16%, var(--card));
+    border:1px solid var(--accent);
+    color:var(--accent);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .admin-mode .shop-free-btn{display:inline-block;}
   .shop-item-name-edit{cursor:pointer;color:var(--accent);text-decoration:underline;}
   .shop-balance{
     display:flex;
@@ -2153,6 +2170,23 @@
     font-size:14px;
     color:var(--text);
   }
+  .shop-give-btn{
+    display:none;
+    margin-left:auto;
+    width:28px;height:28px;
+    flex:0 0 auto;
+    border-radius:8px;
+    border:1px solid var(--accent);
+    background:color-mix(in srgb, var(--accent) 18%, var(--card));
+    color:var(--accent);
+    font-size:17px;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    align-items:center;
+    justify-content:center;
+  }
+  .admin-mode .shop-give-btn{display:inline-flex;}
   .hex-mini{
     position:relative;
     width:18px;height:20px;
@@ -5353,6 +5387,7 @@ document.addEventListener("keydown", (e) => {
   if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
   if(e.key.toLowerCase() === "m"){
     admin = !admin;
+    document.body.classList.toggle("admin-mode", admin);
     const btn = document.getElementById("testQuestBtn");
     if(admin){
       if(btn) btn.style.display = "";
@@ -6340,9 +6375,22 @@ function editThemeFromShop(t){
 }
 function renderShop(){
   const balance = getUnits();
-  document.getElementById("shopBalance").innerHTML =
+  const shopBalanceEl = document.getElementById("shopBalance");
+  shopBalanceEl.innerHTML =
     `<div class="hex-mini"><svg viewBox="0 0 20 23"><polygon points="10,1 19,6.5 19,16.5 10,22 1,16.5 1,6.5"/></svg><span>${balance}</span></div>` +
-    `<span>${balance === 1 ? "1 unit" : balance + " units"}</span>`;
+    `<span>${balance === 1 ? "1 unit" : balance + " units"}</span>` +
+    `<button type="button" class="shop-give-btn" id="shopGiveBtn" aria-label="Give 5 units">+</button>`;
+  const giveBtn = document.getElementById("shopGiveBtn");
+  if(giveBtn) giveBtn.addEventListener("click", () => {
+    if(!admin) return;
+    const st = loadState();
+    st.units = (st.units || 0) + 5;
+    saveState(st);
+    renderLevelBar();
+    renderShop();
+    sfx.click();
+    showToast("+5 units");
+  });
   const box = document.getElementById("shopItems");
   box.innerHTML = "";
   const owned = loadOwnedThemes();
@@ -6546,6 +6594,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("shopBackBtn").addEventListener("click", closeShop);
   const shopEditBtn = document.getElementById("shopEditBtn");
   if(shopEditBtn) shopEditBtn.addEventListener("click", toggleShopEditMode);
+  const shopFreeBtn = document.getElementById("shopFreeBtn");
+  if(shopFreeBtn) shopFreeBtn.addEventListener("click", () => {
+    if(typeof window.adminCreateFreeTheme === "function") window.adminCreateFreeTheme();
+  });
   document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
     openConfirmGeneric(
@@ -6962,7 +7014,10 @@ maybeAutoShowRetro();
       <div id="shopItems"></div>
     </div>
     <div class="shop-edit-notice" id="shopEditNotice">Choose which theme to edit</div>
-    <button type="button" class="shop-edit-btn" id="shopEditBtn">Edit</button>
+    <div class="shop-footer">
+      <button type="button" class="shop-free-btn" id="shopFreeBtn">New theme</button>
+      <button type="button" class="shop-edit-btn" id="shopEditBtn">Edit</button>
+    </div>
   </div>
 </div>
 
@@ -7493,11 +7548,13 @@ maybeAutoShowRetro();
   function togglePanel(){
     if(open) closePanel(); else openPanel();
   }
-  function startCreateTheme(){
-    const balance = getUnits();
-    if(balance < CUSTOM_THEME_PRICE){
-      showToast(`Not enough units — need ${CUSTOM_THEME_PRICE - balance} more`);
-      return;
+  function startCreateTheme(free){
+    if(!free){
+      const balance = getUnits();
+      if(balance < CUSTOM_THEME_PRICE){
+        showToast(`Not enough units — need ${CUSTOM_THEME_PRICE - balance} more`);
+        return;
+      }
     }
     const n = loadCustomThemes().filter(c => (c.name || "").indexOf("New theme") === 0).length;
     const t = {
@@ -7515,7 +7572,7 @@ maybeAutoShowRetro();
     const owned = loadOwnedThemes();
     owned.push(t.id);
     saveOwnedThemes(owned);
-    adminPendingCreate = { id: t.id, prevThemeId: localStorage.getItem(THEME_KEY) };
+    adminPendingCreate = { id: t.id, prevThemeId: localStorage.getItem(THEME_KEY), free: !!free };
     currentTheme = customThemeToTheme(t);
     localStorage.setItem(THEME_KEY, t.id);
     applyTheme(currentTheme);
@@ -7532,11 +7589,13 @@ maybeAutoShowRetro();
     if(adminPendingCreate){
       const id = adminPendingCreate.id;
       const rec = loadCustomThemes().find(c => c.id === id);
-      const state = loadState();
-      state.units = Math.max(0, (state.units || 0) - CUSTOM_THEME_PRICE);
-      saveState(state);
-      renderLevelBar();
-      logPurchase({ id: id, name: rec ? rec.name : "Custom theme", price: CUSTOM_THEME_PRICE, kind: "custom", ts: Date.now() });
+      if(!adminPendingCreate.free){
+        const state = loadState();
+        state.units = Math.max(0, (state.units || 0) - CUSTOM_THEME_PRICE);
+        saveState(state);
+        renderLevelBar();
+        logPurchase({ id: id, name: rec ? rec.name : "Custom theme", price: CUSTOM_THEME_PRICE, kind: "custom", ts: Date.now() });
+      }
       adminPendingCreate = null;
       closePanel();
       sfx.complete();
@@ -7673,6 +7732,7 @@ maybeAutoShowRetro();
   window.adminResetProp = resetProp;
   window.adminRepopulate = repopulate;
   window.adminCreateTheme = startCreateTheme;
+  window.adminCreateFreeTheme = () => startCreateTheme(true);
   window.adminClearUploads = clearStoredUploads;
 
   document.getElementById("adminCloseBtn").addEventListener("click", cancelPanel);
