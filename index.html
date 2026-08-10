@@ -7809,6 +7809,7 @@ maybeAutoShowRetro();
       const id = prefix + Date.now();
       return dbPutImage(id, f).then(() => {
         setVal("--bg-image", `qbimg://${id}`);
+        resolveStoredImage(`qbimg://${id}`);
         ensureImageDefaults();
         repopulatePage3();
         showToast("Image applied");
