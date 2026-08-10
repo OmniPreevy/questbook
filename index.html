@@ -50,6 +50,10 @@
     --alpha-bg:1;
     --alpha-card:1;
     --alpha-panel:1;
+    --shop-panel-bg:var(--card);
+    --shop-panel-border:var(--border);
+    --shop-btn-bg:var(--bg);
+    --shop-btn-color:var(--accent);
   }
   /* Theme palettes — switch via the accent picker in Settings.
      Each theme can tint the page background, cards and borders,
@@ -111,7 +115,7 @@
     --card:#fff0d1;
     --border:#d6c9ab;
     --text:#2b241a;
-    --dim:#8a7d63;
+    --dim:#474033;
   }
   [data-theme="parchment"] h1{color:#2b241a;}
   [data-theme="parchment"] .xp-track{background:#d6c9ab;border-color:#c2b38d;}
@@ -126,6 +130,24 @@
     --bg-decor:
       radial-gradient(600px 320px at 12% -60px, rgba(255,45,120,.16), transparent 70%),
       radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%);
+  }
+  [data-theme="redmoon"]{
+    --accent:#e2574f;
+    --bg:#18090c;
+    --card:#221014;
+    --border:#3a1a20;
+    --bg-decor:
+      radial-gradient(700px 380px at 78% -120px, rgba(226,87,79,.18), transparent 70%),
+      radial-gradient(500px 300px at 18% 110%, rgba(226,87,79,.10), transparent 70%);
+  }
+  [data-theme="spectral"]{
+    --accent:#a9b6ff;
+    --bg:#0d1120;
+    --card:#141a30;
+    --border:#283052;
+    --bg-decor:
+      radial-gradient(700px 380px at 50% -140px, rgba(169,182,255,.14), transparent 70%),
+      radial-gradient(500px 300px at 8% 112%, rgba(169,182,255,.08), transparent 70%);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-gutter:stable;}
@@ -2005,8 +2027,8 @@
     display:flex;
     flex-wrap:wrap;
     gap:16px;
-    padding:8px 8px 4px;
-    max-height:208px; /* 4 rows of 40px dots + 3*16px gaps */
+    padding:8px;
+    max-height:228px; /* 4 rows of 40px dots + 3*16px gaps + 16px padding */
     overflow-y:auto;
   }
   .theme-swatch{
@@ -2019,10 +2041,6 @@
     padding:0;
   }
   .theme-swatch:active{transform:scale(.9);}
-  .theme-swatch.active{
-    border-color:#fff !important;
-    box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--border) !important;
-  }
   .theme-swatch.active::after{
     content:"✓";
     position:absolute;
@@ -2162,8 +2180,8 @@
     gap:12px;
     padding:12px;
     margin-top:12px;
-    background:var(--card);
-    border:1px solid var(--border);
+    background:var(--shop-panel-bg, var(--card));
+    border:1px solid var(--shop-panel-border, var(--border));
     border-radius:10px;
   }
   .shop-item-preview{
@@ -2199,10 +2217,10 @@
   }
   .shop-item-btn{
     flex:0 0 auto;
-    border:1px solid var(--border);
+    border:1px solid var(--shop-btn-color, var(--border));
     border-radius:8px;
-    background:var(--bg);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--bg));
+    color:var(--shop-btn-color, var(--text));
     font-size:12.5px;
     font-weight:600;
     padding:8px 11px;
@@ -2210,7 +2228,7 @@
   }
   .shop-item-btn:active{transform:scale(.95);}
   .shop-item-btn.primary{background:var(--accent);border-color:var(--accent);color:#0d0d0d;}
-  .shop-item-btn.owned{border-color:var(--accent);color:var(--accent);}
+  .shop-item-btn.owned{background:var(--shop-btn-bg);border-color:var(--shop-btn-color);color:var(--shop-btn-color);}
   .shop-item-actions{
     flex:0 0 auto;
     display:flex;
@@ -3659,7 +3677,7 @@ function renderHiddenList(){
 function openHiddenView(){
   renderHiddenList();
   document.getElementById("hiddenView").classList.add("active");
-  closeLeftPanes("hiddenView");
+  if(window.innerWidth < 1024) closeLeftPanes("hiddenView");
   if(!threePaneAvailable()) closeRightPanes(null);
   balancePaneLayout();
 }
@@ -5717,12 +5735,16 @@ let monthViewYear = null;
 let monthViewMonth = null; // 0-indexed
 
 function openMonthView(){
+  if(window.innerWidth >= 1024 && paneRightOpen() && paneHiddenOpen()){
+    showToast("Close the left pane first");
+    return;
+  }
   const now = new Date();
   monthViewYear = now.getFullYear();
   monthViewMonth = now.getMonth();
   renderMonthGrid();
   document.getElementById("monthView").classList.add("active");
-  closeLeftPanes("monthView");
+  if(window.innerWidth < 1024) closeLeftPanes("monthView");
   if(!threePaneAvailable()) closeRightPanes(null);
   balancePaneLayout();
 }
@@ -6034,16 +6056,18 @@ const ACCENTS = [
 ];
 // Preview swatches used in the shop (must match the [data-theme="…"] CSS blocks).
 const THEME_CSS = {
-  nocturne:  { bg: "#0d1220", accent: "#c9b458", border: "#25304d" },
-  parchment: { bg: "#ece4d2", accent: "#8a5a2b", border: "#d6c9ab" },
-  neon:      { bg: "#0a0a12", accent: "#ff2d78", border: "#26263c" }
+  nocturne:  { bg: "#0d1220", accent: "#c9b458", border: "#25304d", card: "#141b2e", text: "#e8e8e8", dim: "#787878" },
+  parchment: { bg: "#ece4d2", accent: "#8a5a2b", border: "#d6c9ab", card: "#fff0d1", text: "#2b241a", dim: "#474033" },
+  neon:      { bg: "#0a0a12", accent: "#ff2d78", border: "#26263c", card: "#131320", text: "#e8e8e8", dim: "#787878" },
+  redmoon:   { bg: "#18090c", accent: "#e2574f", border: "#3a1a20", card: "#221014", text: "#e8e8e8", dim: "#a3858a" },
+  spectral:  { bg: "#0d1120", accent: "#a9b6ff", border: "#283052", card: "#141a30", text: "#e8e8e8", dim: "#8d93b8" }
 };
 const PAID_THEMES = [
   { id: "nocturne",  name: "Nocturne",   price: 5,  desc: "A midnight indigo restyle under starlit gold." },
   {
     id: "parchment",
     name: "Parchment",
-    price: 10,
+    price: 5,
     desc: "A light paper-and-ink look for bright rooms.",
     bgImage: "backdrops/parchment.webp",
     bgImageOptions: { opacity: .72, blur: "0px", scrim: "rgba(244,236,216,.24)" }
@@ -6051,10 +6075,24 @@ const PAID_THEMES = [
   {
     id: "neon",
     name: "Neon Pulse",
-    price: 15,
+    price: 10,
     desc: "Electric magenta on deep black.",
     bgImage: "backdrops/neon_pulse.png",
     bgImageOptions: { opacity: .61, blur: "0px", scrim: "rgba(0,0,0,.53)" }
+  },
+  {
+    id: "redmoon",
+    name: "Red Moon",
+    price: 10,
+    desc: "A blood-red sky above a moonlit rooftop.",
+    bgImage: "backdrops/red_moon_rooftop.jpg",
+    bgImageOptions: { opacity: .7, blur: "0px", scrim: "rgba(64,8,12,.42)" }
+  },
+  {
+    id: "spectral",
+    name: "Spectral",
+    price: 15,
+    desc: "Pale ghost light drifting over midnight blue."
   }
 ];
 let currentTheme = loadTheme();
@@ -6171,6 +6209,35 @@ function clearBackgroundImage(){
   root.style.setProperty("--bg-image-size", "cover");
   root.style.setProperty("--bg-image-scrim", "rgba(0,0,0,0)");
 }
+function hexToRgb(hex){
+  const h = String(hex || "").trim();
+  if(!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(h)) return null;
+  let c = h.slice(1);
+  if(c.length === 3) c = c.split("").map(ch => ch + ch).join("");
+  return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+}
+function colorLuminance(hex){
+  const rgb = hexToRgb(hex);
+  if(!rgb) return 0.5;
+  const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
+}
+function mixHex(hex, target, t){
+  const rgb = hexToRgb(hex);
+  const trgb = hexToRgb(target);
+  if(!rgb || !trgb) return "#ffffff";
+  return "#" + rgb.map((v, i) => Math.round(v + (trgb[i] - v) * t))
+    .map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("");
+}
+function swatchOutline(bgColor){
+  if(!hexToRgb(bgColor)) return "#ffffff";
+  return colorLuminance(bgColor) < 0.5 ? "#ffffff" : "#0d0d0d";
+}
+function contrastOutline(bgColor, accentColor){
+  return colorLuminance(bgColor) < 0.5
+    ? mixHex(accentColor, "#ffffff", 0.55)
+    : mixHex(accentColor, "#000000", 0.55);
+}
 function renderThemeSwatches(){
   const box = document.getElementById("themeSwatches");
   if(!box) return;
@@ -6180,7 +6247,13 @@ function renderThemeSwatches(){
     sw.type = "button";
     sw.className = "theme-swatch" + (a.id === currentTheme.id ? " active" : "");
     const ov = (typeof window.adminGetOverride === "function") ? window.adminGetOverride(a.id, "--accent") : null;
-    sw.style.background = ov || a.color;
+    const base = ov || a.color;
+    sw.style.background = base;
+    if(a.id === currentTheme.id){
+      const ring = swatchOutline(base);
+      sw.style.borderColor = ring;
+      sw.style.boxShadow = `0 0 0 3px ${base}, 0 0 0 5px ${ring}`;
+    }
     sw.title = a.name;
     sw.setAttribute("aria-label", a.name);
     sw.addEventListener("click", () => {
@@ -6283,24 +6356,50 @@ function renderShop(){
   allThemes.forEach(t => {
     const key = t.custom ? "custom-" + t.id : t.id;
     const ov = (typeof window.adminGetOverride === "function") ? window.adminGetOverride : null;
-    const base = t.custom ? { bg: t.bg, accent: t.accent, border: t.border } : THEME_CSS[t.id];
-    const css = {
-      bg: ov ? (ov(key, "--bg") || base.bg) : base.bg,
-      accent: ov ? (ov(key, "--accent") || base.accent) : base.accent,
-      border: ov ? (ov(key, "--border") || base.border) : base.border
+    const get = (prop, fb) => ov ? (ov(key, prop) || fb) : fb;
+    const base = t.custom
+      ? { bg: t.bg, card: t.card, border: t.border, accent: t.accent, text: "#e8e8e8", dim: "#787878" }
+      : THEME_CSS[t.id];
+    const pal = {
+      bg: get("--bg", base.bg),
+      card: get("--card", base.card),
+      border: get("--border", base.border),
+      text: get("--text", base.text),
+      dim: get("--dim", base.dim),
+      accent: get("--accent", base.accent),
+      panelBg: get("--shop-panel-bg", base.card),
+      panelBorder: get("--shop-panel-border", base.border),
+      btnBg: get("--shop-btn-bg", base.bg),
+      btnColor: get("--shop-btn-color", base.accent)
     };
     const row = document.createElement("div");
     row.className = "shop-item";
+    const rowVars = {
+      "--bg": pal.bg,
+      "--card": pal.card,
+      "--border": pal.border,
+      "--text": pal.text,
+      "--dim": pal.dim,
+      "--accent": pal.accent,
+      "--shop-panel-bg": pal.panelBg,
+      "--shop-panel-border": pal.panelBorder,
+      "--shop-btn-bg": pal.btnBg,
+      "--shop-btn-color": pal.btnColor
+    };
+    for(const prop in rowVars){
+      row.style.setProperty(prop, rowVars[prop]);
+    }
 
     const prev = document.createElement("div");
     prev.className = "shop-item-preview";
-    prev.style.background = css.bg;
+    prev.style.background = pal.bg;
+    prev.style.borderColor = contrastOutline(pal.bg, pal.accent);
     const dot = document.createElement("div");
     dot.className = "dot";
-    dot.style.background = css.accent;
+    dot.style.background = pal.accent;
     const line = document.createElement("div");
     line.className = "line";
-    line.style.background = css.border;
+    line.style.background = pal.border;
     prev.append(dot, line);
 
     const info = document.createElement("div");
@@ -6412,6 +6511,8 @@ function closeSettings(){
 }
 function resetPaneLayout(){
   localStorage.removeItem("qbPaneLayout");
+  localStorage.removeItem("qbMonthSticky");
+  monthStickyLeft = false;
   applyPaneLayout();
   sfx.pop();
 }
@@ -6499,20 +6600,57 @@ function syncPaneBackLabels(){
     if(el && el.textContent !== label) el.textContent = label;
   });
 }
-function balancePaneLayout(){
-  applyPaneLayout();
-  if(window.innerWidth < 1024) return;
-  const month = document.getElementById("monthView");
-  const main = document.querySelector(".app-main");
-  if(!month || !main) return;
-  const rightOpen = rightPaneIds().some(id => {
+function paneRightOpen(){
+  return rightPaneIds().some(id => {
     const el = document.getElementById(id);
     return el && el.classList.contains("active");
   });
-  if(month.classList.contains("active") && !rightOpen){
-    const mainOrder = parseInt(getComputedStyle(main).order, 10) || 2;
-    month.style.order = mainOrder + 1;
+}
+function paneHiddenOpen(){
+  const el = document.getElementById("hiddenView");
+  return !!el && el.classList.contains("active");
+}
+let monthStickyLeft = (function(){
+  try{ return localStorage.getItem("qbMonthSticky") === "1"; }catch(e){ return false; }
+})();
+function setMonthSticky(on){
+  monthStickyLeft = !!on;
+  try{ localStorage.setItem("qbMonthSticky", on ? "1" : "0"); }catch(e){}
+}
+function setMonthSide(left){
+  const layout = loadPaneLayout();
+  const mainIdx = layout.indexOf("main");
+  const cur = layout.indexOf("monthView");
+  if(cur === -1) return;
+  if((left && cur < mainIdx) || (!left && cur > mainIdx)) return;
+  layout.splice(cur, 1);
+  const nm = layout.indexOf("main");
+  layout.splice(left ? nm : nm + 1, 0, "monthView");
+  savePaneLayout(layout);
+  applyPaneLayout();
+}
+function positionMonth(){
+  if(window.innerWidth < 1024) return;
+  const month = document.getElementById("monthView");
+  if(!month || !month.classList.contains("active")) return;
+  const rightOpen = paneRightOpen();
+  const hiddenOpen = paneHiddenOpen();
+  if(hiddenOpen && rightOpen){
+    month.classList.remove("active");
+    return;
   }
+  if(hiddenOpen){
+    setMonthSide(false);
+  } else if(rightOpen){
+    setMonthSide(true);
+    setMonthSticky(true);
+  } else {
+    setMonthSide(monthStickyLeft);
+  }
+}
+function balancePaneLayout(){
+  applyPaneLayout();
+  positionMonth();
 }
 function visibleRowItems(exceptId){
   const out = [];
@@ -6577,6 +6715,9 @@ function dropPaneAt(e){
   const ti = target ? layout.indexOf(target) : layout.length;
   layout.splice(ti, 0, dragState.paneId);
   savePaneLayout(layout);
+  if(dragState.paneId === "monthView"){
+    setMonthSticky(layout.indexOf("monthView") < layout.indexOf("main"));
+  }
   balancePaneLayout();
 }
 function endPaneDrag(e){
@@ -6979,6 +7120,10 @@ maybeAutoShowRetro();
   const FIELDS = [
     { label:"Background", prop:"--bg",     page:1 },
     { label:"Card",       prop:"--card",   page:1 },
+    { label:"Panel bg",   prop:"--shop-panel-bg",    page:1 },
+    { label:"Panel outline", prop:"--shop-panel-border", page:1 },
+    { label:"Button bg",  prop:"--shop-btn-bg",      page:1 },
+    { label:"Button font/outline", prop:"--shop-btn-color", page:1 },
     { label:"Accent",     prop:"--accent", page:2 },
     { label:"Border",     prop:"--border", page:2 },
     { label:"Text",       prop:"--text",   page:2 },
@@ -7049,6 +7194,8 @@ maybeAutoShowRetro();
   const alphaPanelVal = document.getElementById("adminAlphaPanelVal");
   let open = false;
   let adminPendingCreate = null;
+  let adminSessionStore = null;
+  let adminSessionCustom = null;
 
   function goPage(n){
     pages.forEach((p, i) => p.classList.toggle("active", i === n - 1));
@@ -7300,6 +7447,14 @@ maybeAutoShowRetro();
   }
   function openPanel(){
     open = true;
+    const key = themeKey();
+    adminSessionStore = { key: key, rec: JSON.parse(JSON.stringify(load()[key] || {})) };
+    if(currentTheme && currentTheme.custom){
+      const rec = loadCustomThemes().find(c => c.id === currentTheme.id);
+      adminSessionCustom = rec ? { id: rec.id, rec: JSON.parse(JSON.stringify(rec)) } : null;
+    }else{
+      adminSessionCustom = null;
+    }
     syncMeta();
     buildRows();
     repopulatePage3();
@@ -7372,6 +7527,8 @@ maybeAutoShowRetro();
     showPanel();
   }
   function confirmPanel(){
+    adminSessionStore = null;
+    adminSessionCustom = null;
     if(adminPendingCreate){
       const id = adminPendingCreate.id;
       const rec = loadCustomThemes().find(c => c.id === id);
@@ -7389,6 +7546,26 @@ maybeAutoShowRetro();
     closePanel();
   }
   function cancelPanel(){
+    let reverted = false;
+    if(adminSessionStore){
+      const store = load();
+      if(adminSessionStore.rec && Object.keys(adminSessionStore.rec).length){
+        store[adminSessionStore.key] = adminSessionStore.rec;
+      }else{
+        delete store[adminSessionStore.key];
+      }
+      save(store);
+      adminSessionStore = null;
+      reverted = true;
+    }
+    if(adminSessionCustom){
+      const arr = loadCustomThemes();
+      const idx = arr.findIndex(c => c.id === adminSessionCustom.id);
+      if(idx >= 0) arr[idx] = adminSessionCustom.rec;
+      saveCustomThemes(arr);
+      adminSessionCustom = null;
+      reverted = true;
+    }
     if(adminPendingCreate){
       const id = adminPendingCreate.id;
       saveCustomThemes(loadCustomThemes().filter(c => c.id !== id));
@@ -7414,7 +7591,10 @@ maybeAutoShowRetro();
       showToast("Theme creation cancelled");
       return;
     }
+    applyOverrides();
     closePanel();
+    sfx.click();
+    if(reverted) showToast("Changes cancelled");
   }
   function resetProp(prop){
     if(prop === "--bg-image") clearStoredUploads(themeKey());
