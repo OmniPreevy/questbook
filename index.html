@@ -2286,6 +2286,11 @@
     font-size:11.5px;
     padding:6px 11px;
   }
+  .shop-item-btn-refund{
+    background:transparent;
+    border-color:color-mix(in srgb, var(--danger) 55%, transparent);
+    color:var(--danger);
+  }
   .shop-item-create{
     border-style:dashed;
     background:transparent;
@@ -6503,6 +6508,15 @@ function renderShop(){
       btn.onclick = () => buyTheme(t);
     }
     btnWrap.appendChild(btn);
+    if(t.custom){
+      const refundBtn = document.createElement("button");
+      refundBtn.type = "button";
+      refundBtn.className = "shop-item-btn shop-item-btn-refund";
+      refundBtn.textContent = `Refund · ${CUSTOM_THEME_PRICE} ◇`;
+      refundBtn.title = "Delete this theme and get back " + CUSTOM_THEME_PRICE + " credits";
+      refundBtn.onclick = () => refundCustomTheme(t);
+      btnWrap.appendChild(refundBtn);
+    }
     row.append(prev, info, btnWrap);
     box.appendChild(row);
   });
@@ -6558,6 +6572,43 @@ function buyTheme(t){
       sfx.complete();
       showToast(`${t.name} equipped`);
     }
+  );
+}
+function refundCustomTheme(t){
+  openConfirmGeneric(
+    `Refund ${t.name}? It will be deleted and you'll get ${CUSTOM_THEME_PRICE} credits back.`,
+    "Refund",
+    () => {
+      const state = loadState();
+      state.credits = (state.credits || 0) + CUSTOM_THEME_PRICE;
+      saveState(state);
+      renderLevelBar();
+      saveCustomThemes(loadCustomThemes().filter(c => c.id !== t.id));
+      saveOwnedThemes(loadOwnedThemes().filter(o => o !== t.id));
+      try{
+        const store = JSON.parse(localStorage.getItem("qb-admin-overrides")) || {};
+        let changed = false;
+        for(const k of [t.id, "custom-" + t.id]){
+          if(store[k]){ delete store[k]; changed = true; }
+        }
+        if(changed) localStorage.setItem("qb-admin-overrides", JSON.stringify(store));
+      }catch(e){}
+      if(typeof window.adminClearUploads === "function"){
+        window.adminClearUploads(t.id);
+        window.adminClearUploads("custom-" + t.id);
+      }
+      savePurchases(loadPurchases().filter(p => !(p.kind === "custom" && p.id === t.id)));
+      if(localStorage.getItem(THEME_KEY) === t.id){
+        localStorage.setItem(THEME_KEY, ACCENTS[0].id);
+        currentTheme = ACCENTS[0];
+        applyTheme(currentTheme);
+      }
+      renderShop();
+      if(typeof renderThemeSwatches === "function") renderThemeSwatches();
+      sfx.undo();
+      showToast(`${t.name} refunded · +${CUSTOM_THEME_PRICE} ◇`);
+    },
+    true
   );
 }
 function openSettings(){
