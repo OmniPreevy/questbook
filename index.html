@@ -135,22 +135,28 @@
       radial-gradient(700px 360px at 106% 6%, rgba(0,255,220,.12), transparent 70%);
   }
   [data-theme="redmoon"]{
-    --accent:#e2574f;
-    --bg:#18090c;
-    --card:#221014;
-    --border:#3a1a20;
-    --bg-decor:
-      radial-gradient(700px 380px at 78% -120px, rgba(226,87,79,.18), transparent 70%),
-      radial-gradient(500px 300px at 18% 110%, rgba(226,87,79,.10), transparent 70%);
+    --accent:#ff0000;
+    --bg:#4d0000;
+    --card:#190000;
+    --border:#4d0000;
+    --alpha-card:.28;
+    --alpha-panel:.24;
+    --shop-panel-bg:#000000;
+    --shop-panel-border:#c70000;
+    --shop-btn-bg:#1c1c1c;
+    --shop-btn-color:#ff0000;
+    --shop-show-bg:#1a0f0f;
+    --shop-show-accent:#a71111;
   }
   [data-theme="spectral"]{
-    --accent:#a9b6ff;
-    --bg:#0d1120;
-    --card:#141a30;
-    --border:#283052;
-    --bg-decor:
-      radial-gradient(700px 380px at 50% -140px, rgba(169,182,255,.14), transparent 70%),
-      radial-gradient(500px 300px at 8% 112%, rgba(169,182,255,.08), transparent 70%);
+    --accent:#85caff;
+    --bg:#ffd1fd;
+    --card:#9694e5;
+    --border:#cea1c4;
+    --dim:#000000;
+    --alpha-card:.16;
+    --alpha-panel:.05;
+    --shop-btn-color:#dfdfe7;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scrollbar-gutter:stable;}
@@ -6098,8 +6104,8 @@ const THEME_CSS = {
   nocturne:  { bg: "#0d1220", accent: "#c9b458", border: "#25304d", card: "#141b2e", text: "#e8e8e8", dim: "#787878" },
   parchment: { bg: "#ece4d2", accent: "#8a5a2b", border: "#d6c9ab", card: "#fff0d1", text: "#2b241a", dim: "#474033" },
   neon:      { bg: "#0a0a12", accent: "#ff2d78", border: "#26263c", card: "#131320", text: "#e8e8e8", dim: "#787878" },
-  redmoon:   { bg: "#18090c", accent: "#e2574f", border: "#3a1a20", card: "#221014", text: "#e8e8e8", dim: "#a3858a" },
-  spectral:  { bg: "#0d1120", accent: "#a9b6ff", border: "#283052", card: "#141a30", text: "#e8e8e8", dim: "#8d93b8" }
+  redmoon:   { bg: "#4d0000", accent: "#ff0000", border: "#4d0000", card: "#190000", text: "#e8e8e8", dim: "#787878", panelBg: "#000000", panelBorder: "#c70000", btnBg: "#1c1c1c", btnColor: "#ff0000", showBg: "#1a0f0f", showAccent: "#a71111" },
+  spectral:  { bg: "#ffd1fd", accent: "#85caff", border: "#cea1c4", card: "#9694e5", text: "#e8e8e8", dim: "#000000", panelBg: "#9694e5", panelBorder: "#cea1c4", btnBg: "#9694e5", btnColor: "#dfdfe7", showBg: "#ffd1fd", showAccent: "#85caff" }
 };
 const PAID_THEMES = [
   { id: "nocturne",  name: "Nocturne",   price: 5,  desc: "A midnight indigo restyle under starlit gold." },
@@ -6125,13 +6131,15 @@ const PAID_THEMES = [
     price: 10,
     desc: "A blood-red sky above a moonlit rooftop.",
     bgImage: "backdrops/red_moon_rooftop.jpg",
-    bgImageOptions: { opacity: .7, blur: "0px", scrim: "rgba(64,8,12,.42)" }
+    bgImageOptions: { opacity: 1, blur: "5px", scrim: "rgba(0,0,0,.2)" }
   },
   {
     id: "spectral",
     name: "Spectral",
     price: 15,
-    desc: "Pale ghost light drifting over midnight blue."
+    desc: "Soft pastel pink and cyan light.",
+    bgImage: "backdrops/pink_cyan_anime.jpg",
+    bgImageOptions: { opacity: 1, blur: "6px", scrim: "rgba(0,0,0,.42)" }
   }
 ];
 let currentTheme = loadTheme();
@@ -6419,13 +6427,13 @@ function renderShop(){
       text: get("--text", base.text),
       dim: get("--dim", base.dim),
       accent: get("--accent", base.accent),
-      panelBg: get("--shop-panel-bg", base.card),
-      panelBorder: get("--shop-panel-border", base.border),
-      btnBg: get("--shop-btn-bg", base.bg),
-      btnColor: get("--shop-btn-color", base.accent)
+      panelBg: get("--shop-panel-bg", base.panelBg || base.card),
+      panelBorder: get("--shop-panel-border", base.panelBorder || base.border),
+      btnBg: get("--shop-btn-bg", base.btnBg || base.bg),
+      btnColor: get("--shop-btn-color", base.btnColor || base.accent)
     };
-    pal.showBg = get("--shop-show-bg", pal.bg);
-    pal.showAccent = get("--shop-show-accent", pal.accent);
+    pal.showBg = get("--shop-show-bg", base.showBg || pal.bg);
+    pal.showAccent = get("--shop-show-accent", base.showAccent || pal.accent);
     const row = document.createElement("div");
     row.className = "shop-item";
     const rowVars = {
