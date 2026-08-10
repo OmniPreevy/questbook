@@ -50,10 +50,13 @@
     --alpha-bg:1;
     --alpha-card:1;
     --alpha-panel:1;
+    --alpha-panel-ui:.97;
     --shop-panel-bg:var(--card);
     --shop-panel-border:var(--border);
     --shop-btn-bg:var(--bg);
     --shop-btn-color:var(--accent);
+    --shop-show-bg:var(--bg);
+    --shop-show-accent:var(--accent);
   }
   /* Theme palettes - switch via the accent picker in Settings.
      Each theme can tint the page background, cards and borders,
@@ -230,10 +233,10 @@
     background:color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
   }
   .detail-view, .notes-doc, .detail-timer{
-    background:color-mix(in srgb, var(--card) calc(var(--alpha-panel,1)*100%), transparent) !important;
+    background:color-mix(in srgb, var(--shop-panel-bg, var(--card)) calc(var(--alpha-panel,1)*100%), transparent) !important;
   }
   #retroView, .settings-panel, .shop-panel{
-    background:color-mix(in srgb, var(--bg) calc(var(--alpha-panel,1)*100%), transparent) !important;
+    background:color-mix(in srgb, var(--shop-panel-bg, var(--bg)) calc(var(--alpha-panel-ui,.97)*100%), transparent) !important;
   }
   input, textarea, select, [contenteditable="true"],
   .notes-doc, .notes-line-text, .item-label-input{
@@ -670,9 +673,9 @@
   .section-add-btn, .cal-add-btn{
     width:30px;height:30px;
     border-radius:50%;
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--dim);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--dim));
     font-size:16px;
     display:flex;align-items:center;justify-content:center;
     padding:0;
@@ -774,9 +777,9 @@
   .month-nav-btn{
     width:32px;height:32px;
     border-radius:50%;
-    background:var(--card);
-    border:1px solid var(--border);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
     font-size:16px;
     display:flex;align-items:center;justify-content:center;
     padding:0;
@@ -1210,7 +1213,7 @@
     position:fixed;
     inset:0;
     z-index:60;
-    background:var(--card);
+    background:var(--shop-panel-bg, var(--card));
     padding:16px;
     padding-top:calc(16px + env(safe-area-inset-top));
     display:flex;
@@ -1239,9 +1242,9 @@
   }
   #hiddenView .detail-header{margin-bottom:14px;}
   .back-btn{
-    background:var(--card);
-    border:1px solid var(--border);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--card));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
     border-radius:8px;
     padding:8px 14px;
     font-size:15px;
@@ -1265,9 +1268,9 @@
     width:34px;
     height:34px;
     border-radius:50%;
-    background:transparent;
-    border:1px solid var(--border);
-    color:var(--dim);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--dim));
     font-size:14px;
     display:flex;
     align-items:center;
@@ -1561,8 +1564,8 @@
     max-height:82vh;
     margin:0;
     padding:0;
-    background:var(--bg);
-    border:1px solid var(--border);
+    background:var(--shop-panel-bg, var(--bg));
+    border:1px solid var(--shop-panel-border, var(--border));
     border-radius:14px;
     box-shadow:0 24px 70px rgba(0,0,0,.55);
     display:flex;
@@ -1871,9 +1874,9 @@
   .nt-day-row{display:flex;align-items:center;gap:10px;}
   .nt-day-row input[type=range]{flex:1;}
   .nt-custom-btn{
-    background:var(--card);
-    border:1px solid var(--border);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
     border-radius:8px;
     padding:8px 12px;
     font-size:13px;
@@ -1969,8 +1972,8 @@
     position:absolute;
     top:0;right:0;bottom:0;
     width:min(480px, 100%);
-    background:var(--bg);
-    border-left:1px solid var(--border);
+    background:var(--shop-panel-bg, var(--bg));
+    border-left:1px solid var(--shop-panel-border, var(--border));
     display:flex;
     flex-direction:column;
     transform:translateX(100%);
@@ -2034,7 +2037,7 @@
   .theme-swatch{
     width:40px;height:40px;
     border-radius:50%;
-    border:2px solid var(--border);
+    border:2px solid #0d0d0d;
     position:relative;
     cursor:pointer;
     transition:transform .15s ease;
@@ -2082,8 +2085,8 @@
     position:absolute;
     top:0;right:0;bottom:0;
     width:min(480px, 100%);
-    background:var(--bg);
-    border-left:1px solid var(--border);
+    background:var(--shop-panel-bg, var(--bg));
+    border-left:1px solid var(--shop-panel-border, var(--border));
     display:flex;
     flex-direction:column;
     transform:translateX(100%);
@@ -2135,9 +2138,9 @@
     z-index:2;
   }
   .shop-edit-btn{
-    background:var(--card);
-    border:1px solid var(--border);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
     border-radius:8px;
     padding:8px 14px;
     font-size:13px;
@@ -2172,7 +2175,6 @@
   }
   .shop-give-btn{
     display:none;
-    margin-left:auto;
     width:28px;height:28px;
     flex:0 0 auto;
     border-radius:8px;
@@ -2223,6 +2225,7 @@
     flex:0 0 auto;
     border-radius:10px;
     border:1px solid var(--border);
+    background:var(--shop-show-bg, var(--bg));
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -2232,6 +2235,7 @@
   .shop-item-preview .dot{
     width:18px;height:18px;
     border-radius:50%;
+    background:var(--shop-show-accent, var(--accent));
   }
   .shop-item-preview .line{
     width:28px;height:3px;
@@ -2282,6 +2286,7 @@
   }
   .shop-item-create .shop-item-preview{
     border-style:dashed;
+    background:transparent;
     font-size:22px;
     color:var(--dim);
   }
@@ -2296,9 +2301,9 @@
   .settings-row-title{font-size:14px;font-weight:600;}
   .settings-row-sub{font-size:12px;color:var(--dim);margin-top:2px;line-height:1.4;}
   .settings-action{
-    background:var(--card);
-    border:1px solid var(--border);
-    color:var(--text);
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
     border-radius:8px;
     padding:8px 16px;
     font-size:13px;
@@ -6376,9 +6381,9 @@ function renderShop(){
   const balance = getCredits();
   const shopBalanceEl = document.getElementById("shopBalance");
   shopBalanceEl.innerHTML =
+    `<button type="button" class="shop-give-btn" id="shopGiveBtn" aria-label="Give 5 credits">+</button>` +
     `<div class="hex-mini"><svg viewBox="0 0 20 23"><polygon points="10,1 19,6.5 19,16.5 10,22 1,16.5 1,6.5"/></svg><span>${balance}</span></div>` +
-    `<span>${balance === 1 ? "1 credit" : balance + " credits"}</span>` +
-    `<button type="button" class="shop-give-btn" id="shopGiveBtn" aria-label="Give 5 credits">+</button>`;
+    `<span>${balance === 1 ? "1 credit" : balance + " credits"}</span>`;
   const giveBtn = document.getElementById("shopGiveBtn");
   if(giveBtn) giveBtn.addEventListener("click", () => {
     if(!admin) return;
@@ -6417,7 +6422,9 @@ function renderShop(){
       panelBg: get("--shop-panel-bg", base.card),
       panelBorder: get("--shop-panel-border", base.border),
       btnBg: get("--shop-btn-bg", base.bg),
-      btnColor: get("--shop-btn-color", base.accent)
+      btnColor: get("--shop-btn-color", base.accent),
+      showBg: get("--shop-show-bg", pal.bg),
+      showAccent: get("--shop-show-accent", pal.accent)
     };
     const row = document.createElement("div");
     row.className = "shop-item";
@@ -6431,7 +6438,9 @@ function renderShop(){
       "--shop-panel-bg": pal.panelBg,
       "--shop-panel-border": pal.panelBorder,
       "--shop-btn-bg": pal.btnBg,
-      "--shop-btn-color": pal.btnColor
+      "--shop-btn-color": pal.btnColor,
+      "--shop-show-bg": pal.showBg,
+      "--shop-show-accent": pal.showAccent
     };
     for(const prop in rowVars){
       row.style.setProperty(prop, rowVars[prop]);
@@ -6439,11 +6448,9 @@ function renderShop(){
 
     const prev = document.createElement("div");
     prev.className = "shop-item-preview";
-    prev.style.background = pal.bg;
-    prev.style.borderColor = contrastOutline(pal.bg, pal.accent);
+    prev.style.borderColor = contrastOutline(pal.showBg, pal.showAccent);
     const dot = document.createElement("div");
     dot.className = "dot";
-    dot.style.background = pal.accent;
     const line = document.createElement("div");
     line.className = "line";
     line.style.background = pal.border;
@@ -7174,10 +7181,12 @@ maybeAutoShowRetro();
   const FIELDS = [
     { label:"Background", prop:"--bg",     page:1 },
     { label:"Card",       prop:"--card",   page:1 },
-    { label:"Panel bg",   prop:"--shop-panel-bg",    page:1 },
-    { label:"Panel outline", prop:"--shop-panel-border", page:1 },
-    { label:"Button bg",  prop:"--shop-btn-bg",      page:1 },
-    { label:"Button font/outline", prop:"--shop-btn-color", page:1 },
+    { label:"Shop showcase bg",   prop:"--shop-show-bg",     page:1 },
+    { label:"Shop showcase accent", prop:"--shop-show-accent", page:1 },
+    { label:"Panel bg",   prop:"--shop-panel-bg",    page:2 },
+    { label:"Panel outline", prop:"--shop-panel-border", page:2 },
+    { label:"Button bg",  prop:"--shop-btn-bg",      page:2 },
+    { label:"Button font/outline", prop:"--shop-btn-color", page:2 },
     { label:"Accent",     prop:"--accent", page:2 },
     { label:"Border",     prop:"--border", page:2 },
     { label:"Text",       prop:"--text",   page:2 },
