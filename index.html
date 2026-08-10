@@ -6591,6 +6591,7 @@ function buyTheme(t){
       localStorage.setItem(THEME_KEY, t.id);
       applyTheme(currentTheme);
       renderShop();
+      if(typeof renderThemeSwatches === "function") renderThemeSwatches();
       sfx.complete();
       showToast(`${t.name} equipped`);
     }
