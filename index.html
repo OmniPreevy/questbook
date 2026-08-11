@@ -1100,8 +1100,8 @@
 
   /* persistent "Today's Events" toast shown while the day view is open at launch */
   .today-events-toast{
-    position:fixed;
-    top:20%;
+    position:absolute;
+    top:18%;
     left:50%;
     transform:translateX(-50%) translateY(-8px);
     background:color-mix(in srgb, var(--card) 92%, transparent);
@@ -1116,12 +1116,29 @@
     box-shadow:0 6px 24px rgba(0,0,0,.45);
     opacity:0;
     pointer-events:none;
+    white-space:nowrap;
     z-index:2100;
     transition:opacity .25s ease, transform .25s ease;
   }
   .today-events-toast.show{
     opacity:1;
     transform:translateX(-50%) translateY(0);
+  }
+  /* On wide screens the toast lives inside the day-view pane: anchor it to the
+     pane (not the middle of the screen) and keep it a quiet corner badge. */
+  @media (min-width:1024px){
+    .today-events-toast{
+      top:auto;
+      bottom:14px;
+      font-size:13px;
+      font-weight:600;
+      letter-spacing:.4px;
+      text-shadow:0 1px 6px rgba(0,0,0,.5);
+      padding:6px 12px;
+      border-width:1px;
+      border-radius:9px;
+      box-shadow:0 3px 12px rgba(0,0,0,.35);
+    }
   }
 
   /* inspect-mode exit button pinned left of the date + persistent "Testing" toast */
@@ -2697,7 +2714,6 @@
   </div>
 </div>
 
-<div class="today-events-toast" id="todayEventsToast">Today's Events</div>
 <div class="inspect-exit" id="inspectExitBtn" role="button" title="Stop testing this theme and reopen the shop" aria-label="Stop testing this theme">&times;</div>
 <div class="inspect-toast" id="inspectToast"></div>
 
@@ -2871,6 +2887,7 @@
 </div>
 
 <div class="detail-view" id="dayView">
+  <div class="today-events-toast" id="todayEventsToast">Today's Events</div>
   <div class="detail-header">
     <button class="back-btn" id="dayBackBtn">‹ Collapse</button>
     <div class="detail-title" id="dayViewTitle">Day</div>
@@ -7648,21 +7665,35 @@ if(todayEventsAtBoot.length > 0){
   .admin-nav:disabled{opacity:.35;cursor:default;background:#2e2e2e;pointer-events:none;}
   .admin-done{background:#2f9e44;color:#fff;border:1px solid #38b64e;border-radius:6px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;}
   .admin-done:hover{background:#3ab252;}
-  .admin-note{color:#777;font-size:10px;line-height:1.5;margin:8px 0 4px;}
-  .admin-showcase-row{align-items:center;}
-  .admin-showcase-preview{
-    width:34px;height:34px;flex:0 0 auto;
+  .admin-undo-all{
+    flex:0 0 auto;
+    margin-right:auto;
+    background:#3a1215;
+    border:1px solid #a02a30;
+    color:#ff8a80;
     border-radius:6px;
+    padding:6px 10px;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .admin-undo-all:hover{background:#4a1619;color:#ffaaa2;}
+  .admin-note{color:#777;font-size:10px;line-height:1.5;margin:8px 0 4px;}
+  .admin-showcase-row{align-items:center;margin-top:18px;}
+  .admin-showcase-preview{
+    width:56px;height:56px;flex:0 0 auto;
+    border-radius:9px;
     border:1px solid #555;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:4px;
+    gap:5px;
   }
-  .admin-showcase-dot{width:10px;height:10px;border-radius:50%;}
-  .admin-showcase-line{width:18px;height:2px;border-radius:1px;}
-  .admin-showcase-colors{display:flex;align-items:center;gap:5px;}
+  .admin-showcase-dot{width:16px;height:16px;border-radius:50%;}
+  .admin-showcase-line{width:30px;height:3px;border-radius:2px;}
+  .admin-showcase-colors{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .admin-show-color-row{display:flex;align-items:center;gap:3px;}
   .admin-show-swatch{
     width:20px;height:20px;
     border:1px solid #555;
@@ -7672,6 +7703,12 @@ if(todayEventsAtBoot.length > 0){
     flex:0 0 auto;
   }
   .admin-show-swatch:hover{border-color:#fff;}
+  .admin-show-reset{
+    flex:0 0 auto;width:20px;height:20px;
+    border:1px solid #3a3a3a;background:#242424;color:#ccc;
+    border-radius:4px;cursor:pointer;font-size:11px;line-height:1;padding:0;
+  }
+  .admin-show-reset:hover{color:#fff;border-color:#5a5a5a;}
   .admin-showcase-picker{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
 
 </style>
@@ -7693,6 +7730,7 @@ if(todayEventsAtBoot.length > 0){
       </div>
       <div id="adminRows1"></div>
       <div class="admin-page-foot">
+        <button type="button" class="admin-undo-all" id="adminUndoAllBtn" title="Remove every edit ever made to this theme">Undo all</button>
         <button type="button" class="admin-nav" disabled aria-disabled="true">&larr;</button>
         <button type="button" class="admin-nav" id="adminNext1">&rarr;</button>
       </div>
@@ -7768,6 +7806,18 @@ if(todayEventsAtBoot.length > 0){
     { label:"Text",       prop:"--text",   page:2 },
     { label:"Dim",        prop:"--dim",    page:2 }
   ];
+  // The three colors of the shop showcase preview, rendered vertically with
+  // their own reset buttons next to the preview on page 1.
+  const SHOWCASE_COLORS = [
+    { prop: "--shop-show-bg", title: "Showcase background" },
+    { prop: "--shop-show-accent", title: "Showcase accent" },
+    { prop: "--border", title: "Showcase line" }
+  ];
+  // Every color prop that has a reset button. Resets restore the value the
+  // theme had when the editor was opened, not the baked-in server default.
+  const RESET_PROPS = Array.from(new Set(
+    FIELDS.map(f => f.prop).concat(SHOWCASE_COLORS.map(s => s.prop))
+  ));
   const panel = document.getElementById("adminPanel");
   const rowsEl1 = document.getElementById("adminRows1");
   const rowsEl2 = document.getElementById("adminRows2");
@@ -7836,6 +7886,13 @@ if(todayEventsAtBoot.length > 0){
   let adminPendingCreate = null;
   let adminSessionStore = null;
   let adminSessionCustom = null;
+  // Effective color values captured when the editor opens; per-color reset
+  // buttons restore these instead of the theme's baked-in default.
+  let adminSessionColors = null;
+  function captureSessionColors(){
+    adminSessionColors = {};
+    for(const p of RESET_PROPS) adminSessionColors[p] = currentColor(p);
+  }
 
   function goPage(n){
     pages.forEach((p, i) => p.classList.toggle("active", i === n - 1));
@@ -8041,12 +8098,8 @@ if(todayEventsAtBoot.length > 0){
       row.appendChild(lab); row.appendChild(color); row.appendChild(hex); row.appendChild(reset);
       (f.page === 1 ? rowsEl1 : rowsEl2).appendChild(row);
     }
-    // Shop showcase preview with three clickable color squares
-    const SHOWCASE_COLORS = [
-      { prop: "--shop-show-bg", title: "Showcase background" },
-      { prop: "--shop-show-accent", title: "Showcase accent" },
-      { prop: "--border", title: "Showcase line" }
-    ];
+    // Shop showcase preview, bigger on page 1, with the three colors stacked
+    // vertically to its right - each with its own reset button
     const scRow = document.createElement("div");
     scRow.className = "admin-row admin-showcase-row";
     const scLab = document.createElement("span");
@@ -8069,6 +8122,8 @@ if(todayEventsAtBoot.length > 0){
       if(scPicker.dataset.prop) setVal(scPicker.dataset.prop, scPicker.value);
     });
     SHOWCASE_COLORS.forEach(s => {
+      const colorRow = document.createElement("div");
+      colorRow.className = "admin-show-color-row";
       const sw = document.createElement("button");
       sw.type = "button";
       sw.className = "admin-show-swatch";
@@ -8080,7 +8135,15 @@ if(todayEventsAtBoot.length > 0){
         scPicker.value = currentColor(s.prop);
         scPicker.click();
       });
-      scColors.appendChild(sw);
+      const rs = document.createElement("button");
+      rs.type = "button";
+      rs.className = "admin-show-reset";
+      rs.title = "Reset " + s.title.toLowerCase() + " to the value when the editor opened";
+      rs.setAttribute("aria-label", "Reset " + s.title);
+      rs.textContent = "\u21BA";
+      rs.addEventListener("click", () => resetProp(s.prop));
+      colorRow.append(sw, rs);
+      scColors.appendChild(colorRow);
     });
     scRow.append(scLab, scPrev, scColors, scPicker);
     rowsEl1.appendChild(scRow);
@@ -8153,6 +8216,7 @@ if(todayEventsAtBoot.length > 0){
     }else{
       adminSessionCustom = null;
     }
+    captureSessionColors();
     syncMeta();
     buildRows();
     repopulatePage3();
@@ -8300,6 +8364,12 @@ if(todayEventsAtBoot.length > 0){
   }
   function resetProp(prop){
     if(prop === "--bg-image") clearStoredUploads(themeKey());
+    const sessionValue = adminSessionColors && Object.prototype.hasOwnProperty.call(adminSessionColors, prop) ? adminSessionColors[prop] : null;
+    if(sessionValue !== null){
+      // Restore the value this theme had when the editor was opened.
+      setVal(prop, sessionValue);
+      return;
+    }
     const store = load();
     const key = themeKey();
     if(store[key]){
@@ -8310,6 +8380,23 @@ if(todayEventsAtBoot.length > 0){
     applyTheme(currentTheme);
     repopulate();
     refreshPreviewSwatches();
+  }
+  // Red "Undo all": drop every override ever saved for this theme (including
+  // uploaded images) and re-apply the theme exactly as it ships on the server.
+  function undoAllTheme(){
+    const key = themeKey();
+    const store = load();
+    if(store && store[key]){
+      delete store[key];
+      save(store);
+    }
+    clearStoredUploads(key);
+    applyTheme(currentTheme);
+    captureSessionColors();
+    repopulate();
+    refreshPreviewSwatches();
+    sfx.click();
+    showToast("All edits to this theme undone");
   }
   const ADMIN_PROPS = [
     "--bg", "--card", "--border", "--accent", "--text", "--dim",
@@ -8388,10 +8475,12 @@ if(todayEventsAtBoot.length > 0){
   window.adminCreateTheme = startCreateTheme;
   window.adminCreateFreeTheme = () => startCreateTheme(true);
   window.adminClearUploads = clearStoredUploads;
+  window.adminUndoAllTheme = undoAllTheme;
 
   document.getElementById("adminCloseBtn").addEventListener("click", cancelPanel);
   document.getElementById("adminCheckBtn").addEventListener("click", confirmPanel);
   document.getElementById("adminDoneBtn").addEventListener("click", confirmPanel);
+  document.getElementById("adminUndoAllBtn").addEventListener("click", undoAllTheme);
   document.getElementById("adminNext1").addEventListener("click", () => goPage(2));
   document.getElementById("adminPrev2").addEventListener("click", () => goPage(1));
   document.getElementById("adminNext2").addEventListener("click", () => goPage(3));
