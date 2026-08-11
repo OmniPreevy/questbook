@@ -1805,7 +1805,11 @@
   /* ---- new quest full-screen view ---- */
   .new-task-view{
     position:fixed;
-    inset:0;
+    top:0;
+    left:0;
+    right:0;
+    height:100vh;
+    height:100dvh;
     z-index:65;
     background:var(--card);
     padding:16px;
@@ -1815,6 +1819,7 @@
     flex-direction:column;
     max-width:480px;
     margin:0 auto;
+    overflow-y:auto;
     transform:translateY(100%);
     transition:transform .3s ease;
   }
@@ -1991,6 +1996,8 @@
     border-radius:10px;
     padding:14px;
     flex:0 0 auto;
+    position:sticky;
+    bottom:calc(16px + env(safe-area-inset-bottom));
   }
   @media (hover: hover) and (pointer: fine){
     .task:hover{border-color:var(--dim);}
@@ -5196,9 +5203,43 @@ function openNewTaskView(){
   document.getElementById("newTaskView").classList.add("active");
 }
 function closeNewTaskView(){
-  document.getElementById("newTaskView").classList.remove("active");
+  const view = document.getElementById("newTaskView");
+  view.classList.remove("active");
+  view.style.top = "";
+  view.style.height = "";
   document.getElementById("ntPriorityPopover").classList.remove("show");
 }
+
+/* On mobile the on-screen keyboard doesn't shrink the layout viewport, so a
+   fixed-height panel would leave the Create button hidden behind it. Pin the
+   new-quest view to the visual viewport while it's open: the button rides up
+   and stays right on top of the keyboard. */
+(function(){
+  if(!("visualViewport" in window)) return;
+  const vv = window.visualViewport;
+  let rafId = 0;
+  function pinNewTaskView(){
+    const view = document.getElementById("newTaskView");
+    if(!view) return;
+    if(window.innerWidth < 1024 && view.classList.contains("active")){
+      view.style.top = vv.offsetTop + "px";
+      view.style.height = vv.height + "px";
+    } else {
+      view.style.top = "";
+      view.style.height = "";
+    }
+  }
+  vv.addEventListener("resize", () => {
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(pinNewTaskView);
+  });
+  vv.addEventListener("scroll", () => {
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(pinNewTaskView);
+  });
+  window.addEventListener("resize", pinNewTaskView);
+  document.addEventListener("DOMContentLoaded", pinNewTaskView);
+})();
 
 function createNewTask(){
   const name = document.getElementById("ntName").value.trim();
