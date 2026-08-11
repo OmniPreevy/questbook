@@ -1125,18 +1125,19 @@
     transform:translateX(-50%) translateY(0);
   }
   /* On wide screens the toast lives inside the day-view pane: anchor it to the
-     pane (not the middle of the screen) and keep it a quiet corner badge. */
+     top of the events list (clearly on the pane, never the middle of the
+     screen) and keep it modest so it doesn't take over the view. */
   @media (min-width:1024px){
     .today-events-toast{
-      top:auto;
-      bottom:14px;
-      font-size:13px;
-      font-weight:600;
-      letter-spacing:.4px;
+      top:56px;
+      bottom:auto;
+      font-size:15px;
+      font-weight:700;
+      letter-spacing:.5px;
       text-shadow:0 1px 6px rgba(0,0,0,.5);
-      padding:6px 12px;
+      padding:8px 16px;
       border-width:1px;
-      border-radius:9px;
+      border-radius:10px;
       box-shadow:0 3px 12px rgba(0,0,0,.35);
     }
   }
@@ -4152,10 +4153,13 @@ function openDetail(taskId){
     : `${task.perDay}x/day · ${task.perWeek}x/week`;
   document.getElementById("saveHint").classList.remove("show");
 
+  // Open the pane first so autoGrowTextarea can measure the notes lines - if
+  // they're built while the pane is still display:none their height collapses
+  // to 0 and the first textarea becomes unclickable.
+  placePane("detailView");
   renderNotesDoc();
   renderQuestTimer();
   restartQuestTimerInterval(task);
-  placePane("detailView");
 }
 
 function closeDetail(){
