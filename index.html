@@ -311,6 +311,11 @@
     text-underline-offset:2px;
   }
   .backup-row .backup-right{margin-left:auto;}
+  .backup-row .save-size{
+    color:var(--dim);
+    font-size:11px;
+    align-self:center;
+  }
   .notify-hint{
     font-size:10.5px;
     color:var(--dim);
@@ -898,17 +903,6 @@
     gap:10px;
     padding-top:14px;
   }
-  .day-quests-section{
-    margin-top:6px;
-  }
-  .day-section-label{
-    font-size:11px;
-    font-weight:600;
-    color:var(--dim);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    padding-top:18px;
-  }
   .event-row{
     background:var(--card);
     border:1px solid var(--border);
@@ -933,10 +927,10 @@
   }
   .event-bring:active{opacity:.7;}
   .event-bring.done{
-    color:var(--dim);
-    border-color:var(--border);
-    cursor:default;
-    opacity:.6;
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d0d0d;
+    font-weight:600;
   }
 
   .levelbar{
@@ -1223,14 +1217,12 @@
     background:var(--accent);
     color:#0d0d0d;
   }
-  .bring-day-options{
-    display:flex;
-    gap:10px;
-    margin:2px 0 12px;
-  }
-  .bring-day-options .modal-btn{flex:1;}
-  .bring-date-row{
-    margin-bottom:12px;
+  .bring-question{
+    font-size:19px;
+    font-weight:800;
+    color:var(--danger);
+    margin-bottom:16px;
+    line-height:1.3;
   }
   .trash-card{max-width:420px;}
   .trash-head{
@@ -2479,6 +2471,7 @@
   <button type="button" id="retroBtn" class="backup-btn">Last week's retro</button>
   <button type="button" id="testQuestBtn" class="backup-btn" style="display:none;" title="Temporary: create a lorem ipsum test quest">Lorem quest</button>
   <button type="button" id="settingsBtn" class="backup-btn backup-right" title="Settings">⚙ Settings</button>
+  <span class="save-size" id="saveSize" title="Estimated size of the exported save file">– MB</span>
   <input type="file" id="importFile" accept="application/json" style="display:none;">
 </div>
 <div class="notify-hint" id="notifyHint"></div>
@@ -2502,7 +2495,7 @@
 <div class="section-header">
   <div class="section-title">Quests</div>
   <div class="section-header-actions">
-    <button type="button" class="section-add-btn" id="trashBtn" aria-label="Recently deleted quests" title="Recently deleted quests">🗑<span id="trashCount" style="display:none;"></span></button>
+    <button type="button" class="section-add-btn" id="trashBtn" aria-label="Recently deleted quests (right-click to empty)" title="Recently deleted quests (right-click to empty)">🗑<span id="trashCount" style="display:none;"></span></button>
     <button type="button" class="section-add-btn" id="questAddBtn" aria-label="Add quest">+</button>
   </div>
 </div>
@@ -2551,18 +2544,12 @@
 
 <div class="modal-overlay" id="bringOverlay">
   <div class="modal-card">
-    <div class="modal-title">Bring event into quests</div>
-    <div class="modal-label">On which day do you want the quest to appear?</div>
-    <div class="bring-day-options">
-      <button type="button" class="modal-btn primary" id="bringTodayBtn">Today</button>
-      <button type="button" class="modal-btn secondary" id="bringOtherBtn">Another day</button>
-    </div>
-    <div class="bring-date-row" id="bringDateRow" style="display:none;">
-      <input type="date" id="bringDateInput" aria-label="Choose a day">
-    </div>
+    <div class="bring-question">On which day do you want the quest to appear?</div>
+    <label class="modal-label">Day</label>
+    <input type="date" id="bringDateInput" aria-label="Choose a day">
     <div class="modal-actions">
       <button type="button" class="modal-btn secondary" id="bringCancelBtn">Cancel</button>
-      <button type="button" class="modal-btn primary" id="bringConfirmBtn" style="display:none;">Add quest</button>
+      <button type="button" class="modal-btn primary" id="bringConfirmBtn">Add quest</button>
     </div>
   </div>
 </div>
@@ -2715,10 +2702,6 @@
   <div class="detail-scroll">
     <div id="dayEventsList" class="day-events-list"></div>
     <div class="empty" id="dayEmptyMsg" style="display:none;">No events this day. Tap + to add one.</div>
-    <div class="day-quests-section" id="dayQuestsSection" style="display:none;">
-      <div class="day-section-label">Quests</div>
-      <div id="dayQuestsList" class="day-events-list"></div>
-    </div>
   </div>
 </div>
 
@@ -3109,6 +3092,7 @@ function loadState(){
 }
 function saveState(state){
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  updateSaveSize();
 }
 
 // Given total accumulated xp, derive level + progress within that level
@@ -4678,6 +4662,7 @@ function loadTasks(){
 }
 function saveTasks(tasks){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  updateSaveSize();
 }
 
 const TRASH_KEY = "qb_recent_deleted";
@@ -5311,14 +5296,19 @@ document.addEventListener("DOMContentLoaded", () => {
       render();
     }
   });
-  document.getElementById("bringTodayBtn").addEventListener("click", chooseBringToday);
-  document.getElementById("bringOtherBtn").addEventListener("click", chooseBringOther);
-  document.getElementById("bringConfirmBtn").addEventListener("click", confirmBringOther);
+  document.getElementById("bringConfirmBtn").addEventListener("click", confirmBringDay);
   document.getElementById("bringCancelBtn").addEventListener("click", cancelBring);
+  document.getElementById("bringDateInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") confirmBringDay();
+  });
   document.getElementById("bringOverlay").addEventListener("click", (e) => {
     if(e.target === e.currentTarget) cancelBring();
   });
   document.getElementById("trashBtn").addEventListener("click", openTrash);
+  document.getElementById("trashBtn").addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    emptyTrash();
+  });
   document.getElementById("trashCloseBtn").addEventListener("click", closeTrash);
   document.getElementById("trashEmptyBtn").addEventListener("click", emptyTrash);
   document.getElementById("trashOverlay").addEventListener("click", (e) => {
@@ -5423,6 +5413,28 @@ function exportData(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+function savePayloadData(){
+  const state = JSON.parse(localStorage.getItem(STATE_KEY) || '{"xp":0}');
+  return {
+    tasks: JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"),
+    state: state,
+    events: JSON.parse(localStorage.getItem(EVENTS_KEY) || "[]"),
+    history: JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"),
+    credits: state.credits || 0,
+    currentTheme: localStorage.getItem(THEME_KEY) || null,
+    ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
+    customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
+    themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}")
+  };
+}
+
+function updateSaveSize(){
+  const el = document.getElementById("saveSize");
+  if(!el) return;
+  const bytes = new Blob([JSON.stringify(savePayloadData())]).size;
+  el.textContent = (bytes / 1024 / 1024).toFixed(2) + " MB";
 }
 
 function importDataFromFile(file){
@@ -5569,6 +5581,7 @@ function loadEvents(){
 }
 function saveEvents(events){
   localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+  updateSaveSize();
 }
 
 // Date string of the Sunday that ended last week (Mon-Sun weeks). Anything that
@@ -6000,30 +6013,20 @@ function renderDayView(){
   if(!currentDayKey) return;
   const list = document.getElementById("dayEventsList");
   const emptyMsg = document.getElementById("dayEmptyMsg");
-  const questsSection = document.getElementById("dayQuestsSection");
-  const questList = document.getElementById("dayQuestsList");
   list.innerHTML = "";
-  questList.innerHTML = "";
 
   const dateObj = currentDayDateObj || new Date(currentDayKey + "T00:00:00");
   const events = loadEvents()
     .filter(e => eventOccursOnDay(e, dateObj, currentDayKey))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  const dayQuests = loadTasks().filter(t =>
-    t.broughtFromEventId &&
-    t.scheduledDay === currentDayKey &&
-    !(t.hiddenUntil && t.hiddenUntil >= currentDayKey)
-  );
-
-  if(events.length === 0 && dayQuests.length === 0){
+  if(events.length === 0){
     emptyMsg.style.display = "block";
-    questsSection.style.display = "none";
     return;
   }
   emptyMsg.style.display = "none";
-  questsSection.style.display = dayQuests.length ? "block" : "none";
 
+  const tasks = loadTasks();
   events.forEach(ev => {
     const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes);
     const row = document.createElement("div");
@@ -6040,13 +6043,18 @@ function renderDayView(){
     info.appendChild(name);
     info.appendChild(meta);
 
-    const brought = loadTasks().some(t => t.broughtFromEventId === ev.id);
+    const broughtTask = tasks.find(t => t.broughtFromEventId === ev.id);
     const bring = document.createElement("button");
-    bring.className = "event-bring" + (brought ? " done" : "");
-    bring.textContent = brought ? "✓" : "→ quest";
-    bring.title = brought ? "Already added to quests" : "Bring this event into the quest list";
-    bring.disabled = brought;
-    bring.onclick = () => bringEventToQuests(ev);
+    bring.className = "event-bring" + (broughtTask ? " done" : "");
+    if(broughtTask){
+      bring.textContent = "quest";
+      bring.title = "Open this quest's notes";
+      bring.onclick = () => openDetail(broughtTask.id);
+    } else {
+      bring.textContent = "→ quest";
+      bring.title = "Bring this event into the quest list";
+      bring.onclick = () => bringEventToQuests(ev);
+    }
 
     const edit = document.createElement("button");
     edit.className = "del edit";
@@ -6068,63 +6076,30 @@ function renderDayView(){
     row.appendChild(del);
     list.appendChild(row);
   });
-
-  dayQuests.forEach(t => {
-    const row = document.createElement("div");
-    row.className = "event-row";
-
-    const info = document.createElement("div");
-    info.className = "info";
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = t.name;
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = "quest";
-    info.appendChild(name);
-    info.appendChild(meta);
-
-    const edit = document.createElement("button");
-    edit.className = "del edit";
-    edit.textContent = "✎";
-    edit.title = "Edit this quest";
-    edit.onclick = () => openDetail(t.id);
-
-    row.appendChild(info);
-    row.appendChild(edit);
-    questList.appendChild(row);
-  });
 }
 
 let pendingBringEvent = null;
 
-function bringEventToQuests(ev){
-  pendingBringEvent = ev;
-  const dateInput = document.getElementById("bringDateInput");
-  const dateRow = document.getElementById("bringDateRow");
-  const confirmBtn = document.getElementById("bringConfirmBtn");
-  const otherBtn = document.getElementById("bringOtherBtn");
-  dateInput.value = dayAfterStr(todayStr());
-  dateInput.min = todayStr();
-  dateRow.style.display = "none";
-  confirmBtn.style.display = "none";
-  otherBtn.textContent = "Another day";
-  document.getElementById("bringOverlay").classList.add("active");
+function eventEndsToday(ev, tKey){
+  if(ev.repeat) return !!ev.repeatUntil && ev.repeatUntil === tKey;
+  return ev.day === tKey;
 }
 
-function chooseBringToday(){
-  finishBringQuest(pendingBringEvent, todayStr());
+function bringEventToQuests(ev){
+  const tKey = todayStr();
+  if(eventEndsToday(ev, tKey)){
+    finishBringQuest(ev, tKey);
+    return;
+  }
+  pendingBringEvent = ev;
+  const dateInput = document.getElementById("bringDateInput");
+  dateInput.value = tKey;
+  dateInput.min = tKey;
+  document.getElementById("bringOverlay").classList.add("active");
+  requestAnimationFrame(() => dateInput.focus());
 }
-function chooseBringOther(){
-  const dateRow = document.getElementById("bringDateRow");
-  const confirmBtn = document.getElementById("bringConfirmBtn");
-  const otherBtn = document.getElementById("bringOtherBtn");
-  const show = dateRow.style.display === "none";
-  dateRow.style.display = show ? "block" : "none";
-  confirmBtn.style.display = show ? "inline-block" : "none";
-  otherBtn.textContent = show ? "Back" : "Another day";
-}
-function confirmBringOther(){
+
+function confirmBringDay(){
   const val = document.getElementById("bringDateInput").value;
   if(!val) return;
   finishBringQuest(pendingBringEvent, val);
@@ -6384,6 +6359,7 @@ function loadOwnedThemes(){
 }
 function saveOwnedThemes(arr){
   localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
+  updateSaveSize();
 }
 function loadCustomThemes(){
   try{
@@ -6394,6 +6370,7 @@ function loadCustomThemes(){
 }
 function saveCustomThemes(arr){
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(arr));
+  updateSaveSize();
 }
 // Ordered log of paid purchases so de-levels can walk back the most recent
 // purchase when the credit balance can't cover the refund on its own.
@@ -6915,6 +6892,7 @@ syncPaneBackLabels();
 render();
 renderLevelBar();
 renderCalendar();
+updateSaveSize();
 maybeAutoShowRetro();
 
 const todayEventsAtBoot = loadEvents()
@@ -7425,7 +7403,7 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
     try{ const v = JSON.parse(localStorage.getItem(KEY)); if(v && typeof v === "object") return v; }catch(e){}
     return {};
   }
-  function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} }
+  function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} updateSaveSize(); }
   let imageObjectUrl = null;
   function revokeImageUrl(){
     if(imageObjectUrl){ try{ URL.revokeObjectURL(imageObjectUrl); }catch(e){} imageObjectUrl = null; }
