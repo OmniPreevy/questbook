@@ -3639,6 +3639,16 @@ function showSwipeToast(text){
   swipeToastTimer = setTimeout(() => t.classList.remove("show"), 1500);
 }
 
+let notesToastTimer = null;
+function showNotesToast(text){
+  const t = document.getElementById("notesToast");
+  if(!t) return;
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(notesToastTimer);
+  notesToastTimer = setTimeout(() => t.classList.remove("show"), 1500);
+}
+
 function updateHiddenBtn(tasks){
   const btn = document.getElementById("hiddenBtn");
   const count = document.getElementById("hiddenCount");
@@ -4295,9 +4305,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const text = notesTextareas().map(ta => ta.value).filter(v => v.length > 0).join("\n");
     try{
       await copyTextToClipboard(text);
-      showSwipeToast("notes copied");
+      showNotesToast("text copied");
     }catch(err){
-      showSwipeToast("copy not supported");
+      showNotesToast("copy not supported");
     }
     hideNotesCtxMenu();
   });
@@ -7031,6 +7041,8 @@ maybeAutoShowRetro();
   <div class="detail-scroll">
     <div class="notes-doc" id="notesDoc"></div>
   </div>
+
+  <div class="swipe-toast" id="notesToast"></div>
 
   <div class="detail-timer">
     <div class="quest-timer">
