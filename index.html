@@ -1794,7 +1794,7 @@
     transform:translateX(-50%) translateY(0);
   }
   .fab-choice-btn{
-    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
+    background:color-mix(in srgb, color-mix(in srgb, var(--card) 82%, #0b0b0b) calc(var(--alpha-card,1)*100%), transparent);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:8px;
@@ -2133,8 +2133,8 @@
   }
   .theme-swatch-add{
     background:transparent;
-    border:2px dashed #9a9a9a;
-    color:#9a9a9a;
+    border:2px dashed color-mix(in srgb, var(--text) 55%, transparent);
+    color:color-mix(in srgb, var(--text) 55%, transparent);
     font-size:22px;
     font-weight:400;
     line-height:1;
@@ -2142,6 +2142,18 @@
     align-items:center;
     justify-content:center;
   }
+  .theme-swatch-edit{
+    background:color-mix(in srgb, var(--card) 70%, var(--bg));
+    border:2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    color:var(--text);
+    font-size:18px;
+    font-weight:600;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .theme-swatch-edit:hover{border-color:var(--accent);}
 
   /* ---- theme shop sheet ---- */
   .shop-overlay{
@@ -2709,6 +2721,11 @@
     <div id="hiddenFinishedWrap" style="display:none;">
       <div class="hidden-section-title">Finished quests</div>
       <div id="hiddenFinishedList"></div>
+    </div>
+    <hr class="hidden-divider" id="hiddenOtherDivider" style="display:none;">
+    <div id="hiddenOtherWrap" style="display:none;">
+      <div class="hidden-section-title">Other time</div>
+      <div id="hiddenOtherList"></div>
     </div>
     <div class="empty" id="hiddenEmptyMsg" style="display:none;">Nothing hidden for today.</div>
   </div>
@@ -3763,65 +3780,80 @@ function updateHiddenBtn(tasks){
   if(count) count.textContent = n;
 }
 
+function hiddenRowFor(t, opts){
+  const row = document.createElement("div");
+  row.className = "hidden-row";
+  const info = document.createElement("div");
+  info.className = "info";
+  info.onclick = () => openDetail(t.id);
+  const name = document.createElement("div");
+  name.className = "name";
+  name.textContent = t.name;
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  if(opts && opts.otherTime && t.scheduledDay){
+    const d = new Date(t.scheduledDay + "T00:00:00");
+    meta.textContent = `appears ${WEEKDAY_FULL[d.getDay()]}, ${MONTH_ABBR[d.getMonth()]} ${d.getDate()}` + (t.oneTime ? " · one-time" : "");
+  }else{
+    meta.textContent = t.oneTime ? "one-time" : `${t.perDay}x/day · ${t.perWeek}x/week`;
+  }
+  info.appendChild(name);
+  info.appendChild(meta);
+  const lock = document.createElement("button");
+  lock.className = "del";
+  lock.textContent = t.locked ? "🔒" : "🔓";
+  lock.title = t.locked ? "Unlock - can be restored again" : "Lock - stays hidden until unlocked";
+  lock.onclick = () => {
+    const all = normalize(loadTasks());
+    const x = all.find(q => q.id === t.id);
+    if(x) x.locked = !x.locked;
+    saveTasks(all);
+    sfx.click();
+    render();
+    renderHiddenList();
+    updateHiddenBtn(loadTasks());
+  };
+  const restore = document.createElement("button");
+  restore.className = "del";
+  restore.textContent = "↺";
+  restore.title = t.locked ? "Locked - unlock it first" : "Show again today";
+  restore.disabled = !!t.locked;
+  restore.onclick = () => {
+    const all = normalize(loadTasks());
+    const x = all.find(q => q.id === t.id);
+    if(x){
+      x.hiddenUntil = null;
+      if(opts && opts.otherTime) x.scheduledDay = null;
+    }
+    saveTasks(all);
+    sfx.pop();
+    render();
+    renderHiddenList();
+    updateHiddenBtn(loadTasks());
+  };
+  const del = document.createElement("button");
+  del.className = "del";
+  del.textContent = "×";
+  del.title = "Delete quest";
+  del.onclick = () => deleteQuest(t.id);
+  row.appendChild(info);
+  row.appendChild(lock);
+  row.appendChild(restore);
+  row.appendChild(del);
+  return row;
+}
+
 function renderHiddenList(){
   const tasks = normalize(loadTasks());
-  const hidden = tasks.filter(t => t.hiddenUntil);
+  const tKey = todayStr();
+  const hiddenAll = tasks.filter(t => t.hiddenUntil);
+  const otherTime = hiddenAll.filter(t => t.scheduledDay && t.scheduledDay > tKey);
+  const hidden = hiddenAll.filter(t => !(t.scheduledDay && t.scheduledDay > tKey));
   const listEl = document.getElementById("hiddenList");
   const empty = document.getElementById("hiddenEmptyMsg");
   listEl.innerHTML = "";
   hidden.forEach(t => {
-    const row = document.createElement("div");
-    row.className = "hidden-row";
-    const info = document.createElement("div");
-    info.className = "info";
-    info.onclick = () => openDetail(t.id);
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = t.name;
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = t.oneTime ? "one-time" : `${t.perDay}x/day · ${t.perWeek}x/week`;
-    info.appendChild(name);
-    info.appendChild(meta);
-    const lock = document.createElement("button");
-    lock.className = "del";
-    lock.textContent = t.locked ? "🔒" : "🔓";
-    lock.title = t.locked ? "Unlock - can be restored again" : "Lock - stays hidden until unlocked";
-    lock.onclick = () => {
-      const all = normalize(loadTasks());
-      const x = all.find(q => q.id === t.id);
-      if(x) x.locked = !x.locked;
-      saveTasks(all);
-      sfx.click();
-      render();
-      renderHiddenList();
-      updateHiddenBtn(loadTasks());
-    };
-    const restore = document.createElement("button");
-    restore.className = "del";
-    restore.textContent = "↺";
-    restore.title = t.locked ? "Locked - unlock it first" : "Show again today";
-    restore.disabled = !!t.locked;
-    restore.onclick = () => {
-      const all = normalize(loadTasks());
-      const x = all.find(q => q.id === t.id);
-      if(x) x.hiddenUntil = null;
-      saveTasks(all);
-      sfx.pop();
-      render();
-      renderHiddenList();
-      updateHiddenBtn(loadTasks());
-    };
-    const del = document.createElement("button");
-    del.className = "del";
-    del.textContent = "×";
-    del.title = "Delete quest";
-    del.onclick = () => deleteQuest(t.id);
-    row.appendChild(info);
-    row.appendChild(lock);
-    row.appendChild(restore);
-    row.appendChild(del);
-    listEl.appendChild(row);
+    listEl.appendChild(hiddenRowFor(t));
   });
 
   // Finished quests - shown below the divider when auto-hide is on
@@ -3867,7 +3899,23 @@ function renderHiddenList(){
     wrap.style.display = "none";
   }
 
-  empty.style.display = (hidden.length + finished.length) ? "none" : "block";
+  // Quests that will appear on another day - shown at the very end
+  const otherDivider = document.getElementById("hiddenOtherDivider");
+  const otherWrap = document.getElementById("hiddenOtherWrap");
+  const otherEl = document.getElementById("hiddenOtherList");
+  if(otherTime.length){
+    otherDivider.style.display = "block";
+    otherWrap.style.display = "block";
+    otherEl.innerHTML = "";
+    otherTime.forEach(t => {
+      otherEl.appendChild(hiddenRowFor(t, { otherTime: true }));
+    });
+  } else {
+    otherDivider.style.display = "none";
+    otherWrap.style.display = "none";
+  }
+
+  empty.style.display = (hidden.length + finished.length + otherTime.length) ? "none" : "block";
 }
 
 function openHiddenView(){
@@ -4750,7 +4798,9 @@ function normalize(tasks){
   });
 
   kept.forEach((task, i) => {
-    if(task.dayDate !== t){
+    // Quests scheduled for a future day keep that date; only reset the daily
+    // counter once that day arrives (or for quests that belong to today).
+    if(task.dayDate !== t && !(task.scheduledDay && task.scheduledDay > t)){
       task.dayDate = t;
       task.dayCount = 0;
       task.lastCheckedAt = null;
@@ -6258,7 +6308,7 @@ function finishBringQuest(ev, dayStr){
     order: Date.now(),
     createdAt: Date.now(),
     dayCount: 0,
-    dayDate: tKey,
+    dayDate: dayStr,
     weekCount: 0,
     weekKey: weekStr(),
     notes: "",
@@ -6686,6 +6736,16 @@ function renderThemeSwatches(){
   addBtn.setAttribute("aria-label", "Open the theme shop");
   addBtn.addEventListener("click", openShop);
   box.appendChild(addBtn);
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "theme-swatch theme-swatch-edit";
+  editBtn.innerHTML = "\u270E";
+  editBtn.title = "Edit current theme";
+  editBtn.setAttribute("aria-label", "Edit the current theme");
+  editBtn.addEventListener("click", () => {
+    if(typeof window.adminShowPanel === "function") window.adminShowPanel();
+  });
+  box.appendChild(editBtn);
 }
 function openShop(){
   currentTheme = loadTheme();
@@ -7301,6 +7361,31 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
   .admin-done{background:#2f9e44;color:#fff;border:1px solid #38b64e;border-radius:6px;padding:6px 18px;font-size:12px;font-weight:700;cursor:pointer;}
   .admin-done:hover{background:#3ab252;}
   .admin-note{color:#777;font-size:10px;line-height:1.5;margin:8px 0 4px;}
+  .admin-showcase-row{align-items:center;}
+  .admin-showcase-preview{
+    width:34px;height:34px;flex:0 0 auto;
+    border-radius:6px;
+    border:1px solid #555;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+  .admin-showcase-dot{width:10px;height:10px;border-radius:50%;}
+  .admin-showcase-line{width:18px;height:2px;border-radius:1px;}
+  .admin-showcase-colors{display:flex;align-items:center;gap:5px;}
+  .admin-show-swatch{
+    width:20px;height:20px;
+    border:1px solid #555;
+    border-radius:5px;
+    padding:0;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .admin-show-swatch:hover{border-color:#fff;}
+  .admin-showcase-picker{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+
 </style>
 
 <div id="adminPanel" class="admin-panel">
@@ -7386,8 +7471,6 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
   const FIELDS = [
     { label:"Background", prop:"--bg",     page:1 },
     { label:"Card",       prop:"--card",   page:1 },
-    { label:"Shop showcase bg",   prop:"--shop-show-bg",     page:1 },
-    { label:"Shop showcase accent", prop:"--shop-show-accent", page:1 },
     { label:"Panel bg",   prop:"--shop-panel-bg",    page:2 },
     { label:"Panel outline", prop:"--shop-panel-border", page:2 },
     { label:"Button bg",  prop:"--shop-btn-bg",      page:2 },
@@ -7639,6 +7722,7 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
     document.documentElement.style.setProperty(prop, value);
     syncInputs(prop, value);
     refreshPreviewSwatches();
+    syncShowcase();
   }
   function buildRows(){
     rowsEl1.innerHTML = "";
@@ -7669,6 +7753,62 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
       row.appendChild(lab); row.appendChild(color); row.appendChild(hex); row.appendChild(reset);
       (f.page === 1 ? rowsEl1 : rowsEl2).appendChild(row);
     }
+    // Shop showcase preview with three clickable color squares
+    const SHOWCASE_COLORS = [
+      { prop: "--shop-show-bg", title: "Showcase background" },
+      { prop: "--shop-show-accent", title: "Showcase accent" },
+      { prop: "--border", title: "Showcase line" }
+    ];
+    const scRow = document.createElement("div");
+    scRow.className = "admin-row admin-showcase-row";
+    const scLab = document.createElement("span");
+    scLab.className = "admin-label";
+    scLab.textContent = "Showcase";
+    const scPrev = document.createElement("div");
+    scPrev.className = "admin-showcase-preview";
+    scPrev.id = "adminShowcasePrev";
+    const scDot = document.createElement("div");
+    scDot.className = "admin-showcase-dot";
+    const scLine = document.createElement("div");
+    scLine.className = "admin-showcase-line";
+    scPrev.append(scDot, scLine);
+    const scColors = document.createElement("div");
+    scColors.className = "admin-showcase-colors";
+    const scPicker = document.createElement("input");
+    scPicker.type = "color";
+    scPicker.className = "admin-showcase-picker";
+    scPicker.addEventListener("input", () => {
+      if(scPicker.dataset.prop) setVal(scPicker.dataset.prop, scPicker.value);
+    });
+    SHOWCASE_COLORS.forEach(s => {
+      const sw = document.createElement("button");
+      sw.type = "button";
+      sw.className = "admin-show-swatch";
+      sw.setAttribute("data-showcase-prop", s.prop);
+      sw.title = s.title;
+      sw.setAttribute("aria-label", s.title);
+      sw.addEventListener("click", () => {
+        scPicker.dataset.prop = s.prop;
+        scPicker.value = currentColor(s.prop);
+        scPicker.click();
+      });
+      scColors.appendChild(sw);
+    });
+    scRow.append(scLab, scPrev, scColors, scPicker);
+    rowsEl1.appendChild(scRow);
+    syncShowcase();
+  }
+  function syncShowcase(){
+    const prev = document.getElementById("adminShowcasePrev");
+    if(!prev) return;
+    prev.style.background = currentColor("--shop-show-bg");
+    prev.style.borderColor = contrastOutline(currentColor("--shop-show-bg"), currentColor("--shop-show-accent"));
+    const dot = prev.querySelector(".admin-showcase-dot");
+    if(dot) dot.style.background = currentColor("--shop-show-accent");
+    const line = prev.querySelector(".admin-showcase-line");
+    if(line) line.style.background = currentColor("--border");
+    const swatches = rowsEl1.querySelectorAll(".admin-show-swatch");
+    swatches.forEach(sw => { sw.style.background = currentColor(sw.getAttribute("data-showcase-prop")); });
   }
   function pct(v){
     const n = Math.min(1, Math.max(0, parseFloat(v) || 0));
@@ -7713,6 +7853,7 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
       if(f._hexEl) f._hexEl.value = v;
     }
     repopulatePage3();
+    syncShowcase();
   }
   function openPanel(){
     open = true;
