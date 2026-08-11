@@ -6049,7 +6049,10 @@ function renderDayView(){
     if(broughtTask){
       bring.textContent = "quest";
       bring.title = "Open this quest's notes";
-      bring.onclick = () => openDetail(broughtTask.id);
+      bring.onclick = () => {
+        if(paneActive("dayView") && paneSideOf("dayView") === "right") closePane("dayView");
+        openDetail(broughtTask.id);
+      };
     } else {
       bring.textContent = "→ quest";
       bring.title = "Bring this event into the quest list";
