@@ -282,6 +282,24 @@
     user-select:text;
   }
 
+  /* On touch devices text is only selectable inside notes / inputs - the
+     inherited body rule isn't enough on some mobile browsers, which still
+     trigger the selection haptic on long-press, so every element is set
+     explicitly and re-enabled just for notes and editable fields. */
+  @media (hover: none) and (pointer: coarse){
+    body *{
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+    body input, body textarea, body select, body [contenteditable="true"],
+    body .notes-doc, body .notes-line-text, body .item-label-input{
+      -webkit-user-select:text;
+      user-select:text;
+      -webkit-touch-callout:default;
+    }
+  }
+
   h1{
     font-family:'Cinzel', Georgia, 'Times New Roman', serif;
     font-size:22px;
@@ -303,6 +321,18 @@
     color:var(--accent);
   }
   .sub{color:var(--dim);font-size:13px;margin-bottom:4px;}
+  #dateLabel{
+    text-align:center;
+    font-size:17px;
+    font-weight:600;
+    color:var(--text);
+    letter-spacing:.5px;
+    padding-top:2px;
+  }
+  #dateLabel .date-accent{
+    color:var(--accent);
+    font-weight:700;
+  }
   .backup-row{display:flex;flex-wrap:wrap;gap:10px 14px;margin-bottom:6px;}
   .backup-btn{
     background:none;border:none;padding:0;
@@ -666,6 +696,18 @@
     opacity:1;
     transform:translateX(-50%) translateY(0);
   }
+  /* The notes toast reuses .swipe-toast, but inside the scrollable notes view
+     its top:-14px anchor pushes it off-screen; pin it to the viewport instead. */
+  #notesToast{
+    position:fixed;
+    top:18px;
+    left:50%;
+    transform:translateX(-50%) translateY(-10px);
+    z-index:1500;
+  }
+  #notesToast.show{
+    transform:translateX(-50%) translateY(0);
+  }
 
   /* ---- hidden quests menu ---- */
   .hidden-row{
@@ -865,14 +907,14 @@
     font-weight:800;
   }
   .month-cell.has-nonrepeat{
-    border-color:#22c55e;
+    border-color:var(--event-oneoff-color, #22c55e);
   }
   .month-cell .repeat-dot{
     position:absolute;
     top:3px;right:3px;
     width:7px;height:7px;
     border-radius:50%;
-    background:#ef4444;
+    background:var(--event-repeat-color, #ef4444);
   }
   .month-legend{
     display:flex;
@@ -882,17 +924,29 @@
     font-size:11px;
     color:var(--dim);
   }
-  .legend-item{display:flex;align-items:center;gap:7px;}
+  .legend-item{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:none;
+    background:none;
+    padding:2px 0;
+    font:inherit;
+    color:var(--dim);
+    cursor:pointer;
+    text-align:left;
+  }
+  .legend-item:active{color:var(--text);}
   .legend-swatch{
     width:14px;height:14px;
     border-radius:4px;
-    border:1.5px solid #22c55e;
+    border:1.5px solid var(--event-oneoff-color, #22c55e);
     display:inline-block;
   }
   .legend-dot{
     width:8px;height:8px;
     border-radius:50%;
-    background:#ef4444;
+    background:var(--event-repeat-color, #ef4444);
     display:inline-block;
     margin:0 3px;
   }
@@ -1043,6 +1097,77 @@
     opacity:1;
     transform:translateX(-50%) translateY(0);
   }
+
+  /* persistent "Today's Events" toast shown while the day view is open at launch */
+  .today-events-toast{
+    position:fixed;
+    top:20%;
+    left:50%;
+    transform:translateX(-50%) translateY(-8px);
+    background:color-mix(in srgb, var(--card) 92%, transparent);
+    border:2px solid #ffd400;
+    color:#ffd400;
+    font-size:24px;
+    font-weight:800;
+    letter-spacing:1.5px;
+    text-shadow:0 2px 10px rgba(0,0,0,.6);
+    padding:14px 30px;
+    border-radius:14px;
+    box-shadow:0 6px 24px rgba(0,0,0,.45);
+    opacity:0;
+    pointer-events:none;
+    z-index:2100;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .today-events-toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* inspect-mode exit button pinned left of the date + persistent "Testing" toast */
+  .inspect-exit{
+    position:fixed;
+    top:80px;
+    left:max(8px, calc(50% - 246px));
+    width:46px;height:46px;
+    border-radius:50%;
+    background:#e02d2d;
+    color:#fff;
+    border:2px solid #fff;
+    font-size:24px;
+    font-weight:700;
+    line-height:1;
+    cursor:pointer;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
+    z-index:3000;
+  }
+  .inspect-exit.show{display:flex;}
+  .inspect-exit:active{transform:scale(.92);}
+  .inspect-toast{
+    position:fixed;
+    left:50%;
+    bottom:48px;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,.82);
+    color:#ffd400;
+    border:1px solid #ffd400;
+    border-radius:999px;
+    padding:9px 20px;
+    font-size:13.5px;
+    font-weight:700;
+    letter-spacing:.4px;
+    white-space:nowrap;
+    max-width:90%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    pointer-events:none;
+    z-index:3000;
+    display:none;
+  }
+  .inspect-toast.show{display:block;}
 
   /* ---- feedback fx: particle canvas, floating xp text, pop-bounce ---- */
   .fx-canvas{
@@ -2372,6 +2497,11 @@
     border-color:color-mix(in srgb, var(--danger) 55%, transparent);
     color:var(--danger);
   }
+  .shop-item-btn-inspect{
+    background:transparent;
+    border-color:color-mix(in srgb, var(--shop-btn-color, var(--border)) 60%, transparent);
+    color:var(--shop-btn-color, var(--text));
+  }
   .shop-item-create{
     border-style:dashed;
     background:transparent;
@@ -2567,6 +2697,10 @@
   </div>
 </div>
 
+<div class="today-events-toast" id="todayEventsToast">Today's Events</div>
+<div class="inspect-exit" id="inspectExitBtn" role="button" title="Stop testing this theme and reopen the shop" aria-label="Stop testing this theme">&times;</div>
+<div class="inspect-toast" id="inspectToast"></div>
+
 <div class="modal-overlay" id="confirmOverlay">
   <div class="modal-card">
     <div class="modal-title" id="confirmTitle">Are you sure you want to delete this quest?</div>
@@ -2704,9 +2838,14 @@
     </div>
     <div class="month-grid" id="monthGrid"></div>
     <div class="month-legend">
-      <span class="legend-item"><span class="legend-swatch legend-green"></span> non-repeating event</span>
-      <span class="legend-item"><span class="legend-dot"></span> repeating event</span>
+      <button type="button" class="legend-item" id="legendOneoff" title="Tap to choose the colour for non-repeating events">
+        <span class="legend-swatch legend-green"></span> non-repeating event
+      </button>
+      <button type="button" class="legend-item" id="legendRepeat" title="Tap to choose the colour for repeating events">
+        <span class="legend-dot"></span> repeating event
+      </button>
     </div>
+    <input type="color" id="legendColorPicker" style="display:none;">
   </div>
 </div>
 
@@ -4470,6 +4609,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     hideNotesCtxMenu();
   });
+
+  document.getElementById("ctxSearch").addEventListener("click", () => {
+    const target = ctxMenuEl()._target;
+    let text = "";
+    if(target && (target.selectionStart !== undefined) && target.selectionStart !== target.selectionEnd){
+      text = target.value.slice(target.selectionStart, target.selectionEnd);
+    }
+    if(!text) text = String(window.getSelection() || "").trim();
+    if(!text && target && target.value) text = target.value.trim();
+    if(!text){
+      showNotesToast("select some text to search");
+      return;
+    }
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(text), "_blank");
+    hideNotesCtxMenu();
+  });
 });
 /* -------------------------------------------------- */
 
@@ -5549,8 +5704,8 @@ function saveCustomDay(){
 
 {
   const now = new Date();
-  document.getElementById("dateLabel").textContent =
-    `${WEEKDAY_FULL[now.getDay()]}, ${MONTH_ABBR[now.getMonth()]} ${now.getDate()}`;
+  document.getElementById("dateLabel").innerHTML =
+    `${WEEKDAY_FULL[now.getDay()]}, ${MONTH_ABBR[now.getMonth()]} <span class="date-accent">${now.getDate()}</span>`;
 }
 
 /* ---------------- Backup / restore ---------------- */
@@ -6094,9 +6249,54 @@ function openMonthView(){
   const now = new Date();
   monthViewYear = now.getFullYear();
   monthViewMonth = now.getMonth();
+  applyEventMarkerColors();
   renderMonthGrid();
   placePane("monthView");
 }
+
+/* ---- month-view marker colours (the green one-off square + red repeat dot) ---- */
+const EVENT_MARKER_KEY = "qb_event_marker_colors";
+function loadEventMarkerColors(){
+  try{
+    const v = JSON.parse(localStorage.getItem(EVENT_MARKER_KEY));
+    if(v && typeof v === "object") return { oneOff: v.oneOff || "#22c55e", repeat: v.repeat || "#ef4444" };
+  }catch(e){}
+  return { oneOff: "#22c55e", repeat: "#ef4444" };
+}
+function applyEventMarkerColors(){
+  const colors = loadEventMarkerColors();
+  const mv = document.getElementById("monthView");
+  if(mv){
+    mv.style.setProperty("--event-oneoff-color", colors.oneOff);
+    mv.style.setProperty("--event-repeat-color", colors.repeat);
+  }
+}
+(function(){
+  const picker = document.getElementById("legendColorPicker");
+  const oneoff = document.getElementById("legendOneoff");
+  const repeat = document.getElementById("legendRepeat");
+  if(!picker || !oneoff || !repeat) return;
+  oneoff.addEventListener("click", () => {
+    picker.dataset.target = "oneOff";
+    picker.value = loadEventMarkerColors().oneOff;
+    picker.click();
+  });
+  repeat.addEventListener("click", () => {
+    picker.dataset.target = "repeat";
+    picker.value = loadEventMarkerColors().repeat;
+    picker.click();
+  });
+  picker.addEventListener("input", () => {
+    const target = picker.dataset.target;
+    if(!target) return;
+    const colors = loadEventMarkerColors();
+    colors[target] = picker.value;
+    try{ localStorage.setItem(EVENT_MARKER_KEY, JSON.stringify(colors)); }catch(e){}
+    applyEventMarkerColors();
+    if(document.getElementById("monthView").classList.contains("active")) renderMonthGrid();
+  });
+  applyEventMarkerColors();
+})();
 function closeMonthView(){
   closePane("monthView");
 }
@@ -6109,6 +6309,7 @@ function maybeOpenCalendarAfterDone(){
   const now = new Date();
   monthViewYear = now.getFullYear();
   monthViewMonth = now.getMonth();
+  applyEventMarkerColors();
   renderMonthGrid();
   setPaneSide("monthView", "right");
   paneEl("monthView").classList.add("active");
@@ -6900,6 +7101,13 @@ function renderShop(){
     } else {
       btn.textContent = `${t.price} ◇`;
       btn.onclick = () => buyTheme(t);
+      const inspectBtn = document.createElement("button");
+      inspectBtn.type = "button";
+      inspectBtn.className = "shop-item-btn shop-item-btn-inspect";
+      inspectBtn.textContent = "Inspect";
+      inspectBtn.title = "Try this theme without buying it";
+      inspectBtn.onclick = () => startInspect(t);
+      btnWrap.appendChild(inspectBtn);
     }
     btnWrap.appendChild(btn);
     if(t.custom){
@@ -6969,6 +7177,56 @@ function buyTheme(t){
     }
   );
 }
+
+/* ---- Inspect mode: try an unowned theme without buying it ----
+   Applies the theme without persisting it, closes the shop and settings,
+   shows a red ✕ pinned left of the date plus a persistent "Testing …" toast.
+   The ✕ restores the previous theme and reopens settings then the shop. */
+let inspectMode = false;
+let inspectPrevThemeId = null;
+function startInspect(t){
+  if(inspectMode || !t) return;
+  inspectPrevThemeId = localStorage.getItem(THEME_KEY);
+  inspectMode = true;
+  currentTheme = t.custom ? customThemeToTheme(t) : paidThemeToTheme(t);
+  applyTheme(currentTheme);
+  closeShop();
+  if(typeof closeSettings === "function") closeSettings();
+  const exitBtn = document.getElementById("inspectExitBtn");
+  if(exitBtn) exitBtn.classList.add("show");
+  const toast = document.getElementById("inspectToast");
+  if(toast){
+    toast.textContent = "Testing " + (t.name || "theme");
+    toast.classList.add("show");
+  }
+  sfx.click();
+}
+function exitInspectMode(){
+  if(!inspectMode) return;
+  inspectMode = false;
+  const prevId = inspectPrevThemeId;
+  inspectPrevThemeId = null;
+  if(prevId){
+    localStorage.setItem(THEME_KEY, prevId);
+    currentTheme = loadTheme();
+  }else{
+    localStorage.removeItem(THEME_KEY);
+    currentTheme = ACCENTS[0];
+  }
+  applyTheme(currentTheme);
+  if(typeof renderThemeSwatches === "function") renderThemeSwatches();
+  const exitBtn = document.getElementById("inspectExitBtn");
+  if(exitBtn) exitBtn.classList.remove("show");
+  const toast = document.getElementById("inspectToast");
+  if(toast) toast.classList.remove("show");
+  openSettings();
+  openShop();
+  sfx.click();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const exitBtn = document.getElementById("inspectExitBtn");
+  if(exitBtn) exitBtn.addEventListener("click", exitInspectMode);
+});
 function refundCustomTheme(t){
   openConfirmGeneric(
     `Refund ${t.name}? It will be deleted and you'll get ${CUSTOM_THEME_PRICE} credits back.`,
@@ -7085,9 +7343,38 @@ renderCalendar();
 updateSaveSize();
 maybeAutoShowRetro();
 
+const TODAY_EVENTS_TOAST_KEY = "qb_today_events_toast_shown";
+const TODAY_EVENTS_TOAST_COOLDOWN = 60 * 60 * 1000; // one hour
+function hideTodayEventsToast(){
+  const el = document.getElementById("todayEventsToast");
+  if(el) el.classList.remove("show");
+}
+function maybeShowTodayEventsToast(){
+  const el = document.getElementById("todayEventsToast");
+  if(!el) return;
+  const last = Number(localStorage.getItem(TODAY_EVENTS_TOAST_KEY) || 0);
+  if(Date.now() - last < TODAY_EVENTS_TOAST_COOLDOWN) return;
+  try{ localStorage.setItem(TODAY_EVENTS_TOAST_KEY, String(Date.now())); }catch(e){}
+  el.classList.add("show");
+}
+// Hide the toast whenever the day view stops being active (any close path).
+// Only react when the pane becomes inactive: the boot sequence below opens the
+// day view itself, and an observer that fires on every class mutation would
+// otherwise batch-hide the toast right after it is shown.
+(function(){
+  const dayView = document.getElementById("dayView");
+  if(!dayView) return;
+  new MutationObserver(() => {
+    if(!dayView.classList.contains("active")) hideTodayEventsToast();
+  }).observe(dayView, { attributes: true, attributeFilter: ["class"] });
+})();
+
 const todayEventsAtBoot = loadEvents()
   .filter(e => eventOccursOnDay(e, new Date(), todayStr()));
-if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
+if(todayEventsAtBoot.length > 0){
+  openDayView(todayStr(), new Date());
+  maybeShowTodayEventsToast();
+}
 
 /* ---- PWA: installable + auto-updates ----
    The service worker caches the app for offline use and fetches the newest
@@ -7306,6 +7593,7 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
   <button type="button" class="notes-ctx-btn" id="ctxSelectAll" role="menuitem">Select all</button>
   <button type="button" class="notes-ctx-btn" id="ctxCopyAll" role="menuitem">Copy all</button>
   <button type="button" class="notes-ctx-btn" id="ctxPaste" role="menuitem">Paste</button>
+  <button type="button" class="notes-ctx-btn" id="ctxSearch" role="menuitem">🔍 Search web</button>
 </div>
 
 <style>
