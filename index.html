@@ -2463,35 +2463,7 @@
       overflow:hidden;
     }
     .detail-view:not(.active){display:none;}
-    #monthView{order:1;}
-    #hiddenView{order:1;}
-    .pane-grip{
-      flex:0 0 auto;
-      width:28px;height:34px;
-      display:flex;align-items:center;justify-content:center;
-      color:var(--dim);
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:8px;
-      font-size:14px;
-      cursor:grab;
-      touch-action:none;
-      user-select:none;
-    }
-    .pane-grip:active{cursor:grabbing;}
-    .pane-dragging{
-      z-index:80;
-      box-shadow:0 12px 32px rgba(0,0,0,.35);
-    }
-    #paneDropLine{
-      position:fixed;
-      top:16px;bottom:16px;
-      width:3px;border-radius:2px;
-      background:var(--accent);
-      z-index:120;
-      display:none;
-      pointer-events:none;
-    }
+    .detail-view.pane-left{order:1;}
     .fab-add{z-index:40;}
     .fab-choice-popover{z-index:41;}
   }
@@ -2696,7 +2668,6 @@
 
 <div class="detail-view" id="monthView">
   <div class="detail-header">
-    <div class="pane-grip" data-pane="monthView" title="Drag to move this panel">⠿</div>
     <button class="back-btn" id="monthBackBtn">‹ Collapse</button>
     <div class="detail-title">Calendar</div>
   </div>
@@ -2719,7 +2690,6 @@
 
 <div class="detail-view" id="hiddenView">
   <div class="detail-header">
-    <div class="pane-grip" data-pane="hiddenView" title="Drag to move this panel">⠿</div>
     <button class="back-btn" id="hiddenBackBtn">‹ Collapse</button>
     <div class="detail-title">Hidden quests</div>
   </div>
@@ -2736,7 +2706,6 @@
 
 <div class="detail-view" id="dayView">
   <div class="detail-header">
-    <div class="pane-grip" data-pane="dayView" title="Drag to move this panel">⠿</div>
     <button class="back-btn" id="dayBackBtn">‹ Collapse</button>
     <div class="detail-title" id="dayViewTitle">Day</div>
     <div class="detail-header-actions">
@@ -2752,8 +2721,6 @@
     </div>
   </div>
 </div>
-
-<div id="paneDropLine"></div>
 
 <div class="new-task-view" id="newTaskView">
   <div class="detail-header">
@@ -3410,35 +3377,117 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* ------------------------------------------------------ */
 
-/* ---- wide-screen pane management ----
-   On wide screens the app lays out as [month] [main] [notes]. Only one
-   right-side pane (notes/day/retro) is visible at a time; the month view
-   lives on the left so a full three-pane row is possible on large screens.
-   These helpers keep panes from stacking when only two will fit. */
+/* ---- side-panel placement ----
+   On wide screens the app lays out as [side pane] [main] [side pane].
+   Left-side panes are the calendar and hidden quests; right-side panes are
+   the day view and the quest notes. A right-side pane opens on the right,
+   or on the left when the right is already taken and the left is free;
+   when both sides are taken it replaces the pane on the right. */
 const PANE_WIDTH = 480;
 const PANE_GAP = 20;
 const BODY_PAD = 16;
 function threePaneAvailable(){
   return window.innerWidth >= PANE_WIDTH * 3 + PANE_GAP * 2 + BODY_PAD * 2;
 }
-function rightPaneIds(){
-  return ["dayView", "detailView"];
+const LEFT_PANES = ["monthView", "hiddenView"];
+const RIGHT_PANES = ["dayView", "detailView"];
+const ALL_PANES = LEFT_PANES.concat(RIGHT_PANES);
+function paneEl(id){
+  return document.getElementById(id);
 }
-function leftPaneIds(){
-  return ["monthView", "hiddenView"];
+function paneActive(id){
+  const el = paneEl(id);
+  return !!el && el.classList.contains("active");
 }
-function closeRightPanes(keepId){
-  rightPaneIds().forEach(id => {
-    if(id === keepId) return;
-    const el = document.getElementById(id);
-    if(el) el.classList.remove("active");
-  });
+function paneSideOf(id){
+  const el = paneEl(id);
+  if(el && el.classList.contains("pane-left")) return "left";
+  return "right";
 }
-function closeLeftPanes(keepId){
-  leftPaneIds().forEach(id => {
-    if(id === keepId) return;
-    const el = document.getElementById(id);
-    if(el) el.classList.remove("active");
+function paneSideTaken(side){
+  return ALL_PANES.some(id => paneActive(id) && paneSideOf(id) === side);
+}
+function activePaneOnSide(side){
+  return ALL_PANES.find(id => paneActive(id) && paneSideOf(id) === side) || null;
+}
+function setPaneSide(id, side){
+  const el = paneEl(id);
+  if(!el) return;
+  el.classList.remove("pane-left", "pane-right");
+  el.classList.add("pane-" + side);
+}
+function placePane(id){
+  const el = paneEl(id);
+  if(!el) return;
+  const alreadyActive = el.classList.contains("active");
+  if(window.innerWidth < 1024){
+    // full-screen overlays on small screens: only one at a time
+    ALL_PANES.forEach(other => {
+      if(other !== id && paneEl(other)) paneEl(other).classList.remove("active");
+    });
+    el.classList.add("active");
+    return;
+  }
+  if(LEFT_PANES.includes(id)){
+    if(alreadyActive) return;
+    if(!threePaneAvailable()){
+      RIGHT_PANES.forEach(other => {
+        if(paneActive(other)) paneEl(other).classList.remove("active");
+      });
+    }
+    const leftOccupant = activePaneOnSide("left");
+    if(leftOccupant) paneEl(leftOccupant).classList.remove("active");
+    setPaneSide(id, "left");
+    el.classList.add("active");
+    return;
+  }
+  // right-side panes open on the right, or on the left when the right is
+  // already taken and the left is free; when both are taken they replace
+  // the pane currently on the right
+  if(alreadyActive) return;
+  if(threePaneAvailable()){
+    if(!paneSideTaken("right")){
+      setPaneSide(id, "right");
+    } else if(!paneSideTaken("left")){
+      setPaneSide(id, "left");
+    } else {
+      const rightOccupant = activePaneOnSide("right");
+      if(rightOccupant) paneEl(rightOccupant).classList.remove("active");
+      setPaneSide(id, "right");
+    }
+  } else {
+    RIGHT_PANES.forEach(other => {
+      if(other !== id && paneActive(other)) paneEl(other).classList.remove("active");
+    });
+    const leftOccupant = activePaneOnSide("left");
+    if(leftOccupant) paneEl(leftOccupant).classList.remove("active");
+    setPaneSide(id, "right");
+  }
+  el.classList.add("active");
+}
+function closePane(id){
+  const el = paneEl(id);
+  if(el) el.classList.remove("active");
+}
+function reflowOpenPanes(){
+  if(window.innerWidth < 1024) return;
+  if(threePaneAvailable()){
+    LEFT_PANES.forEach(id => {
+      if(paneActive(id) && paneSideOf(id) !== "left") setPaneSide(id, "left");
+    });
+    return;
+  }
+  // narrow desktop: only one side slot, keep a right-side pane on the right
+  const rights = RIGHT_PANES.filter(paneActive);
+  if(rights.length >= 2){
+    const onRight = rights.find(id => paneSideOf(id) === "right") || rights[rights.length - 1];
+    rights.forEach(id => { if(id !== onRight) closePane(id); });
+    setPaneSide(onRight, "right");
+  } else if(rights.length === 1){
+    setPaneSide(rights[0], "right");
+  }
+  LEFT_PANES.forEach(id => {
+    if(paneActive(id)) closePane(id);
   });
 }
 
@@ -3812,14 +3861,10 @@ function renderHiddenList(){
 
 function openHiddenView(){
   renderHiddenList();
-  document.getElementById("hiddenView").classList.add("active");
-  if(window.innerWidth < 1024) closeLeftPanes("hiddenView");
-  if(!threePaneAvailable()) closeRightPanes(null);
-  balancePaneLayout();
+  placePane("hiddenView");
 }
 function closeHiddenView(){
-  document.getElementById("hiddenView").classList.remove("active");
-  balancePaneLayout();
+  closePane("hiddenView");
 }
 function positionFab(){
   if(window.innerWidth < 1024) return;
@@ -3868,13 +3913,7 @@ window.addEventListener("resize", () => {
     return;
   }
   positionFab();
-  if(window.innerWidth < 1024) return;
-  const rightActive = rightPaneIds().some(id => {
-    const el = document.getElementById(id);
-    return el && el.classList.contains("active");
-  });
-  if(rightActive && !threePaneAvailable()) closeLeftPanes();
-  balancePaneLayout();
+  reflowOpenPanes();
 });
 
 new MutationObserver(positionFab).observe(document.body, {
@@ -3898,20 +3937,16 @@ function openDetail(taskId){
     : `${task.perDay}x/day · ${task.perWeek}x/week`;
   document.getElementById("saveHint").classList.remove("show");
 
-  document.getElementById("detailView").classList.add("active");
   renderNotesDoc();
   renderQuestTimer();
   restartQuestTimerInterval(task);
-  closeRightPanes("detailView");
-  if(!threePaneAvailable()) closeLeftPanes();
-  balancePaneLayout();
+  placePane("detailView");
 }
 
 function closeDetail(){
-  document.getElementById("detailView").classList.remove("active");
+  closePane("detailView");
   currentDetailTaskId = null;
   clearInterval(questTimerInterval);
-  balancePaneLayout();
 }
 
 function flashSaved(){
@@ -4841,7 +4876,7 @@ function moveTask(taskId, direction){
   render();
 }
 
-const QUEST_COLLAPSE_LIMIT = 3;
+const QUEST_COLLAPSE_LIMIT = 4;
 let questListExpanded = false;
 let expandAnimating = false;
 
@@ -5879,21 +5914,14 @@ let monthViewYear = null;
 let monthViewMonth = null; // 0-indexed
 
 function openMonthView(){
-  if(window.innerWidth >= 1024 && paneRightOpen() && paneHiddenOpen()){
-    closeHiddenView();
-  }
   const now = new Date();
   monthViewYear = now.getFullYear();
   monthViewMonth = now.getMonth();
   renderMonthGrid();
-  document.getElementById("monthView").classList.add("active");
-  if(window.innerWidth < 1024) closeLeftPanes("monthView");
-  if(!threePaneAvailable()) closeRightPanes(null);
-  balancePaneLayout();
+  placePane("monthView");
 }
 function closeMonthView(){
-  document.getElementById("monthView").classList.remove("active");
-  balancePaneLayout();
+  closePane("monthView");
 }
 function shiftMonth(delta){
   monthViewMonth += delta;
@@ -5953,16 +5981,12 @@ function openDayView(dayKey, dateObj){
   document.getElementById("dayViewTitle").textContent =
     `${WEEKDAY_FULL[currentDayDateObj.getDay()]}, ${MONTH_ABBR[currentDayDateObj.getMonth()]} ${currentDayDateObj.getDate()}`;
   renderDayView();
-  document.getElementById("dayView").classList.add("active");
-  closeRightPanes("dayView");
-  if(!threePaneAvailable()) closeLeftPanes();
-  balancePaneLayout();
+  placePane("dayView");
 }
 function closeDayView(){
-  document.getElementById("dayView").classList.remove("active");
+  closePane("dayView");
   currentDayKey = null;
   currentDayDateObj = null;
-  balancePaneLayout();
 }
 
 function repeatSummary(ev){
@@ -6826,13 +6850,6 @@ function openSettings(){
 function closeSettings(){
   document.getElementById("settingsView").classList.remove("active");
 }
-function resetPaneLayout(){
-  localStorage.removeItem("qbPaneLayout");
-  localStorage.removeItem("qbMonthSticky");
-  monthStickyLeft = false;
-  applyPaneLayout();
-  sfx.pop();
-}
 function resetAllData(){
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STATE_KEY);
@@ -6867,7 +6884,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if(shopFreeBtn) shopFreeBtn.addEventListener("click", () => {
     if(typeof window.adminCreateFreeTheme === "function") window.adminCreateFreeTheme();
   });
-  document.getElementById("resetLayoutBtn").addEventListener("click", resetPaneLayout);
   document.getElementById("resetExpBtn").addEventListener("click", () => {
     openConfirmGeneric(
       "Reset all exp and credits? Your level returns to 1, the bar empties and the credit balance resets. Quests, events and bought themes are kept.",
@@ -6887,33 +6903,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 /* ------------------------------------------- */
 
-/* ---- desktop: draggable panes ---- */
-const ROW_ITEMS = ["hiddenView","monthView","main","dayView","detailView"];
-function defaultPaneLayout(){
-  return ROW_ITEMS.slice();
-}
-function loadPaneLayout(){
-  try{
-    const v = JSON.parse(localStorage.getItem("qbPaneLayout"));
-    if(Array.isArray(v) && v.length === ROW_ITEMS.length){
-      const valid = ROW_ITEMS.join("|");
-      if(v.every(id => new RegExp("^(?:" + valid + ")$").test(id))) return v;
-    }
-  }catch(e){}
-  return defaultPaneLayout();
-}
-function savePaneLayout(layout){
-  localStorage.setItem("qbPaneLayout", JSON.stringify(layout));
-}
-function rowEl(id){
-  return id === "main" ? document.querySelector(".app-main") : document.getElementById(id);
-}
-function applyPaneLayout(){
-  loadPaneLayout().forEach((id, i) => {
-    const el = rowEl(id);
-    if(el) el.style.order = i;
-  });
-}
 function syncPaneBackLabels(){
   const label = window.innerWidth < 1024 ? "\u2039 Back" : "\u2039 Collapse";
   ["monthBackBtn", "hiddenBackBtn", "dayBackBtn", "backBtn"].forEach(id => {
@@ -6921,156 +6910,6 @@ function syncPaneBackLabels(){
     if(el && el.textContent !== label) el.textContent = label;
   });
 }
-function paneRightOpen(){
-  return rightPaneIds().some(id => {
-    const el = document.getElementById(id);
-    return el && el.classList.contains("active");
-  });
-}
-function paneHiddenOpen(){
-  const el = document.getElementById("hiddenView");
-  return !!el && el.classList.contains("active");
-}
-let monthStickyLeft = (function(){
-  try{ return localStorage.getItem("qbMonthSticky") === "1"; }catch(e){ return false; }
-})();
-function setMonthSticky(on){
-  monthStickyLeft = !!on;
-  try{ localStorage.setItem("qbMonthSticky", on ? "1" : "0"); }catch(e){}
-}
-function setMonthSide(left){
-  const layout = loadPaneLayout();
-  const mainIdx = layout.indexOf("main");
-  const cur = layout.indexOf("monthView");
-  if(cur === -1) return;
-  if((left && cur < mainIdx) || (!left && cur > mainIdx)) return;
-  layout.splice(cur, 1);
-  const nm = layout.indexOf("main");
-  layout.splice(left ? nm : nm + 1, 0, "monthView");
-  savePaneLayout(layout);
-  applyPaneLayout();
-}
-function positionMonth(){
-  if(window.innerWidth < 1024) return;
-  const month = document.getElementById("monthView");
-  if(!month || !month.classList.contains("active")) return;
-  const rightOpen = paneRightOpen();
-  const hiddenOpen = paneHiddenOpen();
-  if(hiddenOpen && rightOpen){
-    month.classList.remove("active");
-    return;
-  }
-  if(hiddenOpen){
-    setMonthSide(false);
-  } else if(rightOpen){
-    setMonthSide(true);
-    setMonthSticky(true);
-  } else {
-    setMonthSide(monthStickyLeft);
-  }
-}
-function balancePaneLayout(){
-  applyPaneLayout();
-  positionMonth();
-}
-function visibleRowItems(exceptId){
-  const out = [];
-  for(const id of ROW_ITEMS){
-    if(id === exceptId) continue;
-    const el = rowEl(id);
-    if(!el || getComputedStyle(el).display === "none") continue;
-    out.push({ id, el, rect: el.getBoundingClientRect() });
-  }
-  out.sort((a,b) => a.rect.left - b.rect.left);
-  return out;
-}
-function paneBoundaryX(items, k){
-  if(!items.length) return window.innerWidth / 2;
-  if(k <= 0) return items[0].rect.left - 10;
-  if(k >= items.length) return items[items.length - 1].rect.right + 10;
-  return (items[k - 1].rect.right + items[k].rect.left) / 2;
-}
-let dragState = null;
-function startPaneDrag(e, paneId){
-  if(window.innerWidth < 1024 || dragState) return;
-  const pane = rowEl(paneId);
-  if(!pane) return;
-  dragState = {
-    paneId,
-    pane,
-    startX: e.clientX,
-    origCenterX: 0,
-    items: visibleRowItems(paneId),
-    active: false,
-  };
-  const r = pane.getBoundingClientRect();
-  dragState.origCenterX = r.left + r.width / 2;
-  pane.classList.add("pane-dragging");
-  if(e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
-  e.preventDefault();
-}
-function movePaneDrag(e){
-  if(!dragState) return;
-  const dx = e.clientX - dragState.startX;
-  if(!dragState.active && Math.abs(dx) < 6) return;
-  dragState.active = true;
-  dragState.pane.style.transform = "translateX(" + dx + "px)";
-  const cx = dragState.origCenterX + dx;
-  let k = dragState.items.length;
-  for(let i = 0; i < dragState.items.length; i++){
-    if(cx < dragState.items[i].rect.left + dragState.items[i].rect.width / 2){ k = i; break; }
-  }
-  const line = document.getElementById("paneDropLine");
-  line.style.left = paneBoundaryX(dragState.items, k) + "px";
-  line.style.display = "block";
-}
-function dropPaneAt(e){
-  const dx = e.clientX - dragState.startX;
-  const cx = dragState.origCenterX + dx;
-  let k = dragState.items.length;
-  for(let i = 0; i < dragState.items.length; i++){
-    if(cx < dragState.items[i].rect.left + dragState.items[i].rect.width / 2){ k = i; break; }
-  }
-  const layout = loadPaneLayout().filter(id => id !== dragState.paneId);
-  const target = k < dragState.items.length ? dragState.items[k].id : null;
-  const ti = target ? layout.indexOf(target) : layout.length;
-  layout.splice(ti, 0, dragState.paneId);
-  savePaneLayout(layout);
-  if(dragState.paneId === "monthView"){
-    setMonthSticky(layout.indexOf("monthView") < layout.indexOf("main"));
-  }
-  balancePaneLayout();
-}
-function endPaneDrag(e){
-  if(!dragState) return;
-  if(dragState.active) dropPaneAt(e);
-  dragState.pane.style.transform = "";
-  dragState.pane.classList.remove("pane-dragging");
-  if(e.currentTarget.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)){
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  }
-  document.getElementById("paneDropLine").style.display = "none";
-  dragState = null;
-}
-function cancelPaneDrag(){
-  if(!dragState) return;
-  dragState.pane.style.transform = "";
-  dragState.pane.classList.remove("pane-dragging");
-  document.getElementById("paneDropLine").style.display = "none";
-  dragState = null;
-}
-document.addEventListener("DOMContentLoaded", () => {
-  applyPaneLayout();
-  syncPaneBackLabels();
-  document.querySelectorAll(".pane-grip").forEach(grip => {
-    const paneId = grip.dataset.pane;
-    grip.addEventListener("pointerdown", (e) => startPaneDrag(e, paneId));
-    grip.addEventListener("pointermove", movePaneDrag);
-    grip.addEventListener("pointerup", endPaneDrag);
-    grip.addEventListener("pointercancel", cancelPaneDrag);
-  });
-});
-applyPaneLayout();
 syncPaneBackLabels();
 
 render();
@@ -7172,7 +7011,6 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
 
 <div class="detail-view" id="detailView">
   <div class="detail-header">
-    <div class="pane-grip" data-pane="detailView" title="Drag to move this panel">⠿</div>
     <button class="back-btn" id="backBtn">‹ Collapse</button>
     <div class="detail-title" id="detailTitle">Task</div>
     <div class="detail-header-actions">
@@ -7234,17 +7072,6 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
             <div class="settings-row-sub" id="notifyHint">Notifications only fire while this app is open.</div>
           </div>
           <button type="button" class="settings-action" id="notifyPermBtn">Enable</button>
-        </div>
-      </div>
-
-      <div class="settings-section">
-        <div class="settings-section-title">Layout</div>
-        <div class="settings-row">
-          <div class="settings-row-text">
-            <div class="settings-row-title">Panel arrangement</div>
-            <div class="settings-row-sub">Restore the default order of the side panels.</div>
-          </div>
-          <button type="button" class="settings-action" id="resetLayoutBtn">Reset</button>
         </div>
       </div>
 
