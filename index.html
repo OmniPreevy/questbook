@@ -7392,9 +7392,14 @@ function maybeShowTodayEventsToast(){
 
 const todayEventsAtBoot = loadEvents()
   .filter(e => eventOccursOnDay(e, new Date(), todayStr()));
+// The whole auto-open announcement (day view + "Today's Events" toast) only
+// happens once per hour: reloading within the hour keeps the main view as is.
 if(todayEventsAtBoot.length > 0){
-  openDayView(todayStr(), new Date());
-  maybeShowTodayEventsToast();
+  const lastShown = Number(localStorage.getItem(TODAY_EVENTS_TOAST_KEY) || 0);
+  if(Date.now() - lastShown >= TODAY_EVENTS_TOAST_COOLDOWN){
+    openDayView(todayStr(), new Date());
+    maybeShowTodayEventsToast();
+  }
 }
 
 /* ---- PWA: installable + auto-updates ----
