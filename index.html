@@ -898,6 +898,17 @@
     gap:10px;
     padding-top:14px;
   }
+  .day-quests-section{
+    margin-top:6px;
+  }
+  .day-section-label{
+    font-size:11px;
+    font-weight:600;
+    color:var(--dim);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    padding-top:18px;
+  }
   .event-row{
     background:var(--card);
     border:1px solid var(--border);
@@ -1211,6 +1222,15 @@
   .modal-btn.primary{
     background:var(--accent);
     color:#0d0d0d;
+  }
+  .bring-day-options{
+    display:flex;
+    gap:10px;
+    margin:2px 0 12px;
+  }
+  .bring-day-options .modal-btn{flex:1;}
+  .bring-date-row{
+    margin-bottom:12px;
   }
   .trash-card{max-width:420px;}
   .trash-head{
@@ -2557,6 +2577,24 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="bringOverlay">
+  <div class="modal-card">
+    <div class="modal-title">Bring event into quests</div>
+    <div class="modal-label">On which day do you want the quest to appear?</div>
+    <div class="bring-day-options">
+      <button type="button" class="modal-btn primary" id="bringTodayBtn">Today</button>
+      <button type="button" class="modal-btn secondary" id="bringOtherBtn">Another day</button>
+    </div>
+    <div class="bring-date-row" id="bringDateRow" style="display:none;">
+      <input type="date" id="bringDateInput" aria-label="Choose a day">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="bringCancelBtn">Cancel</button>
+      <button type="button" class="modal-btn primary" id="bringConfirmBtn" style="display:none;">Add quest</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="trashOverlay">
   <div class="modal-card trash-card">
     <div class="trash-head">
@@ -2708,6 +2746,10 @@
   <div class="detail-scroll">
     <div id="dayEventsList" class="day-events-list"></div>
     <div class="empty" id="dayEmptyMsg" style="display:none;">No events this day. Tap + to add one.</div>
+    <div class="day-quests-section" id="dayQuestsSection" style="display:none;">
+      <div class="day-section-label">Quests</div>
+      <div id="dayQuestsList" class="day-events-list"></div>
+    </div>
   </div>
 </div>
 
@@ -5234,6 +5276,13 @@ document.addEventListener("DOMContentLoaded", () => {
       render();
     }
   });
+  document.getElementById("bringTodayBtn").addEventListener("click", chooseBringToday);
+  document.getElementById("bringOtherBtn").addEventListener("click", chooseBringOther);
+  document.getElementById("bringConfirmBtn").addEventListener("click", confirmBringOther);
+  document.getElementById("bringCancelBtn").addEventListener("click", cancelBring);
+  document.getElementById("bringOverlay").addEventListener("click", (e) => {
+    if(e.target === e.currentTarget) cancelBring();
+  });
   document.getElementById("trashBtn").addEventListener("click", openTrash);
   document.getElementById("trashCloseBtn").addEventListener("click", closeTrash);
   document.getElementById("trashEmptyBtn").addEventListener("click", emptyTrash);
@@ -5927,18 +5976,29 @@ function renderDayView(){
   if(!currentDayKey) return;
   const list = document.getElementById("dayEventsList");
   const emptyMsg = document.getElementById("dayEmptyMsg");
+  const questsSection = document.getElementById("dayQuestsSection");
+  const questList = document.getElementById("dayQuestsList");
   list.innerHTML = "";
+  questList.innerHTML = "";
 
   const dateObj = currentDayDateObj || new Date(currentDayKey + "T00:00:00");
   const events = loadEvents()
     .filter(e => eventOccursOnDay(e, dateObj, currentDayKey))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  if(events.length === 0){
+  const dayQuests = loadTasks().filter(t =>
+    t.broughtFromEventId &&
+    t.scheduledDay === currentDayKey &&
+    !(t.hiddenUntil && t.hiddenUntil >= currentDayKey)
+  );
+
+  if(events.length === 0 && dayQuests.length === 0){
     emptyMsg.style.display = "block";
+    questsSection.style.display = "none";
     return;
   }
   emptyMsg.style.display = "none";
+  questsSection.style.display = dayQuests.length ? "block" : "none";
 
   events.forEach(ev => {
     const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes);
@@ -5984,11 +6044,80 @@ function renderDayView(){
     row.appendChild(del);
     list.appendChild(row);
   });
+
+  dayQuests.forEach(t => {
+    const row = document.createElement("div");
+    row.className = "event-row";
+
+    const info = document.createElement("div");
+    info.className = "info";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = t.name;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = "quest";
+    info.appendChild(name);
+    info.appendChild(meta);
+
+    const edit = document.createElement("button");
+    edit.className = "del edit";
+    edit.textContent = "✎";
+    edit.title = "Edit this quest";
+    edit.onclick = () => openDetail(t.id);
+
+    row.appendChild(info);
+    row.appendChild(edit);
+    questList.appendChild(row);
+  });
 }
 
+let pendingBringEvent = null;
+
 function bringEventToQuests(ev){
-  const dateObj = currentDayDateObj || new Date((currentDayKey || todayStr()) + "T00:00:00");
-  const note = `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`;
+  pendingBringEvent = ev;
+  const dateInput = document.getElementById("bringDateInput");
+  const dateRow = document.getElementById("bringDateRow");
+  const confirmBtn = document.getElementById("bringConfirmBtn");
+  const otherBtn = document.getElementById("bringOtherBtn");
+  dateInput.value = dayAfterStr(todayStr());
+  dateInput.min = todayStr();
+  dateRow.style.display = "none";
+  confirmBtn.style.display = "none";
+  otherBtn.textContent = "Another day";
+  document.getElementById("bringOverlay").classList.add("active");
+}
+
+function chooseBringToday(){
+  finishBringQuest(pendingBringEvent, todayStr());
+}
+function chooseBringOther(){
+  const dateRow = document.getElementById("bringDateRow");
+  const confirmBtn = document.getElementById("bringConfirmBtn");
+  const otherBtn = document.getElementById("bringOtherBtn");
+  const show = dateRow.style.display === "none";
+  dateRow.style.display = show ? "block" : "none";
+  confirmBtn.style.display = show ? "inline-block" : "none";
+  otherBtn.textContent = show ? "Back" : "Another day";
+}
+function confirmBringOther(){
+  const val = document.getElementById("bringDateInput").value;
+  if(!val) return;
+  finishBringQuest(pendingBringEvent, val);
+}
+function cancelBring(){
+  pendingBringEvent = null;
+  document.getElementById("bringOverlay").classList.remove("active");
+}
+
+function finishBringQuest(ev, dayStr){
+  cancelBring();
+  if(!ev) return;
+  const tKey = todayStr();
+  const dateObj = currentDayDateObj || new Date((currentDayKey || tKey) + "T00:00:00");
+  const note = dayStr === tKey
+    ? `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`
+    : `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event, appears on ${dayStr}`;
   const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
   const tasks = loadTasks();
   tasks.push({
@@ -6000,7 +6129,7 @@ function bringEventToQuests(ev){
     order: Date.now(),
     createdAt: Date.now(),
     dayCount: 0,
-    dayDate: todayStr(),
+    dayDate: tKey,
     weekCount: 0,
     weekKey: weekStr(),
     notes: "",
@@ -6008,12 +6137,23 @@ function bringEventToQuests(ev){
     oneTime: true,
     checkedAt: null,
     broughtFromEventId: ev.id,
+    scheduledDay: dayStr,
+    hiddenUntil: dayStr > tKey ? dayBeforeStr(dayStr) : null,
     noteBlocks: [{ id: generateId(), type: "text", content: note }]
   });
   saveTasks(tasks);
   sfx.pop();
   render();
   if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+  showSwipeToast(dayStr === tKey ? "quest added for today" : `quest added for ${dayStr}`);
+}
+
+function dayBeforeStr(dayStr){ return shiftDayStr(dayStr, -1); }
+function dayAfterStr(dayStr){ return shiftDayStr(dayStr, 1); }
+function shiftDayStr(dayStr, delta){
+  const d = new Date(dayStr + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  return dateToStr(d);
 }
 
 /* ---- add/edit event modal (shared by the calendar header + day view) ---- */
@@ -6937,6 +7077,10 @@ render();
 renderLevelBar();
 renderCalendar();
 maybeAutoShowRetro();
+
+const todayEventsAtBoot = loadEvents()
+  .filter(e => eventOccursOnDay(e, new Date(), todayStr()));
+if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
 
 /* ---- PWA: installable + auto-updates ----
    The service worker caches the app for offline use and fetches the newest
