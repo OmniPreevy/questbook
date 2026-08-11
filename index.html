@@ -1122,6 +1122,8 @@
     opacity:1;
     pointer-events:auto;
     background:rgba(0,0,0,.7);
+    -webkit-backdrop-filter:blur(4px);
+    backdrop-filter:blur(4px);
   }
   .modal-card{
     background:var(--card);
@@ -1821,9 +1823,14 @@
     margin:0 auto;
     overflow-y:auto;
     transform:translateY(100%);
+    transition:transform .3s ease, visibility .3s;
+    visibility:hidden;
+  }
+  .new-task-view.active{
+    transform:translateY(0);
+    visibility:visible;
     transition:transform .3s ease;
   }
-  .new-task-view.active{transform:translateY(0);}
 
   .nt-name-row{
     position:relative;
@@ -1986,6 +1993,15 @@
     resize:none;
     font-family:inherit;
     margin-bottom:14px;
+    min-height:60px;
+  }
+  .nt-stats-row{
+    display:flex;
+    justify-content:space-between;
+    margin:-8px 2px 0;
+    font-size:11px;
+    color:var(--dim);
+    flex:0 0 auto;
   }
   .nt-create-btn{
     background:var(--accent);
@@ -2782,6 +2798,10 @@
   </div>
 
   <textarea id="ntNotes" class="nt-notes" placeholder="Notes about this quest…"></textarea>
+  <div class="nt-stats-row">
+    <span class="nt-stat" id="ntCpm">0 CPM</span>
+    <span class="nt-stat" id="ntWpm">0 WPM</span>
+  </div>
 
   <button type="button" id="ntCreate" class="nt-create-btn">Create quest</button>
 </div>
@@ -4335,18 +4355,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if(e.pointerType === "mouse") return;
     if(e.target.closest(".item-check, .counter-bubble")) return;
     clearTimeout(pressTimer);
-    pressStart = { x: e.clientX, y: e.clientY };
+    const target = e.target.closest("textarea.notes-line-text") || notesTextareas()[0];
+    if(!target) return;
+    pressStart = { x: e.clientX, y: e.clientY, target };
     pressTimer = setTimeout(() => {
-      const target = notesTextareas()[0];
-      showNotesCtxMenu(pressStart.x, pressStart.y, target);
-    }, 550);
+      showNotesCtxMenu(pressStart.x, pressStart.y, pressStart.target);
+    }, 800);
   });
   const cancelPress = () => clearTimeout(pressTimer);
   doc.addEventListener("pointerup", cancelPress);
   doc.addEventListener("pointercancel", cancelPress);
   doc.addEventListener("pointermove", (e) => {
-    if(pressStart && (Math.abs(e.clientX - pressStart.x) > 12 || Math.abs(e.clientY - pressStart.y) > 12)){
+    if(pressStart && (Math.abs(e.clientX - pressStart.x) > 10 || Math.abs(e.clientY - pressStart.y) > 10)){
       clearTimeout(pressTimer);
+      pressStart = null;
     }
   });
 
@@ -4376,6 +4398,27 @@ document.addEventListener("DOMContentLoaded", () => {
       showNotesToast("text copied");
     }catch(err){
       showNotesToast("copy not supported");
+    }
+    hideNotesCtxMenu();
+  });
+
+  document.getElementById("ctxPaste").addEventListener("click", async () => {
+    const target = ctxMenuEl()._target || notesTextareas()[0];
+    if(!target) return;
+    try{
+      const text = await navigator.clipboard.readText();
+      if(!text){ showNotesToast("clipboard empty"); return; }
+      target.focus();
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      target.value = target.value.slice(0, start) + text + target.value.slice(end);
+      const pos = start + text.length;
+      target.setSelectionRange(pos, pos);
+      updateBlockContent(target.dataset.blockId, target.value);
+      autoGrowTextarea(target);
+      showNotesToast("pasted");
+    }catch(err){
+      showNotesToast("paste not available");
     }
     hideNotesCtxMenu();
   });
@@ -5009,6 +5052,7 @@ function render(){
           render();
           scheduleDoneReposition();
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
+          maybeOpenCalendarAfterDone();
         } else {
           t.checkedAt = null;
           t.lastCheckedAt = null;
@@ -5065,6 +5109,7 @@ function render(){
           render();
           if(dayFullyDone) scheduleDoneReposition();
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
+          if(dayFullyDone) maybeOpenCalendarAfterDone();
         } else {
           // today's target was already fully met - tap again to undo the whole day
           const earnedToday = t.dayCount * xpReward(t);
@@ -5177,6 +5222,12 @@ function setNtMode(mode){
 function resetNewTaskForm(){
   document.getElementById("ntName").value = "";
   document.getElementById("ntNotes").value = "";
+  ntTypingStart = 0;
+  ntTypingWords = 0;
+  ntTypingChars = 0;
+  ntLastInput = 0;
+  document.getElementById("ntWpm").textContent = "0 WPM";
+  document.getElementById("ntCpm").textContent = "0 CPM";
   document.getElementById("ntWeekSlider").value = 4;
   document.getElementById("ntWeekVal").textContent = 4;
   document.getElementById("ntDaySlider").value = 1;
@@ -5187,6 +5238,11 @@ function resetNewTaskForm(){
   setNtMode("once");
   setNtPriority(3);
 }
+
+let ntTypingStart = 0;
+let ntTypingWords = 0;
+let ntTypingChars = 0;
+let ntLastInput = 0;
 
 function setNtPriority(p){
   ntPriority = p;
@@ -5359,6 +5415,23 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("ntCreate").addEventListener("click", createNewTask);
   document.getElementById("ntName").addEventListener("keydown", (e) => {
     if(e.key === "Enter") createNewTask();
+  });
+  document.getElementById("ntNotes").addEventListener("input", () => {
+    const now = Date.now();
+    const val = document.getElementById("ntNotes").value;
+    const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+    const chars = val.length;
+    if(!ntTypingStart || now - ntLastInput > 1500){
+      ntTypingStart = now;
+      ntTypingWords = words;
+      ntTypingChars = chars;
+    }
+    ntLastInput = now;
+    const mins = Math.max((now - ntTypingStart) / 60000, 0.001);
+    const wpm = Math.max(0, Math.round((words - ntTypingWords) / mins));
+    const cpm = Math.max(0, Math.round((chars - ntTypingChars) / mins));
+    document.getElementById("ntWpm").textContent = wpm + " WPM";
+    document.getElementById("ntCpm").textContent = cpm + " CPM";
   });
 
   // priority popover
@@ -5976,6 +6049,19 @@ function openMonthView(){
 }
 function closeMonthView(){
   closePane("monthView");
+}
+// After a quest is finished, surface the month calendar on the right side -
+// but only when the right slot is free, so it never shoves another panel aside.
+function maybeOpenCalendarAfterDone(){
+  if(window.innerWidth < 1024) return;
+  if(paneActive("monthView")) return;
+  if(paneSideTaken("right")) return;
+  const now = new Date();
+  monthViewYear = now.getFullYear();
+  monthViewMonth = now.getMonth();
+  renderMonthGrid();
+  setPaneSide("monthView", "right");
+  paneEl("monthView").classList.add("active");
 }
 function shiftMonth(delta){
   monthViewMonth += delta;
@@ -7159,6 +7245,7 @@ if(todayEventsAtBoot.length > 0) openDayView(todayStr(), new Date());
 <div class="notes-ctx" id="notesCtxMenu" role="menu">
   <button type="button" class="notes-ctx-btn" id="ctxSelectAll" role="menuitem">Select all</button>
   <button type="button" class="notes-ctx-btn" id="ctxCopyAll" role="menuitem">Copy all</button>
+  <button type="button" class="notes-ctx-btn" id="ctxPaste" role="menuitem">Paste</button>
 </div>
 
 <style>
