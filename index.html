@@ -1513,6 +1513,14 @@
     width:100%;
     flex-shrink:0;
   }
+  .notes-stats-row{
+    display:flex;
+    justify-content:space-between;
+    margin:8px 4px 0;
+    font-size:11px;
+    color:var(--dim);
+    flex:0 0 auto;
+  }
   .notes-line-text:focus{outline:none;}
   .notes-line-check, .notes-line-counter{
     display:flex;
@@ -2138,14 +2146,6 @@
     margin-bottom:14px;
     min-height:60px;
   }
-  .nt-stats-row{
-    display:flex;
-    justify-content:space-between;
-    margin:-8px 2px 0;
-    font-size:11px;
-    color:var(--dim);
-    flex:0 0 auto;
-  }
   .nt-create-btn{
     background:var(--accent);
     border:none;
@@ -2155,6 +2155,7 @@
     border-radius:10px;
     padding:14px;
     flex:0 0 auto;
+    margin-top:14px;
     position:sticky;
     bottom:calc(16px + env(safe-area-inset-bottom));
   }
@@ -2972,10 +2973,6 @@
   </div>
 
   <textarea id="ntNotes" class="nt-notes" placeholder="Notes about this quest…"></textarea>
-  <div class="nt-stats-row">
-    <span class="nt-stat" id="ntCpm">0 CPM</span>
-    <span class="nt-stat" id="ntWpm">0 WPM</span>
-  </div>
 
   <button type="button" id="ntCreate" class="nt-create-btn">Create quest</button>
 </div>
@@ -4146,6 +4143,10 @@ function openDetail(taskId){
   if(!task) return;
   currentDetailTaskId = taskId;
   lastCursorInfo = null;
+  notesTypingStart = 0;
+  notesTypingWords = 0;
+  notesTypingChars = 0;
+  notesLastInput = 0;
 
   document.getElementById("detailTitle").textContent = task.name;
   document.getElementById("detailMeta").textContent = task.oneTime
@@ -4411,6 +4412,7 @@ function renderNotesDoc(){
       ta.addEventListener("input", () => {
         autoGrowTextarea(ta);
         updateBlockContent(block.id, ta.value);
+        updateNotesStats();
       });
       const updateCursor = () => { lastCursorInfo = { blockId: block.id, pos: ta.selectionStart }; };
       ta.addEventListener("focus", updateCursor);
@@ -4441,7 +4443,7 @@ function renderNotesDoc(){
       label.dataset.blockId = block.id;
       label.value = block.label;
       label.placeholder = "Checklist item";
-      label.oninput = () => updateBlockLabel(block.id, label.value);
+      label.oninput = () => { updateBlockLabel(block.id, label.value); updateNotesStats(); };
 
       const toggle = document.createElement("button");
       toggle.type = "button";
@@ -4475,7 +4477,7 @@ function renderNotesDoc(){
       label.dataset.blockId = block.id;
       label.value = block.label;
       label.placeholder = "Counter label";
-      label.oninput = () => updateBlockLabel(block.id, label.value);
+      label.oninput = () => { updateBlockLabel(block.id, label.value); updateNotesStats(); };
 
       const reset = document.createElement("button");
       reset.type = "button";
@@ -4493,6 +4495,45 @@ function renderNotesDoc(){
       doc.appendChild(row);
     }
   });
+  updateNotesStats();
+}
+
+let notesTypingStart = 0;
+let notesTypingWords = 0;
+let notesTypingChars = 0;
+let notesLastInput = 0;
+
+function notesTotalStats(){
+  const doc = document.getElementById("notesDoc");
+  let words = 0, chars = 0;
+  doc.querySelectorAll("textarea.notes-line-text").forEach(ta => {
+    const v = ta.value.trim();
+    if(v) words += v.split(/\s+/).length;
+    chars += ta.value.length;
+  });
+  doc.querySelectorAll("input.item-label-input").forEach(inp => {
+    const v = inp.value.trim();
+    if(v) words += v.split(/\s+/).length;
+    chars += inp.value.length;
+  });
+  return { words, chars };
+}
+
+function updateNotesStats(){
+  const wpmEl = document.getElementById("notesWpm");
+  const cpmEl = document.getElementById("notesCpm");
+  if(!wpmEl || !cpmEl) return;
+  const { words, chars } = notesTotalStats();
+  const now = Date.now();
+  if(!notesTypingStart || now - notesLastInput > 1500){
+    notesTypingStart = now;
+    notesTypingWords = words;
+    notesTypingChars = chars;
+  }
+  notesLastInput = now;
+  const mins = Math.max((now - notesTypingStart) / 60000, 0.001);
+  wpmEl.textContent = Math.max(0, Math.round((words - notesTypingWords) / mins)) + " WPM";
+  cpmEl.textContent = Math.max(0, Math.round((chars - notesTypingChars) / mins)) + " CPM";
 }
 /* ----------------------------------------------------------- */
 
@@ -5448,12 +5489,6 @@ function setNtMode(mode){
 function resetNewTaskForm(){
   document.getElementById("ntName").value = "";
   document.getElementById("ntNotes").value = "";
-  ntTypingStart = 0;
-  ntTypingWords = 0;
-  ntTypingChars = 0;
-  ntLastInput = 0;
-  document.getElementById("ntWpm").textContent = "0 WPM";
-  document.getElementById("ntCpm").textContent = "0 CPM";
   document.getElementById("ntWeekSlider").value = 4;
   document.getElementById("ntWeekVal").textContent = 4;
   document.getElementById("ntDaySlider").value = 1;
@@ -5464,11 +5499,6 @@ function resetNewTaskForm(){
   setNtMode("once");
   setNtPriority(3);
 }
-
-let ntTypingStart = 0;
-let ntTypingWords = 0;
-let ntTypingChars = 0;
-let ntLastInput = 0;
 
 function setNtPriority(p){
   ntPriority = p;
@@ -5641,23 +5671,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("ntCreate").addEventListener("click", createNewTask);
   document.getElementById("ntName").addEventListener("keydown", (e) => {
     if(e.key === "Enter") createNewTask();
-  });
-  document.getElementById("ntNotes").addEventListener("input", () => {
-    const now = Date.now();
-    const val = document.getElementById("ntNotes").value;
-    const words = val.trim() ? val.trim().split(/\s+/).length : 0;
-    const chars = val.length;
-    if(!ntTypingStart || now - ntLastInput > 1500){
-      ntTypingStart = now;
-      ntTypingWords = words;
-      ntTypingChars = chars;
-    }
-    ntLastInput = now;
-    const mins = Math.max((now - ntTypingStart) / 60000, 0.001);
-    const wpm = Math.max(0, Math.round((words - ntTypingWords) / mins));
-    const cpm = Math.max(0, Math.round((chars - ntTypingChars) / mins));
-    document.getElementById("ntWpm").textContent = wpm + " WPM";
-    document.getElementById("ntCpm").textContent = cpm + " CPM";
   });
 
   // priority popover
@@ -7503,6 +7516,10 @@ if(todayEventsAtBoot.length > 0){
 
   <div class="detail-scroll">
     <div class="notes-doc" id="notesDoc"></div>
+    <div class="notes-stats-row" id="notesStatsRow">
+      <span id="notesWpm">0 WPM</span>
+      <span id="notesCpm">0 CPM</span>
+    </div>
   </div>
 
   <div class="swipe-toast" id="notesToast"></div>
