@@ -5522,6 +5522,68 @@ function closeNewTaskView(){
   document.getElementById("ntPriorityPopover").classList.remove("show");
 }
 
+/* Mobile pull-down peek: while the new-quest sheet is closed it sits just
+   below the screen. Dragging the page down at the top slides the sheet's top
+   edge up from the bottom edge so you can see a glimpse of it. Let go past
+   the threshold and it opens; release early and it snaps back out of sight. */
+(function(){
+  if(!("ontouchstart" in window)) return;
+  const view = document.getElementById("newTaskView");
+  if(!view) return;
+  const THRESHOLD = 80;
+  let startY = null;
+  let dragging = false;
+  let dy = 0;
+
+  document.addEventListener("touchstart", (e) => {
+    if(view.classList.contains("active")) return;
+    if(window.innerWidth >= 1024) return;
+    if(window.scrollY > 0) return; // only from the top of the page
+    const t = e.target;
+    if(t && t.closest && t.closest("button, input, textarea, select, a, [contenteditable='true']")) return;
+    startY = e.touches[0].clientY;
+    dragging = false;
+    dy = 0;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if(startY === null) return;
+    const move = e.touches[0].clientY - startY;
+    if(!dragging){
+      if(move < -10){ startY = null; return; } // page is scrolling up - not our gesture
+      if(move > 10) dragging = true;
+      else return;
+    }
+    dy = Math.max(0, move);
+    view.style.transition = "none";
+    view.style.visibility = "visible";
+    view.style.transform = `translateY(calc(100% - ${dy}px))`;
+    e.preventDefault();
+  }, { passive: false });
+
+  function end(){
+    if(startY === null) return;
+    startY = null;
+    if(!dragging) return;
+    dragging = false;
+    view.style.transition = "";
+    if(dy >= THRESHOLD){
+      // keep the peek position until the class rule takes over so the sheet
+      // glides the rest of the way in instead of jumping
+      view.classList.add("active");
+      view.style.transform = "";
+      view.style.visibility = "";
+      openNewTaskView();
+    } else {
+      view.style.transform = "";
+      view.style.visibility = "";
+    }
+    dy = 0;
+  }
+  document.addEventListener("touchend", end);
+  document.addEventListener("touchcancel", end);
+})();
+
 /* On mobile the on-screen keyboard doesn't shrink the layout viewport, so a
    fixed-height panel would leave the Create button hidden behind it. Pin the
    new-quest view to the visual viewport while it's open: the button rides up
@@ -6500,6 +6562,27 @@ function eventEndsToday(ev, tKey){
   return ev.day === tKey;
 }
 
+// Next day (>= today) on which this event actually occurs - the day a quest
+// brought from it should default to, instead of always today.
+function nextEventOccurrenceKey(ev){
+  const tKey = todayStr();
+  if(!ev.repeat){
+    return ev.day >= tKey ? ev.day : null;
+  }
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  for(let i = 0; i < 366; i++){
+    const k = dateToStr(d);
+    if(k >= tKey && k >= (ev.day || "") &&
+       (!ev.repeatUntil || k <= ev.repeatUntil) &&
+       ev.repeatDays.includes(d.getDay())){
+      return k;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
 function bringEventToQuests(ev){
   const tKey = todayStr();
   if(eventEndsToday(ev, tKey)){
@@ -6508,7 +6591,7 @@ function bringEventToQuests(ev){
   }
   pendingBringEvent = ev;
   const dateInput = document.getElementById("bringDateInput");
-  dateInput.value = tKey;
+  dateInput.value = nextEventOccurrenceKey(ev) || tKey;
   dateInput.min = tKey;
   document.getElementById("bringOverlay").classList.add("active");
   requestAnimationFrame(() => dateInput.focus());
@@ -7517,8 +7600,8 @@ if(todayEventsAtBoot.length > 0){
   <div class="detail-scroll">
     <div class="notes-doc" id="notesDoc"></div>
     <div class="notes-stats-row" id="notesStatsRow">
-      <span id="notesWpm">0 WPM</span>
       <span id="notesCpm">0 CPM</span>
+      <span id="notesWpm">0 WPM</span>
     </div>
   </div>
 
@@ -7635,8 +7718,8 @@ if(todayEventsAtBoot.length > 0){
 <div class="notes-ctx" id="notesCtxMenu" role="menu">
   <button type="button" class="notes-ctx-btn" id="ctxSelectAll" role="menuitem">Select all</button>
   <button type="button" class="notes-ctx-btn" id="ctxCopyAll" role="menuitem">Copy all</button>
-  <button type="button" class="notes-ctx-btn" id="ctxPaste" role="menuitem">Paste</button>
   <button type="button" class="notes-ctx-btn" id="ctxSearch" role="menuitem">🔍 Search web</button>
+  <button type="button" class="notes-ctx-btn" id="ctxPaste" role="menuitem">Paste</button>
 </div>
 
 <style>
