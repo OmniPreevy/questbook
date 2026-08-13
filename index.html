@@ -270,12 +270,12 @@
   .nt-notes, .shop-item{
     background:color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
   }
-  /* The FAB choice menu floats over the quest list, so layer a dark tint on
-     top of its (possibly transparent) card colour to keep it readable. */
+  /* The FAB choice menu floats over the quest list, so blur what sits behind
+     it to keep the buttons readable. */
   .fab-choice-popover{
-    background:
-      linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)),
-      color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
+    background:color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
+    -webkit-backdrop-filter:blur(6px);
+    backdrop-filter:blur(6px);
   }
   .detail-view, .notes-doc, .detail-timer{
     background:color-mix(in srgb, var(--shop-panel-bg, var(--card)) calc(var(--alpha-panel,1)*100%), transparent) !important;
