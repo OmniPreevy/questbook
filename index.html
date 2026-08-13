@@ -270,6 +270,13 @@
   .nt-notes, .shop-item{
     background:color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
   }
+  /* The FAB choice menu floats over the quest list, so layer a dark tint on
+     top of its (possibly transparent) card colour to keep it readable. */
+  .fab-choice-popover{
+    background:
+      linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)),
+      color-mix(in srgb, var(--card) calc(var(--alpha-card,1)*100%), transparent) !important;
+  }
   .detail-view, .notes-doc, .detail-timer{
     background:color-mix(in srgb, var(--shop-panel-bg, var(--card)) calc(var(--alpha-panel,1)*100%), transparent) !important;
   }
@@ -4591,10 +4598,39 @@ function copyTextToClipboard(text){
 document.addEventListener("DOMContentLoaded", () => {
   const doc = document.getElementById("notesDoc");
 
+  // Capture the textarea's selection as early as possible on a right-click -
+  // some browsers collapse it during the pointer/mouse down that precedes
+  // contextmenu, before the handler below gets a chance to read it.
+  let lastRightClickSel = null;
+  const rememberRightClickSelection = (e) => {
+    if(e.button !== 2) return;
+    const ta = e.target.closest("textarea.notes-line-text");
+    if(ta && ta.selectionStart !== undefined && ta.selectionStart !== ta.selectionEnd){
+      lastRightClickSel = { start: ta.selectionStart, end: ta.selectionEnd };
+    }
+  };
+  doc.addEventListener("pointerdown", rememberRightClickSelection, true);
+  doc.addEventListener("mousedown", rememberRightClickSelection, true);
+
   doc.addEventListener("contextmenu", (e) => {
-    if(e.target.closest(".item-check, .counter-bubble")) return;
+    if(e.target.closest(".item-check, .counter-bubble")){
+      lastRightClickSel = null;
+      return;
+    }
     e.preventDefault();
     const target = e.target.closest("textarea.notes-line-text") || notesTextareas()[0];
+    // Right-clicking a textarea can drop its selection before the custom menu
+    // shows; put the highlighted range back so Copy all / Search web still act
+    // on the selected words.
+    if(lastRightClickSel && target){
+      const sel = lastRightClickSel;
+      lastRightClickSel = null;
+      requestAnimationFrame(() => {
+        try{ target.setSelectionRange(sel.start, sel.end); }catch(err){}
+      });
+    } else {
+      lastRightClickSel = null;
+    }
     showNotesCtxMenu(e.clientX, e.clientY, target);
   });
 
