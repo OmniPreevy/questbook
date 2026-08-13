@@ -2650,6 +2650,18 @@
     .fab-add{z-index:40;}
     .fab-choice-popover{z-index:41;}
   }
+  /* Version watermark pinned to the bottom-left corner. */
+  .version-watermark{
+    position:fixed;
+    left:10px;
+    bottom:8px;
+    z-index:5;
+    font-size:11px;
+    color:var(--dim);
+    opacity:.6;
+    pointer-events:none;
+    user-select:none;
+  }
 </style>
 </head>
 <body>
@@ -8637,5 +8649,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
+<div class="version-watermark" aria-hidden="true">v1.5.2</div>
 </body>
 </html>
