@@ -2332,6 +2332,20 @@
     height:150px;
     min-height:150px;
   }
+  /* Bottom bar of the new-quest view: Cancel / Add / 40px arrow-to-notes.
+     Sticky so it stays pinned to the bottom of the screen, moves up with the
+     mobile keyboard (the view itself is pinned to the visual viewport), and
+     keeps a little padding beneath the buttons. */
+  .nt-footer{
+    display:flex;
+    align-items:stretch;
+    gap:8px;
+    margin-top:auto;
+    position:sticky;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+    padding-top:14px;
+    padding-bottom:6px;
+  }
   .nt-create-btn{
     background:var(--accent);
     border:none;
@@ -2340,10 +2354,31 @@
     font-size:16px;
     border-radius:10px;
     padding:14px;
-    flex:0 0 auto;
-    margin-top:14px;
-    position:sticky;
-    bottom:calc(16px + env(safe-area-inset-bottom));
+    flex:1;
+    min-width:0;
+  }
+  .nt-danger-btn{
+    background:var(--danger);
+    border:none;
+    color:#fff;
+    font-weight:700;
+    font-size:16px;
+    border-radius:10px;
+    padding:14px;
+    flex:1;
+    min-width:0;
+  }
+  .nt-arrow-btn{
+    flex:0 0 40px;
+    width:40px;
+    background:var(--accent);
+    border:none;
+    color:#0d0d0d;
+    font-weight:700;
+    font-size:20px;
+    border-radius:10px;
+    padding:0;
+    line-height:1;
   }
   @media (hover: hover) and (pointer: fine){
     .task:hover{border-color:var(--dim);}
@@ -2355,7 +2390,7 @@
       border-color:var(--accent);
       color:var(--text);
     }
-    .modal-btn.primary:hover, .nt-create-btn:hover{filter:brightness(1.08);}
+    .modal-btn.primary:hover, .nt-create-btn:hover, .nt-danger-btn:hover, .nt-arrow-btn:hover{filter:brightness(1.08);}
     .prio-swatch:hover{filter:brightness(1.15);}
     .settings-action-danger:hover{border-color:var(--danger);color:var(--danger);}
   }
@@ -3133,7 +3168,6 @@
 
 <div class="new-task-view" id="newTaskView">
   <div class="detail-header">
-    <button type="button" class="back-btn" id="ntCancel">‹ Cancel</button>
     <div class="detail-title">New quest</div>
   </div>
 
@@ -3221,7 +3255,11 @@
     </div>
   </div>
 
-  <button type="button" id="ntCreate" class="nt-create-btn">Create quest</button>
+  <div class="nt-footer">
+    <button type="button" id="ntCancel" class="nt-danger-btn">Cancel</button>
+    <button type="button" id="ntCreate" class="nt-create-btn">Add</button>
+    <button type="button" id="ntCreateNotes" class="nt-arrow-btn" aria-label="Add and open notes">&#8594;</button>
+  </div>
 </div>
 
 <div class="modal-overlay" id="customDayOverlay">
@@ -5998,8 +6036,9 @@ function createNewTask(){
     : null;
 
   const tasks = loadTasks();
+  const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   tasks.push({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    id: newId,
     name,
     perWeek,
     perDay,
@@ -6026,6 +6065,7 @@ function createNewTask(){
   sfx.pop();
   closeNewTaskView();
   render();
+  return newId;
 }
 
 function populateNtNotifyEvents(){
@@ -6126,6 +6166,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("ntCancel").addEventListener("click", closeNewTaskView);
   document.getElementById("ntCreate").addEventListener("click", createNewTask);
+  document.getElementById("ntCreateNotes").addEventListener("click", () => {
+    const id = createNewTask();
+    if(id) openDetail(id);
+  });
   document.getElementById("ntName").addEventListener("keydown", (e) => {
     if(e.key === "Enter") createNewTask();
   });
@@ -9341,6 +9385,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.5</div>
+<div class="version-watermark" aria-hidden="true">v1.5.6</div>
 </body>
 </html>
