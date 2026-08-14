@@ -2158,6 +2158,10 @@
   .nt-repeat-btn{
     width:100%;
     box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
     background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
     border:1px solid var(--border);
     color:var(--text);
@@ -2173,6 +2177,23 @@
   .nt-repeat-btn.on{
     border-color:var(--accent);
     color:var(--accent);
+  }
+  .nt-repeat-state{
+    flex:0 0 auto;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--dim);
+    background:color-mix(in srgb, var(--card) 70%, #0b0b0b);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:4px 12px;
+  }
+  .nt-repeat-btn.on .nt-repeat-state{
+    color:var(--accent);
+    border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 14%, transparent);
   }
   .nt-notify-row{
     display:flex;
@@ -3096,7 +3117,10 @@
   <label class="modal-label">Duration (min, optional)</label>
   <input type="number" id="eventDuration" min="1" placeholder="optional" class="nt-text-input">
 
-  <button type="button" id="eventRepeatToggle" class="nt-repeat-btn">Repeats</button>
+  <button type="button" id="eventRepeatToggle" class="nt-repeat-btn">
+    <span>Repeats</span>
+    <span class="nt-repeat-state" id="eventRepeatState">Off</span>
+  </button>
 
   <div id="eventRepeatOptions" class="event-repeat-options" style="display:none;">
     <div class="weekday-picker" id="weekdayPicker">
@@ -3111,7 +3135,7 @@
   </div>
 
   <div class="nt-opts-grid">
-    <div class="nt-opt-col">
+    <div class="nt-opt-col" id="eventEndDateCol">
       <label class="modal-checkbox-row">
         <input type="checkbox" id="eventEndDateToggle">
         <span>end date</span>
@@ -7541,7 +7565,17 @@ let importedEventNotes = null; // notes carried over from the quest modal
 function setEventRepeatVisible(visible){
   eventRepeatOn = !!visible;
   document.getElementById("eventRepeatToggle").classList.toggle("on", eventRepeatOn);
+  const stateEl = document.getElementById("eventRepeatState");
+  if(stateEl) stateEl.textContent = eventRepeatOn ? "On" : "Off";
   document.getElementById("eventRepeatOptions").style.display = eventRepeatOn ? "block" : "none";
+  // the end date only matters for repeating events
+  const endCol = document.getElementById("eventEndDateCol");
+  if(endCol) endCol.style.display = eventRepeatOn ? "" : "none";
+  if(!eventRepeatOn){
+    document.getElementById("eventEndDateToggle").checked = false;
+    document.getElementById("eventRepeatUntil").value = "";
+    document.getElementById("eventRepeatUntil").style.display = "none";
+  }
 }
 function setEventQuestMode(mode){
   document.querySelectorAll('#eventQuestOptions input[name="eventQuestMode"]').forEach(r => {
@@ -9629,6 +9663,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.18</div>
+<div class="version-watermark" aria-hidden="true">v1.5.19</div>
 </body>
 </html>
