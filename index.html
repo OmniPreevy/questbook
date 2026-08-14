@@ -2045,31 +2045,32 @@
     transition:transform .3s ease;
   }
   /* Grippy handle at the top of the creation sheet; drag it down to dismiss.
-     The element is a wide invisible strip you can grab anywhere on; the small
-     grey line it draws via ::before is just the visual cue. */
+     The visible line stays small; ::before is a big invisible grab area
+     around it so you can hold anywhere near it. */
   .nt-sheet-handle{
     position:sticky;
     top:0;
     z-index:2;
     flex:0 0 auto;
-    width:100%;
-    height:40px;
-    box-sizing:border-box;
-    touch-action:none;
-    user-select:none;
-    cursor:grab;
-    margin:0 0 8px;
-  }
-  .nt-sheet-handle:active{cursor:grabbing;}
-  .nt-sheet-handle::before{
-    content:"";
-    display:block;
     width:44px;
     height:5px;
     border-radius:3px;
     background:var(--dim);
     opacity:.6;
-    margin:17px auto 0;
+    margin:-4px auto 10px;
+    touch-action:none;
+    user-select:none;
+    cursor:grab;
+  }
+  .nt-sheet-handle:active{cursor:grabbing;}
+  .nt-sheet-handle::before{
+    content:"";
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(480px, 100vw);
+    top:-16px;
+    bottom:-10px;
   }
 
   .nt-name-row{
@@ -9628,6 +9629,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.17</div>
+<div class="version-watermark" aria-hidden="true">v1.5.18</div>
 </body>
 </html>
