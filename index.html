@@ -1326,16 +1326,44 @@
     accent-color:var(--accent);
     margin:0;
   }
-  /* row of three short checkboxes (end date / appear as quest / notify me) */
-  .nt-checkbox-row3{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    flex-wrap:wrap;
+  /* three-column option grid in the event modal: end date | appear as quest | notification */
+  .nt-opts-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
     margin-bottom:12px;
+    align-items:start;
   }
-  .nt-checkbox-row3 .modal-checkbox-row{
+  .nt-opt-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    min-width:0;
+  }
+  .nt-opt-col .modal-checkbox-row{
     margin-bottom:0;
+    justify-content:center;
+  }
+  .nt-end-date-input{
+    width:100%;
+    max-width:150px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .nt-notify-label{
+    font-size:13px;
+    color:var(--text);
+    flex:0 0 auto;
+  }
+  /* "When quest is created" needs no h/m boxes: hide them and let the select
+     stretch to fill the rest of the row */
+  #eventNotifyOptions.quest-mode .nt-notify-row input[type=number],
+  #eventNotifyOptions.quest-mode .nt-notify-unit{
+    display:none;
+  }
+  #eventNotifyOptions.quest-mode .nt-notify-row{
+    width:100%;
   }
   .weekday-picker{
     display:flex;
@@ -2124,11 +2152,6 @@
   .nt-notify-unit{
     font-size:12px;
     color:var(--dim);
-    flex:0 0 auto;
-  }
-  .nt-notify-before{
-    font-size:13px;
-    color:var(--text);
     flex:0 0 auto;
   }
   .nt-notify-mode{
@@ -3044,52 +3067,55 @@
     </div>
   </div>
 
-  <div class="nt-checkbox-row3">
-    <label class="modal-checkbox-row">
-      <input type="checkbox" id="eventEndDateToggle">
-      <span>end date</span>
-    </label>
-    <label class="modal-checkbox-row">
-      <input type="checkbox" id="eventQuestToggle">
-      <span>appear as quest</span>
-    </label>
-    <label class="modal-checkbox-row">
-      <input type="checkbox" id="eventNotifyToggle">
-      <span>notify me</span>
-    </label>
-  </div>
-  <div id="eventEndDateRow" style="display:none;">
-    <input type="date" id="eventRepeatUntil" class="nt-text-input">
-  </div>
-
-  <div id="eventQuestOptions" style="display:none;">
-    <div class="nt-quest-radio-row">
-      <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
-      <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span></label>
+  <div class="nt-opts-grid">
+    <div class="nt-opt-col">
+      <label class="modal-checkbox-row">
+        <input type="checkbox" id="eventEndDateToggle">
+        <span>end date</span>
+      </label>
+      <input type="date" id="eventRepeatUntil" class="nt-end-date-input nt-text-input" style="display:none;">
     </div>
-    <div id="eventQuestBeforeRow" style="display:none;">
-      <div class="nt-notify-row">
-        <input type="number" id="eventQuestBeforeDays" min="0" placeholder="d" aria-label="Days before">
-        <span class="nt-notify-unit">d</span>
-        <input type="number" id="eventQuestBeforeHours" min="0" placeholder="h" aria-label="Hours before">
-        <span class="nt-notify-unit">h</span>
-        <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
-        <span class="nt-notify-unit">m</span>
-        <span class="nt-notify-before">before</span>
+    <div class="nt-opt-col">
+      <label class="modal-checkbox-row">
+        <input type="checkbox" id="eventQuestToggle">
+        <span>appear as quest</span>
+      </label>
+      <div id="eventQuestOptions" style="display:none;">
+        <div class="nt-quest-radio-row">
+          <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
+          <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span></label>
+        </div>
+        <div id="eventQuestBeforeRow" style="display:none;">
+          <div class="nt-notify-row">
+            <input type="number" id="eventQuestBeforeDays" min="0" placeholder="d" aria-label="Days before">
+            <span class="nt-notify-unit">d</span>
+            <input type="number" id="eventQuestBeforeHours" min="0" placeholder="h" aria-label="Hours before">
+            <span class="nt-notify-unit">h</span>
+            <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
+            <span class="nt-notify-unit">m</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-
-  <div id="eventNotifyOptions" style="display:none;">
-    <div class="nt-notify-row">
-      <input type="number" id="eventNotifyHours" min="0" value="0" aria-label="Hours">
-      <span class="nt-notify-unit">h</span>
-      <input type="number" id="eventNotifyMinutes" min="0" max="59" value="0" aria-label="Minutes">
-      <span class="nt-notify-unit">m</span>
-      <select id="eventNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
-        <option value="event">Before event</option>
-        <option value="quest" disabled>When quest is created</option>
-      </select>
+    <div class="nt-opt-col">
+      <label class="modal-checkbox-row">
+        <input type="checkbox" id="eventNotifyToggle">
+        <span>notification</span>
+      </label>
+      <div id="eventNotifyOptions" style="display:none;">
+        <div class="nt-notify-row">
+          <span class="nt-notify-label">notify me</span>
+          <input type="number" id="eventNotifyHours" min="0" value="0" aria-label="Hours">
+          <span class="nt-notify-unit">h</span>
+          <input type="number" id="eventNotifyMinutes" min="0" max="59" value="0" aria-label="Minutes">
+          <span class="nt-notify-unit">m</span>
+          <select id="eventNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
+            <option value="event">Before event</option>
+            <option value="now">From now</option>
+            <option value="quest" disabled>When quest is created</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -6493,7 +6519,8 @@ function normalizeEvent(e){
     notifyEnabled: !!e.notifyEnabled,
     notifyHours: (typeof e.notifyHours === "number" && e.notifyHours >= 0) ? e.notifyHours : 0,
     notifyMinutes: (typeof e.notifyMinutes === "number" && e.notifyMinutes >= 0) ? e.notifyMinutes : 0,
-    notifyMode: (e.notifyMode === "quest") ? "quest" : "event",
+    notifyMode: (e.notifyMode === "quest") ? "quest" : (e.notifyMode === "now") ? "now" : "event",
+    createdAt: (typeof e.createdAt === "number") ? e.createdAt : null,
     priority: (typeof e.priority === "number" && e.priority >= 1 && e.priority <= 5) ? e.priority : 3,
     appearAsQuest: !!e.appearAsQuest,
     questMode: (e.questMode === "before") ? "before" : "day",
@@ -6702,6 +6729,19 @@ function checkReminders(){
         notified[key] = now;
         changed = true;
       }
+    }
+  });
+
+  // Events - "From now" fires the delay after the event was created
+  loadEvents().forEach(ev => {
+    if(!ev.notifyEnabled || ev.notifyMode !== "now" || !ev.createdAt) return;
+    const delayMs = (ev.notifyHours * 60 + ev.notifyMinutes) * 60000;
+    if(delayMs <= 0) return;
+    const key = `event-now-${ev.id}`;
+    if(now >= ev.createdAt + delayMs && !notified[key]){
+      fireNotification(`Reminder: ${ev.name || "Event"}`, "Reminder you set when creating this event.");
+      notified[key] = now;
+      changed = true;
     }
   });
 
@@ -7400,6 +7440,10 @@ function setEventQuestMode(mode){
   });
   document.getElementById("eventQuestBeforeRow").style.display = (mode === "before") ? "block" : "none";
 }
+function setEventNotifyQuestModeVisual(){
+  document.getElementById("eventNotifyOptions").classList.toggle(
+    "quest-mode", document.getElementById("eventNotifyMode").value === "quest");
+}
 function setEventPriority(p){
   eventPriority = p;
   const color = getPriorityColor(p);
@@ -7437,7 +7481,7 @@ function openEventModal(eventId, opts){
     modalRepeatDays = ev.repeatDays.slice();
     const endDate = ev.repeatUntil || "";
     document.getElementById("eventEndDateToggle").checked = !!endDate;
-    document.getElementById("eventEndDateRow").style.display = endDate ? "block" : "none";
+    document.getElementById("eventRepeatUntil").style.display = endDate ? "block" : "none";
     document.getElementById("eventRepeatUntil").value = endDate;
     setEventRepeatVisible(ev.repeat);
     document.getElementById("eventQuestToggle").checked = !!ev.appearAsQuest;
@@ -7459,7 +7503,9 @@ function openEventModal(eventId, opts){
     document.getElementById("eventNotifyOptions").style.display = notifyOn ? "block" : "none";
     document.getElementById("eventNotifyHours").value = nHours;
     document.getElementById("eventNotifyMinutes").value = nMinutes;
-    document.getElementById("eventNotifyMode").value = (ev.notifyMode === "quest") ? "quest" : "event";
+    const nMode = (ev.notifyMode === "quest" || ev.notifyMode === "now") ? ev.notifyMode : "event";
+    document.getElementById("eventNotifyMode").value = nMode;
+    setEventNotifyQuestModeVisual();
     refreshWeekdayButtons();
   } else {
     titleEl.textContent = "New event";
@@ -7470,7 +7516,7 @@ function openEventModal(eventId, opts){
     setEventPriority(3);
     modalRepeatDays = [];
     document.getElementById("eventEndDateToggle").checked = false;
-    document.getElementById("eventEndDateRow").style.display = "none";
+    document.getElementById("eventRepeatUntil").style.display = "none";
     document.getElementById("eventRepeatUntil").value = "";
     setEventRepeatVisible(false);
     document.getElementById("eventQuestToggle").checked = !!opts.exportToQuest;
@@ -7484,6 +7530,7 @@ function openEventModal(eventId, opts){
     document.getElementById("eventNotifyHours").value = 0;
     document.getElementById("eventNotifyMinutes").value = 0;
     document.getElementById("eventNotifyMode").value = "event";
+    setEventNotifyQuestModeVisual();
     refreshWeekdayButtons();
   }
   // "When quest is created" only makes sense when the event appears as a quest
@@ -7536,7 +7583,7 @@ function saveEventModal(){
   const nHours = Math.max(0, parseFloat(document.getElementById("eventNotifyHours").value) || 0);
   const nMinutes = Math.max(0, parseInt(document.getElementById("eventNotifyMinutes").value, 10) || 0);
   const nMode = document.getElementById("eventNotifyMode").value;
-  const effMode = (nMode === "quest" && appearAsQuest) ? "quest" : "event";
+  const effMode = (nMode === "quest" && appearAsQuest) ? "quest" : (nMode === "now") ? "now" : "event";
   const notifyActive = notifyEnabled && (effMode === "quest" || nHours > 0 || nMinutes > 0);
   const fields = {
     name, day, startTime, durationMinutes,
@@ -7560,11 +7607,12 @@ function saveEventModal(){
   if(editingEventId){
     const ev = events.find(e => e.id === editingEventId);
     if(ev){
+      if(typeof ev.createdAt !== "number") ev.createdAt = Date.now();
       Object.assign(ev, fields);
       saved = ev;
     }
   } else {
-    saved = { id: generateId(), ...fields };
+    saved = { id: generateId(), createdAt: Date.now(), ...fields };
     events.push(saved);
   }
   // notes imported from the quest modal live on the event
@@ -7595,10 +7643,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setEventRepeatVisible(!eventRepeatOn);
   });
   document.getElementById("eventEndDateToggle").addEventListener("change", (e) => {
-    document.getElementById("eventEndDateRow").style.display = e.target.checked ? "block" : "none";
+    document.getElementById("eventRepeatUntil").style.display = e.target.checked ? "block" : "none";
   });
   document.getElementById("eventNotifyToggle").addEventListener("change", (e) => {
     document.getElementById("eventNotifyOptions").style.display = e.target.checked ? "block" : "none";
+    if(e.target.checked) setEventNotifyQuestModeVisual();
   });
   document.getElementById("eventQuestToggle").addEventListener("change", (e) => {
     document.getElementById("eventQuestOptions").style.display = e.target.checked ? "block" : "none";
@@ -7606,7 +7655,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if(questNotifyOpt) questNotifyOpt.disabled = !e.target.checked;
     const modeSel = document.getElementById("eventNotifyMode");
     if(!e.target.checked && modeSel.value === "quest") modeSel.value = "event";
+    setEventNotifyQuestModeVisual();
     if(e.target.checked) syncEventQuests();
+  });
+  document.getElementById("eventNotifyMode").addEventListener("change", () => {
+    setEventNotifyQuestModeVisual();
   });
   document.querySelectorAll('#eventQuestOptions input[name="eventQuestMode"]').forEach(r => {
     r.addEventListener("change", () => setEventQuestMode(r.value));
@@ -9465,6 +9518,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.8</div>
+<div class="version-watermark" aria-hidden="true">v1.5.9</div>
 </body>
 </html>
