@@ -6778,6 +6778,29 @@ function buildIcsContent(){
   const stamp = icsNowStamp();
 
   events.forEach(ev => {
+    if(!ev.startTime){
+      // all-day event - export as DATE-only values so a missing start time
+      // can't crash the .ics build
+      const day = ev.day.replace(/-/g, "");
+      lines.push("BEGIN:VEVENT");
+      lines.push(`UID:${ev.id}@questbook`);
+      lines.push(`DTSTAMP:${stamp}`);
+      lines.push(`DTSTART;VALUE=DATE:${day}`);
+      if(ev.durationMinutes && ev.durationMinutes > 0){
+        const d = new Date(ev.day + "T00:00:00");
+        d.setDate(d.getDate() + Math.ceil(ev.durationMinutes / (24 * 60)));
+        lines.push(`DTEND;VALUE=DATE:${dateToStr(d).replace(/-/g, "")}`);
+      }
+      lines.push(`SUMMARY:${icsEscape(ev.name || "Event")}`);
+      if(ev.repeat && ev.repeatDays.length){
+        const byday = ev.repeatDays.slice().sort().map(d => ICS_WEEKDAY[d]).join(",");
+        let rrule = `FREQ=WEEKLY;BYDAY=${byday}`;
+        if(ev.repeatUntil) rrule += `;UNTIL=${ev.repeatUntil.replace(/-/g, "")}T235959Z`;
+        lines.push(`RRULE:${rrule}`);
+      }
+      lines.push("END:VEVENT");
+      return;
+    }
     const dur = ev.durationMinutes || 0;
     const start = icsDateTime(ev.day, ev.startTime);
     const endTimeStr = addMinutesToTime(ev.startTime, dur);
@@ -7548,7 +7571,11 @@ function syncEventQuests(){
   // bring quests for occurrences that are due
   events.forEach(ev => {
     if(!ev.appearAsQuest) return;
-    const maxScan = (ev.questMode === "before") ? ev.questBeforeDays + 1 : 0;
+    // scan far enough ahead that an occurrence's quest becomes due today even
+    // when the "before" offset crosses midnight (hours/minutes can exceed one day)
+    const maxScan = (ev.questMode === "before")
+      ? ev.questBeforeDays + Math.ceil((ev.questBeforeHours * 60 + ev.questBeforeMinutes) / 1440)
+      : 0;
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     for(let i = 0; i <= maxScan; i++){
@@ -9654,6 +9681,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.30</div>
+<div class="version-watermark" aria-hidden="true">v1.5.31</div>
 </body>
 </html>
