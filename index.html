@@ -2050,12 +2050,15 @@
     top:0;
     z-index:2;
     flex:0 0 auto;
-    width:44px;
-    height:5px;
+    width:120px;
+    height:6px;
     border-radius:3px;
     background:var(--dim);
+    background-clip:content-box;
+    padding:10px 0;
     opacity:.6;
-    margin:-4px auto 10px;
+    margin:0 auto 12px;
+    box-sizing:content-box;
     touch-action:none;
     user-select:none;
     cursor:grab;
@@ -9618,6 +9621,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.15</div>
+<div class="version-watermark" aria-hidden="true">v1.5.16</div>
 </body>
 </html>
