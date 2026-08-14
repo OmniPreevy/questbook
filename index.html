@@ -2233,6 +2233,54 @@
     font-size:13px;
     flex:0 0 auto;
   }
+  /* Stepper for the "custom times per day" number: the + / - buttons live in a
+     fixed 40px strip at the right edge so the cursor stays put over them
+     instead of flickering to the text caret across the whole field. */
+  .nt-stepper{
+    position:relative;
+    margin-bottom:12px;
+  }
+  .nt-stepper input{
+    width:100%;
+    padding:10px;
+    padding-right:42px;
+    margin-bottom:0;
+  }
+  .nt-stepper-btns{
+    position:absolute;
+    top:1px;
+    right:1px;
+    bottom:1px;
+    width:40px;
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid var(--border);
+    border-radius:0 7px 7px 0;
+    overflow:hidden;
+  }
+  .nt-step-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--dim);
+    font-size:9px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .nt-step-btn:hover{
+    background:color-mix(in srgb, var(--accent) 15%, transparent);
+    color:var(--text);
+  }
+  .nt-step-btn:active{
+    background:color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .nt-step-btn + .nt-step-btn{
+    border-top:1px solid var(--border);
+  }
   .nt-select{
     width:100%;
     background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
@@ -3179,7 +3227,13 @@
 <div class="modal-overlay" id="customDayOverlay">
   <div class="modal-card">
     <div class="modal-title">Custom times per day</div>
-    <input type="number" id="customDayInput" min="1" value="1">
+    <div class="nt-stepper">
+      <input type="text" id="customDayInput" inputmode="numeric" pattern="[0-9]*" value="1" aria-label="Times per day">
+      <div class="nt-stepper-btns">
+        <button type="button" id="customDayUp" class="nt-step-btn" aria-label="Increase">&#9650;</button>
+        <button type="button" id="customDayDown" class="nt-step-btn" aria-label="Decrease">&#9660;</button>
+      </div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="modal-btn secondary" id="customDayCancel">Cancel</button>
       <button type="button" class="modal-btn primary" id="customDaySave">Save</button>
@@ -6144,6 +6198,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("customDayInput").addEventListener("keydown", (e) => {
     if(e.key === "Enter") saveCustomDay();
   });
+  function stepCustomDay(delta){
+    const input = document.getElementById("customDayInput");
+    const n = parseInt(input.value, 10);
+    const next = (isNaN(n) ? 1 : n) + delta;
+    if(next >= 1) input.value = next;
+    input.focus();
+  }
+  document.getElementById("customDayUp").addEventListener("click", () => stepCustomDay(1));
+  document.getElementById("customDayDown").addEventListener("click", () => stepCustomDay(-1));
   const customDayOverlay = document.getElementById("customDayOverlay");
   customDayOverlay.addEventListener("click", (e) => {
     if(e.target === customDayOverlay) closeCustomDayModal();
@@ -9278,6 +9341,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.4</div>
+<div class="version-watermark" aria-hidden="true">v1.5.5</div>
 </body>
 </html>
