@@ -1447,7 +1447,7 @@
      main view. With transparent surfaces the content behind bleeds through,
      so once one opens we drop the section underneath entirely. */
   @media (max-width: 1023px){
-    body:has(.detail-view.active) .app-main{
+    body:has(.detail-view:not(#retroView).active) .app-main{
       display:none;
     }
   }
@@ -4001,6 +4001,7 @@ function placePane(id){
     ALL_PANES.forEach(other => {
       if(other !== id && paneEl(other)) paneEl(other).classList.remove("active");
     });
+    closeRetroView();
     el.classList.add("active");
     return;
   }
@@ -5395,6 +5396,14 @@ function weekRangeLabel(weekKey){
 }
 
 function openRetroView(weekKey){
+  // on small screens the retro is a modal on top of the main view, so it
+  // can't float over an already-open full-screen side pane
+  if(window.innerWidth < 1024){
+    ALL_PANES.forEach(id => {
+      const el = paneEl(id);
+      if(el && el.classList.contains("active")) el.classList.remove("active");
+    });
+  }
   const key = weekKey || previousWeekKey();
   const stats = computeWeeklyStats(key);
 
@@ -9681,6 +9690,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.31</div>
+<div class="version-watermark" aria-hidden="true">v1.5.32</div>
 </body>
 </html>
