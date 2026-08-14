@@ -7314,9 +7314,13 @@ function renderDayView(){
     info.appendChild(name);
     info.appendChild(meta);
 
+    // match on the day the quest actually appears: "before"-mode auto quests
+    // carry scheduledOccurrence = the event day but are visible on the earlier
+    // scheduledDay, so matching on scheduledOccurrence alone would miss them
+    // and offer a duplicate manual bring
     const broughtTask = tasks.find(t =>
       t.broughtFromEventId === ev.id &&
-      ((t.scheduledOccurrence || t.scheduledDay || "") === currentDayKey));
+      ((t.scheduledDay || t.scheduledOccurrence || "") === currentDayKey));
     const bring = document.createElement("button");
     bring.className = "event-bring" + (broughtTask ? " done" : "");
     if(broughtTask){
@@ -9690,6 +9694,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.32</div>
+<div class="version-watermark" aria-hidden="true">v1.5.33</div>
 </body>
 </html>
