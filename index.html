@@ -2001,6 +2001,22 @@
   .fab-choice-btn:active{border-color:var(--accent);}
 
   /* ---- new quest full-screen view ---- */
+  /* Blurred backdrop shown while a creation sheet is open. */
+  .nt-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:64;
+    background:rgba(0,0,0,0.3);
+    -webkit-backdrop-filter:blur(8px);
+    backdrop-filter:blur(8px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  body.qb-creating .nt-backdrop{
+    opacity:1;
+    pointer-events:auto;
+  }
   .new-task-view{
     position:fixed;
     left:0;
@@ -2896,10 +2912,6 @@
     }
     .detail-view:not(.active){display:none;}
     .detail-view.pane-left{order:1;}
-    /* Creation modals open centered over the main column; slide the side
-       panes inward behind them with a gentle ease, then back out on close. */
-    body.qb-creating .detail-view.pane-left{transform:translateX(calc(100% + 20px));}
-    body.qb-creating .detail-view:not(.pane-left){transform:translateX(calc(-100% - 20px));}
     .fab-add{z-index:40;}
     .fab-choice-popover{z-index:41;}
   }
@@ -2918,6 +2930,8 @@
 </style>
 </head>
 <body>
+
+<div class="nt-backdrop" id="creationBackdrop" aria-hidden="true"></div>
 
 <div class="app-main">
 <div class="page-flourish" aria-hidden="true"></div>
@@ -5960,7 +5974,7 @@ function openNewTaskView(){
   const hint = document.getElementById("ntPrioHint");
   if(hint) hint.style.display = (loadTasks().length === 0) ? "block" : "none";
   document.getElementById("newTaskView").classList.add("active");
-  if(window.innerWidth >= 1024) document.body.classList.add("qb-creating");
+  document.body.classList.add("qb-creating");
 }
 function closeNewTaskView(){
   const view = document.getElementById("newTaskView");
@@ -5970,7 +5984,7 @@ function closeNewTaskView(){
   view.style.bottom = "";
   view.style.maxHeight = "";
   document.getElementById("ntPriorityPopover").classList.remove("show");
-  if(window.innerWidth >= 1024) document.body.classList.remove("qb-creating");
+  document.body.classList.remove("qb-creating");
 }
 
 /* Mobile pull-down peek: while the new-quest sheet is closed it sits just
@@ -6157,6 +6171,12 @@ function populateNtNotifyEvents(){
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("questAddBtn").addEventListener("click", openNewTaskView);
+
+  // Clicking the blurred backdrop outside a creation sheet closes it
+  document.getElementById("creationBackdrop").addEventListener("click", () => {
+    if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
+    else if(document.getElementById("eventTaskView").classList.contains("active")) closeEventModal();
+  });
 
   const fabBtn = document.getElementById("fabAdd");
   const fabPopover = document.getElementById("fabChoicePopover");
@@ -7543,7 +7563,7 @@ function openEventModal(eventId, opts){
   const questNotifyOpt = document.querySelector('#eventNotifyMode option[value="quest"]');
   if(questNotifyOpt) questNotifyOpt.disabled = !document.getElementById("eventQuestToggle").checked;
   document.getElementById("eventTaskView").classList.add("active");
-  if(window.innerWidth >= 1024) document.body.classList.add("qb-creating");
+  document.body.classList.add("qb-creating");
 }
 function closeEventModal(){
   const view = document.getElementById("eventTaskView");
@@ -7552,7 +7572,7 @@ function closeEventModal(){
   view.style.height = "";
   view.style.bottom = "";
   view.style.maxHeight = "";
-  if(window.innerWidth >= 1024) document.body.classList.remove("qb-creating");
+  document.body.classList.remove("qb-creating");
   document.getElementById("eventPriorityPopover").classList.remove("show");
   editingEventId = null;
   importedEventNotes = null;
@@ -9526,6 +9546,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.13</div>
+<div class="version-watermark" aria-hidden="true">v1.5.14</div>
 </body>
 </html>
