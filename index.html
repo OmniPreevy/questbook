@@ -7438,11 +7438,18 @@ function shiftDayStr(dayStr, delta){
    hiding the quest by hand marks that occurrence so it isn't brought again
    until the next one. Notes live on the event, so they survive the quest. */
 function cloneEventBlocks(blocks){
-  return (Array.isArray(blocks) ? blocks : []).map(b => ({
+  const out = (Array.isArray(blocks) ? blocks : []).map(b => ({
     id: generateId(), type: b.type, label: b.label || "",
     content: b.content || "", checked: !!b.checked, count: b.count || 0,
     resetMode: b.resetMode || "none", periodKey: b.periodKey || null
   }));
+  // always end with a text line so the quest's notes are writable even when
+  // the event carries no notes (or only checklist/counter items)
+  const last = out[out.length - 1];
+  if(!last || last.type !== "text"){
+    out.push({ id: generateId(), type: "text", content: "" });
+  }
+  return out;
 }
 
 // ms after which an occurrence's quest is removed: its end time, or 3am on
@@ -9669,6 +9676,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.22</div>
+<div class="version-watermark" aria-hidden="true">v1.5.23</div>
 </body>
 </html>
