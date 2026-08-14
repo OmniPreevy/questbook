@@ -2015,14 +2015,143 @@
     padding:12px 14px;
     font-size:16px;
   }
-  #ntRemindHours{
+  .nt-text-input{
     width:100%;
+    box-sizing:border-box;
     background:var(--card);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:8px;
     padding:10px 12px;
     font-size:15px;
+    margin-bottom:12px;
+  }
+  .nt-prio-hint{
+    position:relative;
+    margin:-10px 0 14px;
+    padding-left:26px;
+    font-size:12px;
+    color:var(--dim);
+    line-height:1.35;
+    animation:ntHintIn .3s ease;
+  }
+  .nt-prio-hint::before{
+    content:"";
+    position:absolute;
+    top:2px;
+    left:7px;
+    width:7px;
+    height:7px;
+    border-left:2px solid var(--accent);
+    border-top:2px solid var(--accent);
+    transform:rotate(45deg);
+  }
+  .nt-prio-hint::after{
+    content:"";
+    position:absolute;
+    top:6px;
+    left:11px;
+    width:2px;
+    height:calc(100% + 6px);
+    background:var(--accent);
+    border-radius:2px;
+  }
+  .nt-prio-hint-bubble{
+    display:inline-block;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
+    border:1px solid var(--accent);
+    border-radius:6px;
+    padding:3px 8px;
+    font-weight:600;
+    font-size:11px;
+    color:var(--text);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  @keyframes ntHintIn{
+    from{opacity:0;transform:translateY(-4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .nt-repeat-btn{
+    width:100%;
+    box-sizing:border-box;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:11px 14px;
+    font-size:15px;
+    font-weight:600;
+    text-align:left;
+    margin-bottom:12px;
+    cursor:pointer;
+  }
+  .nt-repeat-btn:active{border-color:var(--accent);}
+  .nt-repeat-btn.on{
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+  .nt-notify-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .nt-notify-row input[type=number]{
+    width:64px;
+    flex:0 0 64px;
+    box-sizing:border-box;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:15px;
+  }
+  .nt-notify-unit{
+    font-size:12px;
+    color:var(--dim);
+    flex:0 0 auto;
+  }
+  .nt-notify-before{
+    font-size:13px;
+    color:var(--text);
+    flex:0 0 auto;
+  }
+  .nt-notify-mode{
+    flex:1;
+    min-width:110px;
+    margin-bottom:0;
+  }
+  .nt-event-note{
+    font-size:12px;
+    color:var(--dim);
+    margin:-4px 0 14px;
+    line-height:1.4;
+  }
+  .nt-event-link{
+    color:var(--accent);
+    text-decoration:underline;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .nt-quest-radio-row{
+    display:flex;
+    gap:14px;
+    margin-bottom:12px;
+  }
+  .nt-radio{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:14px;
+    color:var(--text);
+  }
+  .nt-radio input[type=radio]{
+    width:16px;height:16px;
+    accent-color:var(--accent);
+    margin:0;
   }
   .ot-toggle{
     display:flex;
@@ -2140,18 +2269,20 @@
   }
 
   .nt-notes{
-    flex:1;
     background:var(--card);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:10px;
-    padding:14px;
+    padding:12px 14px;
     font-size:15px;
     line-height:1.5;
     resize:none;
     font-family:inherit;
-    margin-bottom:14px;
-    min-height:60px;
+    margin-bottom:16px;
+    width:100%;
+    box-sizing:border-box;
+    height:150px;
+    min-height:150px;
   }
   .nt-create-btn{
     background:var(--accent);
@@ -2640,13 +2771,17 @@
       flex:0 0 480px;
       height:calc(100vh - 32px);
       transform:none;
-      transition:none;
+      transition:transform .35s ease;
       border:1px solid var(--border);
       border-radius:12px;
       overflow:hidden;
     }
     .detail-view:not(.active){display:none;}
     .detail-view.pane-left{order:1;}
+    /* Creation modals open centered over the main column; slide the side
+       panes inward behind them with a gentle ease, then back out on close. */
+    body.qb-creating .detail-view.pane-left{transform:translateX(calc(100% + 20px));}
+    body.qb-creating .detail-view:not(.pane-left){transform:translateX(calc(-100% - 20px));}
     .fab-add{z-index:40;}
     .fab-choice-popover{z-index:41;}
   }
@@ -2774,55 +2909,81 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="eventOverlay">
-  <div class="modal-card">
-    <div class="modal-title" id="eventModalTitle">New event</div>
+<div class="new-task-view" id="eventTaskView">
+  <div class="detail-header">
+    <button type="button" class="back-btn" id="eventCancel">‹ Cancel</button>
+    <div class="detail-title" id="eventModalTitle">New event</div>
+  </div>
 
-    <label class="modal-label">Name</label>
-    <input type="text" id="eventName" placeholder="Event name">
-
-    <label class="modal-label">Day</label>
-    <input type="date" id="eventDay">
-
-    <div class="modal-row">
-      <div class="modal-col">
-        <label class="modal-label">Start time</label>
-        <input type="time" id="eventStart">
-      </div>
-      <div class="modal-col">
-        <label class="modal-label">Duration (min)</label>
-        <input type="number" id="eventDuration" min="1" value="60">
-      </div>
-    </div>
-
-    <label class="modal-checkbox-row">
-      <input type="checkbox" id="eventRepeatToggle">
-      <span>Repeats</span>
-    </label>
-
-    <div id="eventRepeatOptions" class="event-repeat-options" style="display:none;">
-      <label class="modal-label">Repeats on</label>
-      <div class="weekday-picker" id="weekdayPicker">
-        <button type="button" class="weekday-btn" data-day="0">S</button>
-        <button type="button" class="weekday-btn" data-day="1">M</button>
-        <button type="button" class="weekday-btn" data-day="2">T</button>
-        <button type="button" class="weekday-btn" data-day="3">W</button>
-        <button type="button" class="weekday-btn" data-day="4">T</button>
-        <button type="button" class="weekday-btn" data-day="5">F</button>
-        <button type="button" class="weekday-btn" data-day="6">S</button>
-      </div>
-      <label class="modal-label">Ends on (optional)</label>
-      <input type="date" id="eventRepeatUntil">
-    </div>
-
-    <label class="modal-label">Remind me (hours before, optional)</label>
-    <input type="number" id="eventRemindHours" min="0" step="0.5" placeholder="e.g. 1">
-
-    <div class="modal-actions">
-      <button type="button" class="modal-btn secondary" id="eventCancel">Cancel</button>
-      <button type="button" class="modal-btn primary" id="eventSave">Save</button>
+  <div class="nt-name-row">
+    <button type="button" class="priority-bar" id="eventPriorityBar" aria-label="Set priority"></button>
+    <input type="text" id="eventName" class="nt-name-input" placeholder="Event name">
+    <div class="priority-popover" id="eventPriorityPopover">
+      <button type="button" class="prio-swatch" data-p="1"></button>
+      <button type="button" class="prio-swatch" data-p="2"></button>
+      <button type="button" class="prio-swatch" data-p="3"></button>
+      <button type="button" class="prio-swatch" data-p="4"></button>
+      <button type="button" class="prio-swatch" data-p="5"></button>
     </div>
   </div>
+
+  <label class="modal-label">Day</label>
+  <input type="date" id="eventDay" class="nt-text-input">
+
+  <label class="modal-label">Start time</label>
+  <input type="time" id="eventStart" class="nt-text-input">
+
+  <label class="modal-label">Duration (min, optional)</label>
+  <input type="number" id="eventDuration" min="1" placeholder="optional" class="nt-text-input">
+
+  <button type="button" id="eventRepeatToggle" class="nt-repeat-btn">Repeats</button>
+
+  <div id="eventRepeatOptions" class="event-repeat-options" style="display:none;">
+    <div class="weekday-picker" id="weekdayPicker">
+      <button type="button" class="weekday-btn" data-day="0">S</button>
+      <button type="button" class="weekday-btn" data-day="1">M</button>
+      <button type="button" class="weekday-btn" data-day="2">T</button>
+      <button type="button" class="weekday-btn" data-day="3">W</button>
+      <button type="button" class="weekday-btn" data-day="4">T</button>
+      <button type="button" class="weekday-btn" data-day="5">F</button>
+      <button type="button" class="weekday-btn" data-day="6">S</button>
+    </div>
+  </div>
+
+  <label class="modal-checkbox-row">
+    <input type="checkbox" id="eventEndDateToggle">
+    <span>end date</span>
+  </label>
+  <div id="eventEndDateRow" style="display:none;">
+    <input type="date" id="eventRepeatUntil" class="nt-text-input">
+  </div>
+
+  <label class="modal-checkbox-row">
+    <input type="checkbox" id="eventQuestToggle">
+    <span>appear as quest</span>
+  </label>
+  <div id="eventQuestOptions" style="display:none;">
+    <div class="nt-quest-radio-row">
+      <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
+      <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span></label>
+    </div>
+    <div id="eventQuestBeforeRow" style="display:none;">
+      <div class="nt-notify-row">
+        <input type="number" id="eventQuestBeforeDays" min="0" placeholder="d" aria-label="Days before">
+        <span class="nt-notify-unit">d</span>
+        <input type="number" id="eventQuestBeforeHours" min="0" placeholder="h" aria-label="Hours before">
+        <span class="nt-notify-unit">h</span>
+        <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
+        <span class="nt-notify-unit">m</span>
+        <span class="nt-notify-before">before</span>
+      </div>
+    </div>
+  </div>
+
+  <label class="modal-label">Remind me (hours before, optional)</label>
+  <input type="number" id="eventRemindHours" min="0" step="0.5" placeholder="e.g. 1" class="nt-text-input">
+
+  <button type="button" id="eventSave" class="nt-create-btn">Save event</button>
 </div>
 
 <div class="retro-overlay" id="retroOverlay"></div>
@@ -2940,10 +3101,16 @@
     </div>
   </div>
 
-  <div class="ot-toggle" id="ntModeToggle">
-    <button type="button" class="ot-toggle-btn selected" data-mode="once">One-time</button>
-    <button type="button" class="ot-toggle-btn" data-mode="repeat">Repeatable</button>
+  <div class="nt-prio-hint" id="ntPrioHint" style="display:none;">
+    <div class="nt-prio-hint-bubble">priority</div>
   </div>
+
+  <textarea id="ntNotes" class="nt-notes" rows="5" placeholder="Notes about this quest…"></textarea>
+
+  <label class="modal-checkbox-row">
+    <input type="checkbox" id="ntRepeatToggle">
+    <span>Repeats</span>
+  </label>
 
   <div class="nt-sliders" id="ntSliders" style="display:none;">
     <div class="nt-slider-group">
@@ -2965,6 +3132,8 @@
       </div>
     </div>
 
+    <div class="nt-event-note">Want your quest to appear on specific days? <span class="nt-event-link" id="ntCreateEventLink">Create an event instead!</span></div>
+
     <div class="nt-slider-group">
       <div class="nt-slider-label">
         <span>Week resets on</span>
@@ -2982,16 +3151,27 @@
     </div>
   </div>
 
-  <div class="ot-info" id="ntOnceInfo">This quest disappears 5 hours after you check it off.</div>
+  <label class="modal-checkbox-row">
+    <input type="checkbox" id="ntNotifyToggle">
+    <span>Notify me</span>
+  </label>
 
-  <div class="nt-slider-group">
-    <div class="nt-slider-label">
-      <span id="ntRemindLabel">Remind me in (hours, optional)</span>
+  <div id="ntNotifyOptions" style="display:none;">
+    <div class="nt-notify-row">
+      <input type="number" id="ntNotifyHours" min="0" placeholder="h" aria-label="Hours before">
+      <span class="nt-notify-unit">h</span>
+      <input type="number" id="ntNotifyMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
+      <span class="nt-notify-unit">m</span>
+      <span class="nt-notify-before">before</span>
+      <select id="ntNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
+        <option value="now">from now</option>
+        <option value="event">before event</option>
+      </select>
     </div>
-    <input type="number" id="ntRemindHours" min="0" step="0.5" placeholder="e.g. 2">
+    <div id="ntNotifyEventRow" style="display:none;">
+      <select id="ntNotifyEvent" class="nt-select" aria-label="Pick an event"></select>
+    </div>
   </div>
-
-  <textarea id="ntNotes" class="nt-notes" placeholder="Notes about this quest…"></textarea>
 
   <button type="button" id="ntCreate" class="nt-create-btn">Create quest</button>
 </div>
@@ -3823,7 +4003,8 @@ function closeConfirm(){
 function doDeleteQuest(taskId){
   const tasks = normalize(loadTasks());
   const t = tasks.find(x => x.id === taskId);
-  if(t) pushToTrash(t);
+  if(t) markEventQuestSkipped(t);
+  if(t && !t.autoQuest) pushToTrash(t);
   saveTasks(tasks.filter(x => x.id !== taskId));
   sfx.del();
   sfx.gun();
@@ -3914,6 +4095,7 @@ function hideQuestSwipe(taskId){
   const t = all.find(x => x.id === taskId);
   if(!t) return;
   t.hiddenUntil = todayStr();
+  markEventQuestSkipped(t);
   saveTasks(all);
   sfx.undo();
   render();
@@ -4207,6 +4389,16 @@ function withCurrentTask(fn){
   if(!t) return;
   fn(t, all);
   saveTasks(all);
+  // quests brought from events keep their notes on the event too, so the
+  // notes survive the quest being deleted or finished while the event lives
+  if(t.broughtFromEventId){
+    const evs = loadEvents();
+    const ev = evs.find(x => x.id === t.broughtFromEventId);
+    if(ev){
+      ev.noteBlocks = t.noteBlocks.map(b => Object.assign({}, b));
+      saveEvents(evs);
+    }
+  }
 }
 
 let lastCursorInfo = null; // { blockId, pos } - kept fresh via focus/click/keyup on text lines
@@ -4411,6 +4603,20 @@ function autoGrowTextarea(ta){
   ta.style.height = ta.scrollHeight + "px";
 }
 
+// Clicking anywhere in the notes body (that isn't an actual control) lands the
+// cursor on the last line, matching the plain textarea behaviour in the quest
+// creation menu where a tap in the empty area always focuses the writing spot.
+function focusLastNotesLine(){
+  const doc = document.getElementById("notesDoc");
+  const lines = doc.querySelectorAll("textarea.notes-line-text");
+  const last = lines[lines.length - 1];
+  if(!last) return;
+  last.focus();
+  const end = last.value.length;
+  try{ last.setSelectionRange(end, end); }catch(e){}
+  last.scrollTop = last.scrollHeight;
+}
+
 function renderNotesDoc(){
   if(!currentDetailTaskId) return;
   const tasks = normalize(loadTasks());
@@ -4560,6 +4766,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("backBtn").addEventListener("click", closeDetail);
   document.getElementById("addCheckItemBtn").addEventListener("click", addCheckItem);
   document.getElementById("addCounterItemBtn").addEventListener("click", addCounterItem);
+  const notesDoc = document.getElementById("notesDoc");
+  notesDoc.addEventListener("click", (e) => {
+    if(e.target === notesDoc){ focusLastNotesLine(); return; }
+    if(e.target.closest && !e.target.closest("textarea, input, button, select, a, .item-check, .counter-bubble")){
+      focusLastNotesLine();
+    }
+  });
 });
 /* -------------------------------------------------- */
 
@@ -4830,6 +5043,10 @@ function saveEdit(){
 
     const wrRaw = document.getElementById("editWeekReset").value;
     t.weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
+    // Re-anchor the week key to the new reset day WITHOUT wiping this week's
+    // progress - otherwise changing the reset day instantly zeroes the weekly
+    // counter. It now resets at the next actual reset-day boundary instead.
+    t.weekKey = weekStrFor(t.weekResetDay);
   }
 
   const remindRaw = parseFloat(document.getElementById("editRemindHours").value);
@@ -5096,10 +5313,17 @@ function normalize(tasks){
     if(typeof task.createdAt !== "number") task.createdAt = task.order || Date.now();
     if(typeof task.timerElapsedMs !== "number") task.timerElapsedMs = 0;
     if(typeof task.timerRunningSince !== "number") task.timerRunningSince = null;
-    if(task.hiddenUntil && !task.locked && task.hiddenUntil < t) delete task.hiddenUntil; // reappears the next day unless locked
+    if(task.hiddenUntil && !task.locked && task.hiddenUntil < t && !task.autoQuest) delete task.hiddenUntil; // reappears the next day unless locked or event-backed
     if(typeof task.hiddenUntil !== "string") task.hiddenUntil = null;
     if(typeof task.locked !== "boolean") task.locked = false;
     if(typeof task.weekResetDay !== "number" || task.weekResetDay < 0 || task.weekResetDay > 6) task.weekResetDay = null;
+    if(typeof task.autoQuest !== "boolean") task.autoQuest = false;
+    if(typeof task.scheduledOccurrence !== "string") task.scheduledOccurrence = null;
+    if(typeof task.notifyEnabled !== "boolean") task.notifyEnabled = false;
+    if(typeof task.notifyHours !== "number" || task.notifyHours < 0) task.notifyHours = 0;
+    if(typeof task.notifyMinutes !== "number" || task.notifyMinutes < 0) task.notifyMinutes = 0;
+    if(task.notifyMode !== "event" && task.notifyMode !== "now") task.notifyMode = "now";
+    if(typeof task.notifyEventId !== "string") task.notifyEventId = null;
 
     // Migrate old plain-notes / separate-items model into unified noteBlocks
     if(!Array.isArray(task.noteBlocks)){
@@ -5520,18 +5744,12 @@ function collapseQuestList(){
 /* ---------------- New quest (add task) view ---------------- */
 let ntPriority = 3;
 let ntPerDay = 1;
-let ntMode = "once";
+let ntRepeat = false;
 
-function setNtMode(mode){
-  ntMode = mode;
-  document.querySelectorAll("#ntModeToggle .ot-toggle-btn").forEach(btn => {
-    btn.classList.toggle("selected", btn.dataset.mode === mode);
-  });
-  document.getElementById("ntSliders").style.display = (mode === "repeat") ? "block" : "none";
-  document.getElementById("ntOnceInfo").style.display = (mode === "once") ? "block" : "none";
-  document.getElementById("ntRemindLabel").textContent = (mode === "once")
-    ? "Remind me in (hours, optional)"
-    : "Remind me (hrs before day ends, optional)";
+function setNtRepeat(on){
+  ntRepeat = !!on;
+  document.getElementById("ntRepeatToggle").checked = ntRepeat;
+  document.getElementById("ntSliders").style.display = ntRepeat ? "block" : "none";
 }
 
 function resetNewTaskForm(){
@@ -5542,9 +5760,15 @@ function resetNewTaskForm(){
   document.getElementById("ntDaySlider").value = 1;
   ntPerDay = 1;
   document.getElementById("ntDayVal").textContent = 1;
-  document.getElementById("ntRemindHours").value = "";
   document.getElementById("ntWeekReset").value = "";
-  setNtMode("once");
+  setNtRepeat(false);
+  document.getElementById("ntNotifyToggle").checked = false;
+  document.getElementById("ntNotifyOptions").style.display = "none";
+  document.getElementById("ntNotifyHours").value = "";
+  document.getElementById("ntNotifyMinutes").value = "";
+  document.getElementById("ntNotifyMode").value = "now";
+  document.getElementById("ntNotifyEventRow").style.display = "none";
+  document.getElementById("ntNotifyEvent").innerHTML = "";
   setNtPriority(3);
 }
 
@@ -5560,7 +5784,10 @@ function setNtPriority(p){
 function openNewTaskView(){
   resetNewTaskForm();
   updateWeekResetLabels();
+  const hint = document.getElementById("ntPrioHint");
+  if(hint) hint.style.display = (loadTasks().length === 0) ? "block" : "none";
   document.getElementById("newTaskView").classList.add("active");
+  if(window.innerWidth >= 1024) document.body.classList.add("qb-creating");
 }
 function closeNewTaskView(){
   const view = document.getElementById("newTaskView");
@@ -5568,6 +5795,7 @@ function closeNewTaskView(){
   view.style.top = "";
   view.style.height = "";
   document.getElementById("ntPriorityPopover").classList.remove("show");
+  if(window.innerWidth >= 1024) document.body.classList.remove("qb-creating");
 }
 
 /* Mobile pull-down peek: while the new-quest sheet is closed it sits just
@@ -5670,14 +5898,24 @@ function createNewTask(){
     return;
   }
   const notes = document.getElementById("ntNotes").value;
-  const isOneTime = ntMode === "once";
+  const isOneTime = !ntRepeat;
 
   const perWeek = isOneTime ? 1 : parseInt(document.getElementById("ntWeekSlider").value, 10);
   const perDay = isOneTime ? 1 : ntPerDay;
-  const remindRaw = parseFloat(document.getElementById("ntRemindHours").value);
-  const remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
   const wrRaw = document.getElementById("ntWeekReset").value;
   const weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
+
+  // notify me
+  let notifyEnabled = document.getElementById("ntNotifyToggle").checked;
+  const notifyHoursRaw = parseFloat(document.getElementById("ntNotifyHours").value);
+  const notifyMinutesRaw = parseFloat(document.getElementById("ntNotifyMinutes").value);
+  const notifyHours = (!isNaN(notifyHoursRaw) && notifyHoursRaw >= 0) ? notifyHoursRaw : 0;
+  const notifyMinutes = (!isNaN(notifyMinutesRaw) && notifyMinutesRaw >= 0) ? notifyMinutesRaw : 0;
+  if(notifyEnabled && notifyHours === 0 && notifyMinutes === 0) notifyEnabled = false;
+  const notifyMode = document.getElementById("ntNotifyMode").value;
+  const notifyEventId = (notifyMode === "event")
+    ? (document.getElementById("ntNotifyEvent").value || null)
+    : null;
 
   const tasks = loadTasks();
   tasks.push({
@@ -5694,14 +5932,42 @@ function createNewTask(){
     weekKey: weekStrFor(weekResetDay),
     weekResetDay,
     notes,
-    remindHours,
+    remindHours: null,
     oneTime: isOneTime,
-    checkedAt: null
+    checkedAt: null,
+    notifyEnabled,
+    notifyHours,
+    notifyMinutes,
+    notifyMode: notifyEnabled ? notifyMode : null,
+    notifyEventId
   });
   saveTasks(tasks);
   sfx.pop();
   closeNewTaskView();
   render();
+}
+
+function populateNtNotifyEvents(){
+  const tKey = todayStr();
+  const select = document.getElementById("ntNotifyEvent");
+  const events = loadEvents()
+    .filter(ev => !ev.repeat && ev.day && ev.day >= tKey)
+    .sort((a, b) => (a.day + (a.startTime || "")).localeCompare(b.day + (b.startTime || "")));
+  select.innerHTML = "";
+  if(events.length === 0){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No upcoming one-time events";
+    select.appendChild(opt);
+    return;
+  }
+  events.forEach(ev => {
+    const opt = document.createElement("option");
+    opt.value = ev.id;
+    const d = new Date(ev.day + "T00:00:00");
+    opt.textContent = `${ev.name || "Event"} · ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}${ev.startTime ? " " + formatTime12h(ev.startTime) : ""}`;
+    select.appendChild(opt);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -5800,9 +6066,34 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("click", () => popover.classList.remove("show"));
 
-  // one-time / repeatable mode toggle
-  document.querySelectorAll("#ntModeToggle .ot-toggle-btn").forEach(btn => {
-    btn.addEventListener("click", () => setNtMode(btn.dataset.mode));
+  // repeats checkbox
+  document.getElementById("ntRepeatToggle").addEventListener("change", (e) => {
+    setNtRepeat(e.target.checked);
+  });
+
+  // notify me block
+  const ntNotifyToggle = document.getElementById("ntNotifyToggle");
+  ntNotifyToggle.addEventListener("change", (e) => {
+    document.getElementById("ntNotifyOptions").style.display = e.target.checked ? "block" : "none";
+    if(e.target.checked) populateNtNotifyEvents();
+  });
+  const ntNotifyMode = document.getElementById("ntNotifyMode");
+  ntNotifyMode.addEventListener("change", () => {
+    document.getElementById("ntNotifyEventRow").style.display = (ntNotifyMode.value === "event") ? "block" : "none";
+    if(ntNotifyMode.value === "event") populateNtNotifyEvents();
+  });
+
+  // "Create an event instead!" link - carries the quest's name + notes over
+  document.getElementById("ntCreateEventLink").addEventListener("click", () => {
+    const name = document.getElementById("ntName").value.trim();
+    const notes = document.getElementById("ntNotes").value;
+    const hadNotes = notes.trim().length > 0;
+    closeNewTaskView();
+    openEventModal(null, {
+      name,
+      exportToQuest: hadNotes,
+      notes: hadNotes ? notes : null
+    });
   });
 
   // weekly slider
@@ -5947,7 +6238,7 @@ document.addEventListener("keydown", (e) => {
   else if(document.getElementById("detailView").classList.contains("active")) closeDetail();
   else if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
   else if(document.getElementById("editOverlay").classList.contains("active")) closeEdit();
-  else if(document.getElementById("eventOverlay").classList.contains("active")) closeEventModal();
+  else if(document.getElementById("eventTaskView").classList.contains("active")) closeEventModal();
   else if(document.getElementById("dayView").classList.contains("active")) closeDayView();
   else if(document.getElementById("monthView").classList.contains("active")) closeMonthView();
   else if(document.getElementById("hiddenView").classList.contains("active")) closeHiddenView();
@@ -6022,16 +6313,25 @@ document.addEventListener("keydown", (e) => {
 
 /* ---------------- Calendar ---------------- */
 function normalizeEvent(e){
+  const dur = e.durationMinutes;
   return {
     id: e.id,
     name: e.name || "",
     day: e.day,
     startTime: e.startTime,
-    durationMinutes: e.durationMinutes,
+    durationMinutes: (dur === null || dur === undefined || dur === "") ? null : Number(dur),
     repeat: !!e.repeat,
     repeatDays: Array.isArray(e.repeatDays) ? e.repeatDays : [],
     repeatUntil: e.repeatUntil || "",
-    remindHours: (typeof e.remindHours === "number" && e.remindHours >= 0) ? e.remindHours : null
+    remindHours: (typeof e.remindHours === "number" && e.remindHours >= 0) ? e.remindHours : null,
+    priority: (typeof e.priority === "number" && e.priority >= 1 && e.priority <= 5) ? e.priority : 3,
+    appearAsQuest: !!e.appearAsQuest,
+    questMode: (e.questMode === "before") ? "before" : "day",
+    questBeforeDays: (typeof e.questBeforeDays === "number" && e.questBeforeDays >= 0) ? e.questBeforeDays : 0,
+    questBeforeHours: (typeof e.questBeforeHours === "number" && e.questBeforeHours >= 0) ? e.questBeforeHours : 0,
+    questBeforeMinutes: (typeof e.questBeforeMinutes === "number" && e.questBeforeMinutes >= 0) ? e.questBeforeMinutes : 0,
+    questSkipped: (e.questSkipped && typeof e.questSkipped === "object") ? e.questSkipped : {},
+    noteBlocks: Array.isArray(e.noteBlocks) ? e.noteBlocks : []
   };
 }
 
@@ -6132,13 +6432,14 @@ function buildIcsContent(){
   const stamp = icsNowStamp();
 
   events.forEach(ev => {
+    const dur = ev.durationMinutes || 0;
     const start = icsDateTime(ev.day, ev.startTime);
-    const endTimeStr = addMinutesToTime(ev.startTime, ev.durationMinutes);
+    const endTimeStr = addMinutesToTime(ev.startTime, dur);
     let endDay = ev.day;
     const startMin = timeToMinutes(ev.startTime);
-    if(startMin + ev.durationMinutes >= 24 * 60){
+    if(startMin + dur >= 24 * 60){
       const d = new Date(ev.day + "T00:00:00");
-      d.setDate(d.getDate() + Math.floor((startMin + ev.durationMinutes) / (24 * 60)));
+      d.setDate(d.getDate() + Math.floor((startMin + dur) / (24 * 60)));
       endDay = dateToStr(d);
     }
     const end = icsDateTime(endDay, endTimeStr);
@@ -6236,28 +6537,75 @@ function checkReminders(){
 
   // Quests
   normalize(loadTasks()).forEach(t => {
-    if(t.remindHours === null || t.remindHours === undefined) return;
-
-    if(t.oneTime){
-      // remind N hours after creation, if still unchecked
-      if(t.checkedAt) return;
-      const remindAt = t.createdAt + t.remindHours * 3600000;
-      const key = `quest-once-${t.id}`;
-      if(now >= remindAt && !notified[key]){
-        fireNotification("Quest reminder", t.name);
-        notified[key] = now;
-        changed = true;
+    // legacy remindHours still supported
+    if(t.remindHours !== null && t.remindHours !== undefined){
+      if(t.oneTime){
+        if(t.checkedAt) return;
+        const remindAt = t.createdAt + t.remindHours * 3600000;
+        const key = `quest-once-${t.id}`;
+        if(now >= remindAt && !notified[key]){
+          fireNotification("Quest reminder", t.name);
+          notified[key] = now;
+          changed = true;
+        }
+      } else {
+        if(t.dayCount >= t.perDay) return;
+        const endOfDayMs = new Date(`${todayKey}T23:59:59`).getTime();
+        const remindAt = endOfDayMs - t.remindHours * 3600000;
+        const key = `quest-${t.id}-${todayKey}`;
+        if(now >= remindAt && now < endOfDayMs && !notified[key]){
+          fireNotification(`Quest reminder: ${t.name}`, `${t.perDay - t.dayCount} left today`);
+          notified[key] = now;
+          changed = true;
+        }
       }
-    } else {
-      // remind N hours before today ends, if not yet completed today
-      if(t.dayCount >= t.perDay) return;
-      const endOfDayMs = new Date(`${todayKey}T23:59:59`).getTime();
-      const remindAt = endOfDayMs - t.remindHours * 3600000;
-      const key = `quest-${t.id}-${todayKey}`;
-      if(now >= remindAt && now < endOfDayMs && !notified[key]){
-        fireNotification(`Quest reminder: ${t.name}`, `${t.perDay - t.dayCount} left today`);
-        notified[key] = now;
-        changed = true;
+    }
+
+    // new notify-me block
+    if(t.notifyEnabled && t.notifyHours + t.notifyMinutes > 0){
+      const beforeMs = (t.notifyHours * 60 + t.notifyMinutes) * 60000;
+      if(t.notifyMode === "event" && t.notifyEventId){
+        const ev = loadEvents().find(e => e.id === t.notifyEventId);
+        if(ev && !t.checkedAt){
+          const d = new Date();
+          d.setHours(0, 0, 0, 0);
+          for(let i = 0; i <= 3; i++){
+            const dKey = dateToStr(d);
+            if(eventOccursOnDay(ev, d, dKey) && dKey >= todayKey && ev.startTime){
+              const startMs = new Date(`${dKey}T${ev.startTime}:00`).getTime();
+              const remindAt = startMs - beforeMs;
+              const key = `quest-ev-${t.id}-${dKey}`;
+              if(now >= remindAt && now < startMs && !notified[key]){
+                fireNotification(`Quest reminder: ${t.name}`, `Starts at ${formatTime12h(ev.startTime)}`);
+                notified[key] = now;
+                changed = true;
+              }
+              break;
+            }
+            d.setDate(d.getDate() + 1);
+          }
+        }
+      } else {
+        if(t.oneTime){
+          if(t.checkedAt) return;
+          const remindAt = t.createdAt + beforeMs;
+          const key = `quest-ntf-${t.id}`;
+          if(now >= remindAt && !notified[key]){
+            fireNotification("Quest reminder", t.name);
+            notified[key] = now;
+            changed = true;
+          }
+        } else {
+          if(t.dayCount >= t.perDay) return;
+          const endOfDayMs = new Date(`${todayKey}T23:59:59`).getTime();
+          const remindAt = endOfDayMs - beforeMs;
+          const key = `quest-ntf-${t.id}-${todayKey}`;
+          if(now >= remindAt && now < endOfDayMs && !notified[key]){
+            fireNotification(`Quest reminder: ${t.name}`, `${t.perDay - t.dayCount} left today`);
+            notified[key] = now;
+            changed = true;
+          }
+        }
       }
     }
   });
@@ -6341,7 +6689,7 @@ function renderCalendar(){
     } else {
       const first = dayEvents[0];
       const last = dayEvents[dayEvents.length - 1];
-      const endTime = addMinutesToTime(last.startTime, last.durationMinutes);
+      const endTime = addMinutesToTime(last.startTime, last.durationMinutes || 0);
       times.className = "cal-times";
       times.innerHTML = `${formatTime12h(first.startTime)}<br>${formatTime12h(endTime)}`;
 
@@ -6550,7 +6898,7 @@ function renderDayView(){
 
   const tasks = loadTasks();
   events.forEach(ev => {
-    const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes);
+    const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
     const row = document.createElement("div");
     row.className = "event-row";
 
@@ -6561,11 +6909,16 @@ function renderDayView(){
     name.textContent = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)}`;
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)} · ${ev.durationMinutes} min` + repeatSummary(ev);
+    const noDur = (ev.durationMinutes === null || ev.durationMinutes === undefined);
+    const durLabel = noDur ? "" : ` · ${ev.durationMinutes} min`;
+    const timeLabel = noDur ? formatTime12h(ev.startTime) : `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)}`;
+    meta.textContent = timeLabel + durLabel + repeatSummary(ev);
     info.appendChild(name);
     info.appendChild(meta);
 
-    const broughtTask = tasks.find(t => t.broughtFromEventId === ev.id);
+    const broughtTask = tasks.find(t =>
+      t.broughtFromEventId === ev.id &&
+      ((t.scheduledOccurrence || t.scheduledDay || "") === currentDayKey));
     const bring = document.createElement("button");
     bring.className = "event-bring" + (broughtTask ? " done" : "");
     if(broughtTask){
@@ -6592,6 +6945,7 @@ function renderDayView(){
     del.onclick = () => {
       const remaining = loadEvents().filter(e => e.id !== ev.id);
       saveEvents(remaining);
+      syncEventQuests();
       refreshOpenViews();
     };
 
@@ -6663,14 +7017,24 @@ function finishBringQuest(ev, dayStr){
   const note = dayStr === tKey
     ? `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`
     : `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event, appears on ${dayStr}`;
-  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
+  const end = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
+  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(end)}`;
   const tasks = loadTasks();
+  // a manual re-bring wins over the auto-bring "skipped" mark for that day
+  if(ev.appearAsQuest && ev.questSkipped && ev.questSkipped[dayStr]){
+    delete ev.questSkipped[dayStr];
+    const events = loadEvents();
+    const e = events.find(x => x.id === ev.id);
+    if(e) Object.assign(e, ev);
+    saveEvents(events);
+  }
+  const hasEventNotes = Array.isArray(ev.noteBlocks) && ev.noteBlocks.length > 0;
   tasks.push({
     id: generateId(),
     name,
     perWeek: 1,
     perDay: 1,
-    priority: 3,
+    priority: (typeof ev.priority === "number" && ev.priority >= 1 && ev.priority <= 5) ? ev.priority : 3,
     order: Date.now(),
     createdAt: Date.now(),
     dayCount: 0,
@@ -6682,9 +7046,13 @@ function finishBringQuest(ev, dayStr){
     oneTime: true,
     checkedAt: null,
     broughtFromEventId: ev.id,
+    autoQuest: false,
+    scheduledOccurrence: dayStr,
     scheduledDay: dayStr,
     hiddenUntil: dayStr > tKey ? dayBeforeStr(dayStr) : null,
-    noteBlocks: [{ id: generateId(), type: "text", content: note }]
+    noteBlocks: hasEventNotes
+      ? ev.noteBlocks.map(b => ({ id: generateId(), type: b.type, label: b.label || "", content: b.content || "", checked: !!b.checked, count: b.count || 0, resetMode: b.resetMode || "none", periodKey: b.periodKey || null }))
+      : [{ id: generateId(), type: "text", content: note }]
   });
   saveTasks(tasks);
   sfx.pop();
@@ -6701,9 +7069,169 @@ function shiftDayStr(dayStr, delta){
   return dateToStr(d);
 }
 
+/* ---- events that "appear as quest": auto-bring + lifecycle ----
+   Every occurrence of an event with appearAsQuest gets its own one-time
+   quest, scheduled for the occurrence day (or a bit before it). The quest
+   is removed once that occurrence's end time passes, or at 3am the day
+   after the occurrence when the event has no defined end hour. Deleting or
+   hiding the quest by hand marks that occurrence so it isn't brought again
+   until the next one. Notes live on the event, so they survive the quest. */
+function cloneEventBlocks(blocks){
+  return (Array.isArray(blocks) ? blocks : []).map(b => ({
+    id: generateId(), type: b.type, label: b.label || "",
+    content: b.content || "", checked: !!b.checked, count: b.count || 0,
+    resetMode: b.resetMode || "none", periodKey: b.periodKey || null
+  }));
+}
+
+// ms after which an occurrence's quest is removed: its end time, or 3am on
+// the day after the occurrence when there's no defined end hour
+function eventEndMs(ev, occKey){
+  if(ev.startTime && ev.durationMinutes && ev.durationMinutes > 0){
+    const [h, m] = ev.startTime.split(":").map(Number);
+    const d = new Date(occKey + "T00:00:00");
+    d.setHours(h, m + ev.durationMinutes, 0, 0);
+    return d.getTime();
+  }
+  const d = new Date(occKey + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  d.setHours(3, 0, 0, 0);
+  return d.getTime();
+}
+
+function shiftOccurrenceKey(occKey, days, hours, minutes){
+  const d = new Date(occKey + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  d.setHours(d.getHours() + hours, d.getMinutes() + minutes, 0, 0);
+  return dateToStr(d);
+}
+
+function makeEventQuest(ev, occKey, scheduledDay){
+  const tKey = todayStr();
+  const end = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
+  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(end)}`;
+  return {
+    id: generateId(),
+    name,
+    perWeek: 1,
+    perDay: 1,
+    priority: (typeof ev.priority === "number" && ev.priority >= 1 && ev.priority <= 5) ? ev.priority : 3,
+    order: Date.now(),
+    createdAt: Date.now(),
+    dayCount: 0,
+    dayDate: scheduledDay,
+    weekCount: 0,
+    weekKey: weekStr(),
+    notes: "",
+    remindHours: null,
+    oneTime: true,
+    checkedAt: null,
+    broughtFromEventId: ev.id,
+    autoQuest: true,
+    scheduledOccurrence: occKey,
+    scheduledDay,
+    hiddenUntil: null,
+    noteBlocks: cloneEventBlocks(ev.noteBlocks)
+  };
+}
+
+// Remember that the user removed/hid an auto-brought quest for an occurrence,
+// so syncEventQuests leaves that occurrence alone until the next one.
+function markEventQuestSkipped(task){
+  if(!task || !task.broughtFromEventId) return;
+  const events = loadEvents();
+  const ev = events.find(e => e.id === task.broughtFromEventId);
+  if(!ev) return;
+  const occ = task.scheduledOccurrence || task.scheduledDay;
+  if(!occ) return;
+  if(!ev.questSkipped || typeof ev.questSkipped !== "object") ev.questSkipped = {};
+  ev.questSkipped[occ] = true;
+  saveEvents(events);
+}
+
+function syncEventQuests(){
+  let changed = false;
+  const tKey = todayStr();
+  const now = Date.now();
+  const events = loadEvents();
+  let tasks = loadTasks();
+
+  // remove auto-brought quests whose occurrence has ended
+  const toRemove = tasks.filter(tt =>
+    tt.autoQuest && tt.broughtFromEventId &&
+    (() => {
+      const ev = events.find(e => e.id === tt.broughtFromEventId);
+      if(!ev) return true;
+      const occ = tt.scheduledOccurrence || tt.scheduledDay;
+      if(!occ) return true;
+      return now >= eventEndMs(ev, occ);
+    })()
+  ).map(tt => tt.id);
+  if(toRemove.length){
+    changed = true;
+    tasks = tasks.filter(t => !toRemove.includes(t.id));
+    saveTasks(tasks);
+  }
+
+  // bring quests for occurrences that are due
+  events.forEach(ev => {
+    if(!ev.appearAsQuest) return;
+    const maxScan = (ev.questMode === "before") ? ev.questBeforeDays + 1 : 0;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    for(let i = 0; i <= maxScan; i++){
+      const occKey = dateToStr(start);
+      if(eventOccursOnDay(ev, start, occKey)){
+        const scheduled = (ev.questMode === "before")
+          ? shiftOccurrenceKey(occKey, -ev.questBeforeDays, -ev.questBeforeHours, -ev.questBeforeMinutes)
+          : occKey;
+        if(scheduled <= tKey && scheduled <= occKey &&
+           !(ev.questSkipped && ev.questSkipped[occKey])){
+          const exists = tasks.some(tt =>
+            tt.broughtFromEventId === ev.id &&
+            (tt.scheduledOccurrence || tt.scheduledDay) === occKey);
+          if(!exists){
+            tasks.push(makeEventQuest(ev, occKey, scheduled));
+            changed = true;
+          }
+        }
+      }
+      start.setDate(start.getDate() + 1);
+    }
+  });
+
+  if(changed){
+    saveTasks(tasks);
+    render();
+    if(document.getElementById("dayView").classList.contains("active")) renderDayView();
+  }
+}
+
 /* ---- add/edit event modal (shared by the calendar header + day view) ---- */
 let modalRepeatDays = [];
+let eventRepeatOn = false;
+let eventPriority = 3;
+let importedEventNotes = null; // notes carried over from the quest modal
 
+function setEventRepeatVisible(visible){
+  eventRepeatOn = !!visible;
+  document.getElementById("eventRepeatToggle").classList.toggle("on", eventRepeatOn);
+  document.getElementById("eventRepeatOptions").style.display = eventRepeatOn ? "block" : "none";
+}
+function setEventQuestMode(mode){
+  document.querySelectorAll('#eventQuestOptions input[name="eventQuestMode"]').forEach(r => {
+    r.checked = (r.value === mode);
+  });
+  document.getElementById("eventQuestBeforeRow").style.display = (mode === "before") ? "block" : "none";
+}
+function setEventPriority(p){
+  eventPriority = p;
+  const color = getPriorityColor(p);
+  document.getElementById("eventPriorityBar").style.background = color;
+  document.querySelectorAll("#eventPriorityPopover .prio-swatch").forEach(sw => {
+    sw.classList.toggle("selected", parseInt(sw.dataset.p, 10) === p);
+  });
+}
 function setWeekdaySelected(day, selected){
   if(selected && !modalRepeatDays.includes(day)) modalRepeatDays.push(day);
   if(!selected) modalRepeatDays = modalRepeatDays.filter(d => d !== day);
@@ -6715,14 +7243,11 @@ function refreshWeekdayButtons(){
   });
 }
 
-function setRepeatOptionsVisible(visible){
-  document.getElementById("eventRepeatOptions").style.display = visible ? "block" : "none";
-}
-
-function openEventModal(eventId){
+function openEventModal(eventId, opts){
+  opts = opts || {};
   editingEventId = eventId || null;
   const titleEl = document.getElementById("eventModalTitle");
-  const repeatToggle = document.getElementById("eventRepeatToggle");
+  importedEventNotes = opts.notes || null;
 
   if(editingEventId){
     const ev = loadEvents().find(e => e.id === editingEventId);
@@ -6731,48 +7256,81 @@ function openEventModal(eventId){
     document.getElementById("eventName").value = ev.name || "";
     document.getElementById("eventDay").value = ev.day;
     document.getElementById("eventStart").value = ev.startTime;
-    document.getElementById("eventDuration").value = ev.durationMinutes;
-    repeatToggle.checked = ev.repeat;
+    document.getElementById("eventDuration").value = (ev.durationMinutes === null || ev.durationMinutes === undefined) ? "" : ev.durationMinutes;
+    setEventPriority((typeof ev.priority === "number" && ev.priority >= 1 && ev.priority <= 5) ? ev.priority : 3);
     modalRepeatDays = ev.repeatDays.slice();
-    document.getElementById("eventRepeatUntil").value = ev.repeatUntil || "";
+    const endDate = ev.repeatUntil || "";
+    document.getElementById("eventEndDateToggle").checked = !!endDate;
+    document.getElementById("eventEndDateRow").style.display = endDate ? "block" : "none";
+    document.getElementById("eventRepeatUntil").value = endDate;
     document.getElementById("eventRemindHours").value = (ev.remindHours === null || ev.remindHours === undefined) ? "" : ev.remindHours;
-    setRepeatOptionsVisible(ev.repeat);
+    setEventRepeatVisible(ev.repeat);
+    document.getElementById("eventQuestToggle").checked = !!ev.appearAsQuest;
+    document.getElementById("eventQuestOptions").style.display = ev.appearAsQuest ? "block" : "none";
+    setEventQuestMode(ev.questMode === "before" ? "before" : "day");
+    document.getElementById("eventQuestBeforeDays").value = (typeof ev.questBeforeDays === "number" && ev.questBeforeDays >= 0) ? ev.questBeforeDays : 0;
+    document.getElementById("eventQuestBeforeHours").value = (typeof ev.questBeforeHours === "number" && ev.questBeforeHours >= 0) ? ev.questBeforeHours : 0;
+    document.getElementById("eventQuestBeforeMinutes").value = (typeof ev.questBeforeMinutes === "number" && ev.questBeforeMinutes >= 0) ? ev.questBeforeMinutes : 0;
     refreshWeekdayButtons();
   } else {
     titleEl.textContent = "New event";
-    document.getElementById("eventName").value = "";
+    document.getElementById("eventName").value = opts.name || "";
     document.getElementById("eventDay").value = currentDayKey || todayStr();
     document.getElementById("eventStart").value = "09:00";
-    document.getElementById("eventDuration").value = 60;
-    repeatToggle.checked = false;
+    document.getElementById("eventDuration").value = "";
+    setEventPriority(3);
     modalRepeatDays = [];
+    document.getElementById("eventEndDateToggle").checked = false;
+    document.getElementById("eventEndDateRow").style.display = "none";
     document.getElementById("eventRepeatUntil").value = "";
     document.getElementById("eventRemindHours").value = "";
-    setRepeatOptionsVisible(false);
+    setEventRepeatVisible(false);
+    document.getElementById("eventQuestToggle").checked = !!opts.exportToQuest;
+    document.getElementById("eventQuestOptions").style.display = document.getElementById("eventQuestToggle").checked ? "block" : "none";
+    setEventQuestMode("day");
+    document.getElementById("eventQuestBeforeDays").value = 0;
+    document.getElementById("eventQuestBeforeHours").value = 0;
+    document.getElementById("eventQuestBeforeMinutes").value = 0;
     refreshWeekdayButtons();
   }
-  document.getElementById("eventOverlay").classList.add("active");
+  document.getElementById("eventTaskView").classList.add("active");
+  if(window.innerWidth >= 1024) document.body.classList.add("qb-creating");
 }
 function closeEventModal(){
-  document.getElementById("eventOverlay").classList.remove("active");
+  document.getElementById("eventTaskView").classList.remove("active");
+  if(window.innerWidth >= 1024) document.body.classList.remove("qb-creating");
+  document.getElementById("eventPriorityPopover").classList.remove("show");
   editingEventId = null;
+  importedEventNotes = null;
 }
 function saveEventModal(){
   const name = document.getElementById("eventName").value.trim();
   const day = document.getElementById("eventDay").value;
   const startTime = document.getElementById("eventStart").value;
-  const durationMinutes = parseInt(document.getElementById("eventDuration").value, 10);
-  const repeat = document.getElementById("eventRepeatToggle").checked;
+  const durRaw = document.getElementById("eventDuration").value;
+  const durationMinutes = (durRaw === "" || durRaw === null) ? null : parseInt(durRaw, 10);
+  const repeat = eventRepeatOn;
   const repeatUntil = document.getElementById("eventRepeatUntil").value || "";
+  const appearAsQuest = document.getElementById("eventQuestToggle").checked;
 
-  if(!day || !startTime || isNaN(durationMinutes) || durationMinutes < 1){
-    alert("Please fill in a day, start time, and a duration of at least 1 minute.");
+  if(!day || !startTime){
+    alert("Please fill in a day and a start time.");
+    return;
+  }
+  if(durationMinutes !== null && (isNaN(durationMinutes) || durationMinutes < 1)){
+    alert("Duration must be empty (no end time) or at least 1 minute.");
     return;
   }
   if(repeat && modalRepeatDays.length === 0){
     alert("Pick at least one day of the week for this event to repeat on.");
     return;
   }
+
+  const questMode = document.querySelector('#eventQuestOptions input[name="eventQuestMode"]:checked');
+  const qMode = (questMode && questMode.value === "before") ? "before" : "day";
+  const qDays = Math.max(0, parseInt(document.getElementById("eventQuestBeforeDays").value, 10) || 0);
+  const qHours = Math.max(0, parseInt(document.getElementById("eventQuestBeforeHours").value, 10) || 0);
+  const qMinutes = Math.max(0, parseInt(document.getElementById("eventQuestBeforeMinutes").value, 10) || 0);
 
   const events = loadEvents();
   const remindRaw = parseFloat(document.getElementById("eventRemindHours").value);
@@ -6782,17 +7340,35 @@ function saveEventModal(){
     repeat,
     repeatDays: repeat ? modalRepeatDays.slice() : [],
     repeatUntil: repeat ? repeatUntil : "",
-    remindHours
+    remindHours,
+    priority: eventPriority,
+    appearAsQuest,
+    questMode: appearAsQuest ? qMode : "day",
+    questBeforeDays: appearAsQuest ? qDays : 0,
+    questBeforeHours: appearAsQuest ? qHours : 0,
+    questBeforeMinutes: appearAsQuest ? qMinutes : 0
   };
 
+  let saved = null;
   if(editingEventId){
     const ev = events.find(e => e.id === editingEventId);
-    if(ev) Object.assign(ev, fields);
+    if(ev){
+      Object.assign(ev, fields);
+      saved = ev;
+    }
   } else {
-    events.push({ id: generateId(), ...fields });
+    saved = { id: generateId(), ...fields };
+    events.push(saved);
   }
+  // notes imported from the quest modal live on the event
+  if(saved && importedEventNotes !== null){
+    saved.noteBlocks = [{ id: generateId(), type: "text", content: importedEventNotes }];
+    importedEventNotes = null;
+  }
+  if(saved && !Array.isArray(saved.noteBlocks)) saved.noteBlocks = [];
   saveEvents(events);
   closeEventModal();
+  syncEventQuests();
   refreshOpenViews();
 }
 
@@ -6805,8 +7381,21 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("monthNextBtn").addEventListener("click", () => shiftMonth(1));
   document.getElementById("eventCancel").addEventListener("click", closeEventModal);
   document.getElementById("eventSave").addEventListener("click", saveEventModal);
-  document.getElementById("eventRepeatToggle").addEventListener("change", (e) => {
-    setRepeatOptionsVisible(e.target.checked);
+  document.getElementById("eventName").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") saveEventModal();
+  });
+  document.getElementById("eventRepeatToggle").addEventListener("click", () => {
+    setEventRepeatVisible(!eventRepeatOn);
+  });
+  document.getElementById("eventEndDateToggle").addEventListener("change", (e) => {
+    document.getElementById("eventEndDateRow").style.display = e.target.checked ? "block" : "none";
+  });
+  document.getElementById("eventQuestToggle").addEventListener("change", (e) => {
+    document.getElementById("eventQuestOptions").style.display = e.target.checked ? "block" : "none";
+    if(e.target.checked) syncEventQuests();
+  });
+  document.querySelectorAll('#eventQuestOptions input[name="eventQuestMode"]').forEach(r => {
+    r.addEventListener("change", () => setEventQuestMode(r.value));
   });
   document.querySelectorAll("#weekdayPicker .weekday-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -6814,10 +7403,22 @@ document.addEventListener("DOMContentLoaded", () => {
       setWeekdaySelected(day, !modalRepeatDays.includes(day));
     });
   });
-  const overlay = document.getElementById("eventOverlay");
-  overlay.addEventListener("click", (e) => {
-    if(e.target === overlay) closeEventModal();
+  // event priority popover
+  const ebar = document.getElementById("eventPriorityBar");
+  const epopover = document.getElementById("eventPriorityPopover");
+  ebar.addEventListener("click", (e) => {
+    e.stopPropagation();
+    epopover.classList.toggle("show");
   });
+  document.querySelectorAll("#eventPriorityPopover .prio-swatch").forEach(sw => {
+    sw.style.background = getPriorityColor(parseInt(sw.dataset.p, 10));
+    sw.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setEventPriority(parseInt(sw.dataset.p, 10));
+      epopover.classList.remove("show");
+    });
+  });
+  document.addEventListener("click", () => epopover.classList.remove("show"));
 });
 /* ------------------------------------------- */
 
@@ -7507,6 +8108,7 @@ renderLevelBar();
 renderCalendar();
 updateSaveSize();
 maybeAutoShowRetro();
+syncEventQuests();
 
 const TODAY_EVENTS_TOAST_KEY = "qb_today_events_toast_shown";
 const TODAY_EVENTS_TOAST_COOLDOWN = 60 * 60 * 1000; // one hour
@@ -8649,6 +9251,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.2</div>
+<div class="version-watermark" aria-hidden="true">v1.5.3</div>
 </body>
 </html>
