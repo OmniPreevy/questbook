@@ -2044,6 +2044,23 @@
     visibility:visible;
     transition:transform .3s ease;
   }
+  /* Grippy handle at the top of the creation sheet; drag it down to dismiss. */
+  .nt-sheet-handle{
+    position:sticky;
+    top:0;
+    z-index:2;
+    flex:0 0 auto;
+    width:44px;
+    height:5px;
+    border-radius:3px;
+    background:var(--dim);
+    opacity:.6;
+    margin:-4px auto 10px;
+    touch-action:none;
+    user-select:none;
+    cursor:grab;
+  }
+  .nt-sheet-handle:active{cursor:grabbing;}
 
   .nt-name-row{
     position:relative;
@@ -3042,6 +3059,7 @@
 </div>
 
 <div class="new-task-view" id="eventTaskView">
+  <div class="nt-sheet-handle" id="ntHandleEvent" aria-hidden="true"></div>
   <div class="detail-header">
     <div class="detail-title" id="eventModalTitle">New event</div>
   </div>
@@ -3237,6 +3255,7 @@
 </div>
 
 <div class="new-task-view" id="newTaskView">
+  <div class="nt-sheet-handle" id="ntHandleQuest" aria-hidden="true"></div>
   <div class="detail-header">
     <div class="detail-title">New quest</div>
   </div>
@@ -5987,6 +6006,55 @@ function closeNewTaskView(){
   document.body.classList.remove("qb-creating");
 }
 
+/* Drag the grey handle at the top of a creation sheet down to dismiss it.
+   Past the threshold it closes, otherwise it snaps back to where it was. */
+function enableSheetSwipeClose(handleId, viewId, onClose){
+  const handle = document.getElementById(handleId);
+  const view = document.getElementById(viewId);
+  if(!handle || !view) return;
+  const THRESHOLD = 100;
+  let startY = null;
+  let dragging = false;
+  function yOf(e){
+    if(e.touches && e.touches.length) return e.touches[0].clientY;
+    if(e.changedTouches && e.changedTouches.length) return e.changedTouches[0].clientY;
+    return e.clientY;
+  }
+  function down(e){
+    startY = yOf(e);
+    dragging = false;
+  }
+  function move(e){
+    if(startY === null) return;
+    const dy = yOf(e) - startY;
+    if(!dragging){
+      if(dy < -4){ startY = null; return; } // ignore upward swipes
+      if(dy > 6) dragging = true;
+      else return;
+    }
+    e.preventDefault();
+    view.style.transition = "none";
+    view.style.transform = "translateY(" + Math.max(0, dy) + "px)";
+  }
+  function up(e){
+    if(startY === null) return;
+    const dy = yOf(e) - startY;
+    startY = null;
+    if(!dragging){ dragging = false; return; }
+    dragging = false;
+    view.style.transition = "";
+    view.style.transform = "";
+    if(dy >= THRESHOLD || dy >= view.offsetHeight * 0.35) onClose();
+  }
+  handle.addEventListener("touchstart", down, { passive: true });
+  handle.addEventListener("touchmove", move, { passive: false });
+  handle.addEventListener("touchend", up);
+  handle.addEventListener("touchcancel", up);
+  handle.addEventListener("mousedown", down);
+  window.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", up);
+}
+
 /* Mobile pull-down peek: while the new-quest sheet is closed it sits just
    below the screen. Dragging the page down at the top slides the sheet's top
    edge up from the bottom edge so you can see a glimpse of it. Let go past
@@ -6177,6 +6245,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
     else if(document.getElementById("eventTaskView").classList.contains("active")) closeEventModal();
   });
+
+  // Swipe the grey handle down to dismiss a creation sheet
+  enableSheetSwipeClose("ntHandleQuest", "newTaskView", closeNewTaskView);
+  enableSheetSwipeClose("ntHandleEvent", "eventTaskView", closeEventModal);
 
   const fabBtn = document.getElementById("fabAdd");
   const fabPopover = document.getElementById("fabChoicePopover");
@@ -9546,6 +9618,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.14</div>
+<div class="version-watermark" aria-hidden="true">v1.5.15</div>
 </body>
 </html>
