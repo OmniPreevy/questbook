@@ -1105,50 +1105,6 @@
     transform:translateX(-50%) translateY(0);
   }
 
-  /* persistent "Today's Events" toast shown while the day view is open at launch */
-  .today-events-toast{
-    position:absolute;
-    top:18%;
-    left:50%;
-    transform:translateX(-50%) translateY(-8px);
-    background:color-mix(in srgb, var(--card) 92%, transparent);
-    border:2px solid #ffd400;
-    color:#ffd400;
-    font-size:24px;
-    font-weight:800;
-    letter-spacing:1.5px;
-    text-shadow:0 2px 10px rgba(0,0,0,.6);
-    padding:14px 30px;
-    border-radius:14px;
-    box-shadow:0 6px 24px rgba(0,0,0,.45);
-    opacity:0;
-    pointer-events:none;
-    white-space:nowrap;
-    z-index:2100;
-    transition:opacity .25s ease, transform .25s ease;
-  }
-  .today-events-toast.show{
-    opacity:1;
-    transform:translateX(-50%) translateY(0);
-  }
-  /* On wide screens the toast lives inside the day-view pane: anchor it to the
-     top of the events list (clearly on the pane, never the middle of the
-     screen) and keep it modest so it doesn't take over the view. */
-  @media (min-width:1024px){
-    .today-events-toast{
-      top:56px;
-      bottom:auto;
-      font-size:15px;
-      font-weight:700;
-      letter-spacing:.5px;
-      text-shadow:0 1px 6px rgba(0,0,0,.5);
-      padding:8px 16px;
-      border-width:1px;
-      border-radius:10px;
-      box-shadow:0 3px 12px rgba(0,0,0,.35);
-    }
-  }
-
   /* inspect-mode exit button pinned left of the date + persistent "Testing" toast */
   .inspect-exit{
     position:fixed;
@@ -1519,6 +1475,11 @@
     white-space:nowrap;
     flex:1;
     min-width:0;
+  }
+  .detail-title.is-today{
+    color:#ffd400;
+    font-weight:700;
+    text-shadow:0 1px 6px rgba(0,0,0,.5);
   }
   .detail-header-actions{
     display:flex;
@@ -3293,7 +3254,6 @@
 </div>
 
 <div class="detail-view" id="dayView">
-  <div class="today-events-toast" id="todayEventsToast">Today's Events</div>
   <div class="detail-header">
     <button class="back-btn" id="dayBackBtn">‹ Collapse</button>
     <div class="detail-title" id="dayViewTitle">Day</div>
@@ -5608,6 +5568,13 @@ function normalize(tasks){
     delete task.notes;
     delete task.noteItems;
 
+    // noteBlocks may already be an array yet hold no text line (event-brought
+    // quests saved before the notes doc existed) - keep a writable text line
+    const lastBlock = task.noteBlocks[task.noteBlocks.length - 1];
+    if(!lastBlock || lastBlock.type !== "text"){
+      task.noteBlocks.push({ id: generateId(), type: "text", content: "" });
+    }
+
     task.noteBlocks.forEach(b => {
       if(b.type !== "check") return;
       // migrate blocks still on the old boolean field
@@ -7222,8 +7189,12 @@ let editingEventId = null; // null = modal is in "create" mode
 function openDayView(dayKey, dateObj){
   currentDayKey = dayKey;
   currentDayDateObj = dateObj || new Date(dayKey + "T00:00:00");
-  document.getElementById("dayViewTitle").textContent =
-    `${WEEKDAY_FULL[currentDayDateObj.getDay()]}, ${MONTH_ABBR[currentDayDateObj.getMonth()]} ${currentDayDateObj.getDate()}`;
+  const titleEl = document.getElementById("dayViewTitle");
+  const isToday = dateToStr(currentDayDateObj) === todayStr();
+  titleEl.textContent = isToday
+    ? "Today"
+    : `${WEEKDAY_FULL[currentDayDateObj.getDay()]}, ${MONTH_ABBR[currentDayDateObj.getMonth()]} ${currentDayDateObj.getDate()}`;
+  titleEl.classList.toggle("is-today", isToday);
   renderDayView();
   placePane("dayView");
 }
@@ -7389,7 +7360,6 @@ function finishBringQuest(ev, dayStr){
     if(e) Object.assign(e, ev);
     saveEvents(events);
   }
-  const hasEventNotes = Array.isArray(ev.noteBlocks) && ev.noteBlocks.length > 0;
   tasks.push({
     id: generateId(),
     name,
@@ -7411,8 +7381,8 @@ function finishBringQuest(ev, dayStr){
     scheduledOccurrence: dayStr,
     scheduledDay: dayStr,
     hiddenUntil: dayStr > tKey ? dayBeforeStr(dayStr) : null,
-    noteBlocks: hasEventNotes
-      ? ev.noteBlocks.map(b => ({ id: generateId(), type: b.type, label: b.label || "", content: b.content || "", checked: !!b.checked, count: b.count || 0, resetMode: b.resetMode || "none", periodKey: b.periodKey || null }))
+    noteBlocks: (Array.isArray(ev.noteBlocks) && ev.noteBlocks.length > 0)
+      ? cloneEventBlocks(ev.noteBlocks)
       : [{ id: generateId(), type: "text", content: note }]
   });
   saveTasks(tasks);
@@ -8535,44 +8505,6 @@ updateSaveSize();
 maybeAutoShowRetro();
 syncEventQuests();
 
-const TODAY_EVENTS_TOAST_KEY = "qb_today_events_toast_shown";
-const TODAY_EVENTS_TOAST_COOLDOWN = 60 * 60 * 1000; // one hour
-function hideTodayEventsToast(){
-  const el = document.getElementById("todayEventsToast");
-  if(el) el.classList.remove("show");
-}
-function maybeShowTodayEventsToast(){
-  const el = document.getElementById("todayEventsToast");
-  if(!el) return;
-  const last = Number(localStorage.getItem(TODAY_EVENTS_TOAST_KEY) || 0);
-  if(Date.now() - last < TODAY_EVENTS_TOAST_COOLDOWN) return;
-  try{ localStorage.setItem(TODAY_EVENTS_TOAST_KEY, String(Date.now())); }catch(e){}
-  el.classList.add("show");
-}
-// Hide the toast whenever the day view stops being active (any close path).
-// Only react when the pane becomes inactive: the boot sequence below opens the
-// day view itself, and an observer that fires on every class mutation would
-// otherwise batch-hide the toast right after it is shown.
-(function(){
-  const dayView = document.getElementById("dayView");
-  if(!dayView) return;
-  new MutationObserver(() => {
-    if(!dayView.classList.contains("active")) hideTodayEventsToast();
-  }).observe(dayView, { attributes: true, attributeFilter: ["class"] });
-})();
-
-const todayEventsAtBoot = loadEvents()
-  .filter(e => eventOccursOnDay(e, new Date(), todayStr()));
-// The whole auto-open announcement (day view + "Today's Events" toast) only
-// happens once per hour: reloading within the hour keeps the main view as is.
-if(todayEventsAtBoot.length > 0){
-  const lastShown = Number(localStorage.getItem(TODAY_EVENTS_TOAST_KEY) || 0);
-  if(Date.now() - lastShown >= TODAY_EVENTS_TOAST_COOLDOWN){
-    openDayView(todayStr(), new Date());
-    maybeShowTodayEventsToast();
-  }
-}
-
 /* ---- PWA: installable + auto-updates ----
    The service worker caches the app for offline use and fetches the newest
    HTML on every load (network-first), so publishing a new Questbook file
@@ -9676,6 +9608,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.23</div>
+<div class="version-watermark" aria-hidden="true">v1.5.24</div>
 </body>
 </html>
