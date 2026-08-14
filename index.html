@@ -1326,6 +1326,17 @@
     accent-color:var(--accent);
     margin:0;
   }
+  /* row of three short checkboxes (end date / appear as quest / notify me) */
+  .nt-checkbox-row3{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .nt-checkbox-row3 .modal-checkbox-row{
+    margin-bottom:0;
+  }
   .weekday-picker{
     display:flex;
     gap:5px;
@@ -2099,15 +2110,16 @@
     flex-wrap:wrap;
   }
   .nt-notify-row input[type=number]{
-    width:64px;
-    flex:0 0 64px;
+    width:44px;
+    flex:0 0 44px;
     box-sizing:border-box;
     background:var(--card);
     border:1px solid var(--border);
     color:var(--text);
     border-radius:8px;
-    padding:8px 10px;
+    padding:8px 6px;
     font-size:15px;
+    text-align:center;
   }
   .nt-notify-unit{
     font-size:12px;
@@ -2994,7 +3006,6 @@
 
 <div class="new-task-view" id="eventTaskView">
   <div class="detail-header">
-    <button type="button" class="back-btn" id="eventCancel">‹ Cancel</button>
     <div class="detail-title" id="eventModalTitle">New event</div>
   </div>
 
@@ -3033,18 +3044,24 @@
     </div>
   </div>
 
-  <label class="modal-checkbox-row">
-    <input type="checkbox" id="eventEndDateToggle">
-    <span>end date</span>
-  </label>
+  <div class="nt-checkbox-row3">
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="eventEndDateToggle">
+      <span>end date</span>
+    </label>
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="eventQuestToggle">
+      <span>appear as quest</span>
+    </label>
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="eventNotifyToggle">
+      <span>notify me</span>
+    </label>
+  </div>
   <div id="eventEndDateRow" style="display:none;">
     <input type="date" id="eventRepeatUntil" class="nt-text-input">
   </div>
 
-  <label class="modal-checkbox-row">
-    <input type="checkbox" id="eventQuestToggle">
-    <span>appear as quest</span>
-  </label>
   <div id="eventQuestOptions" style="display:none;">
     <div class="nt-quest-radio-row">
       <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
@@ -3063,10 +3080,23 @@
     </div>
   </div>
 
-  <label class="modal-label">Remind me (hours before, optional)</label>
-  <input type="number" id="eventRemindHours" min="0" step="0.5" placeholder="e.g. 1" class="nt-text-input">
+  <div id="eventNotifyOptions" style="display:none;">
+    <div class="nt-notify-row">
+      <input type="number" id="eventNotifyHours" min="0" value="0" aria-label="Hours">
+      <span class="nt-notify-unit">h</span>
+      <input type="number" id="eventNotifyMinutes" min="0" max="59" value="0" aria-label="Minutes">
+      <span class="nt-notify-unit">m</span>
+      <select id="eventNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
+        <option value="event">Before event</option>
+        <option value="quest" disabled>When quest is created</option>
+      </select>
+    </div>
+  </div>
 
-  <button type="button" id="eventSave" class="nt-create-btn">Save event</button>
+  <div class="nt-footer">
+    <button type="button" id="eventCancel" class="nt-danger-btn">Cancel</button>
+    <button type="button" id="eventSave" class="nt-create-btn">Schedule</button>
+  </div>
 </div>
 
 <div class="retro-overlay" id="retroOverlay"></div>
@@ -3240,14 +3270,13 @@
 
   <div id="ntNotifyOptions" style="display:none;">
     <div class="nt-notify-row">
-      <input type="number" id="ntNotifyHours" min="0" placeholder="h" aria-label="Hours before">
+      <input type="number" id="ntNotifyHours" min="0" value="0" aria-label="Hours">
       <span class="nt-notify-unit">h</span>
-      <input type="number" id="ntNotifyMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
+      <input type="number" id="ntNotifyMinutes" min="0" max="59" value="0" aria-label="Minutes">
       <span class="nt-notify-unit">m</span>
-      <span class="nt-notify-before">before</span>
       <select id="ntNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
-        <option value="now">from now</option>
-        <option value="event">before event</option>
+        <option value="now">From now</option>
+        <option value="event">Before event</option>
       </select>
     </div>
     <div id="ntNotifyEventRow" style="display:none;">
@@ -5882,8 +5911,8 @@ function resetNewTaskForm(){
   setNtRepeat(false);
   document.getElementById("ntNotifyToggle").checked = false;
   document.getElementById("ntNotifyOptions").style.display = "none";
-  document.getElementById("ntNotifyHours").value = "";
-  document.getElementById("ntNotifyMinutes").value = "";
+  document.getElementById("ntNotifyHours").value = 0;
+  document.getElementById("ntNotifyMinutes").value = 0;
   document.getElementById("ntNotifyMode").value = "now";
   document.getElementById("ntNotifyEventRow").style.display = "none";
   document.getElementById("ntNotifyEvent").innerHTML = "";
@@ -5986,27 +6015,30 @@ function closeNewTaskView(){
   if(!("visualViewport" in window)) return;
   const vv = window.visualViewport;
   let rafId = 0;
-  function pinNewTaskView(){
-    const view = document.getElementById("newTaskView");
-    if(!view) return;
-    if(window.innerWidth < 1024 && view.classList.contains("active")){
-      view.style.top = vv.offsetTop + "px";
-      view.style.height = vv.height + "px";
-    } else {
-      view.style.top = "";
-      view.style.height = "";
-    }
+  function pinBottomSheets(){
+    // both the quest and the event sheets ride up with the on-screen keyboard
+    ["newTaskView", "eventTaskView"].forEach(id => {
+      const view = document.getElementById(id);
+      if(!view) return;
+      if(window.innerWidth < 1024 && view.classList.contains("active")){
+        view.style.top = vv.offsetTop + "px";
+        view.style.height = vv.height + "px";
+      } else {
+        view.style.top = "";
+        view.style.height = "";
+      }
+    });
   }
   vv.addEventListener("resize", () => {
     cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(pinNewTaskView);
+    rafId = requestAnimationFrame(pinBottomSheets);
   });
   vv.addEventListener("scroll", () => {
     cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(pinNewTaskView);
+    rafId = requestAnimationFrame(pinBottomSheets);
   });
-  window.addEventListener("resize", pinNewTaskView);
-  document.addEventListener("DOMContentLoaded", pinNewTaskView);
+  window.addEventListener("resize", pinBottomSheets);
+  document.addEventListener("DOMContentLoaded", pinBottomSheets);
 })();
 
 function createNewTask(){
@@ -6458,6 +6490,10 @@ function normalizeEvent(e){
     repeatDays: Array.isArray(e.repeatDays) ? e.repeatDays : [],
     repeatUntil: e.repeatUntil || "",
     remindHours: (typeof e.remindHours === "number" && e.remindHours >= 0) ? e.remindHours : null,
+    notifyEnabled: !!e.notifyEnabled,
+    notifyHours: (typeof e.notifyHours === "number" && e.notifyHours >= 0) ? e.notifyHours : 0,
+    notifyMinutes: (typeof e.notifyMinutes === "number" && e.notifyMinutes >= 0) ? e.notifyMinutes : 0,
+    notifyMode: (e.notifyMode === "quest") ? "quest" : "event",
     priority: (typeof e.priority === "number" && e.priority >= 1 && e.priority <= 5) ? e.priority : 3,
     appearAsQuest: !!e.appearAsQuest,
     questMode: (e.questMode === "before") ? "before" : "day",
@@ -7325,8 +7361,14 @@ function syncEventQuests(){
             tt.broughtFromEventId === ev.id &&
             (tt.scheduledOccurrence || tt.scheduledDay) === occKey);
           if(!exists){
-            tasks.push(makeEventQuest(ev, occKey, scheduled));
+            const newQuest = makeEventQuest(ev, occKey, scheduled);
+            tasks.push(newQuest);
             changed = true;
+            // "When quest is created" notify mode fires the moment the
+            // auto-brought quest appears
+            if(ev.notifyEnabled && ev.notifyMode === "quest"){
+              fireNotification(`Quest ready: ${newQuest.name}`, "Tap it to see the notes and check it off.");
+            }
           }
         }
       }
@@ -7397,7 +7439,6 @@ function openEventModal(eventId, opts){
     document.getElementById("eventEndDateToggle").checked = !!endDate;
     document.getElementById("eventEndDateRow").style.display = endDate ? "block" : "none";
     document.getElementById("eventRepeatUntil").value = endDate;
-    document.getElementById("eventRemindHours").value = (ev.remindHours === null || ev.remindHours === undefined) ? "" : ev.remindHours;
     setEventRepeatVisible(ev.repeat);
     document.getElementById("eventQuestToggle").checked = !!ev.appearAsQuest;
     document.getElementById("eventQuestOptions").style.display = ev.appearAsQuest ? "block" : "none";
@@ -7405,6 +7446,20 @@ function openEventModal(eventId, opts){
     document.getElementById("eventQuestBeforeDays").value = (typeof ev.questBeforeDays === "number" && ev.questBeforeDays >= 0) ? ev.questBeforeDays : 0;
     document.getElementById("eventQuestBeforeHours").value = (typeof ev.questBeforeHours === "number" && ev.questBeforeHours >= 0) ? ev.questBeforeHours : 0;
     document.getElementById("eventQuestBeforeMinutes").value = (typeof ev.questBeforeMinutes === "number" && ev.questBeforeMinutes >= 0) ? ev.questBeforeMinutes : 0;
+    // notify me setter (legacy remindHours maps into it)
+    let notifyOn = !!ev.notifyEnabled;
+    let nHours = (typeof ev.notifyHours === "number") ? ev.notifyHours : 0;
+    let nMinutes = (typeof ev.notifyMinutes === "number") ? ev.notifyMinutes : 0;
+    if(!notifyOn && typeof ev.remindHours === "number" && ev.remindHours > 0){
+      notifyOn = true;
+      nHours = Math.floor(ev.remindHours);
+      nMinutes = Math.round((ev.remindHours - Math.floor(ev.remindHours)) * 60);
+    }
+    document.getElementById("eventNotifyToggle").checked = notifyOn;
+    document.getElementById("eventNotifyOptions").style.display = notifyOn ? "block" : "none";
+    document.getElementById("eventNotifyHours").value = nHours;
+    document.getElementById("eventNotifyMinutes").value = nMinutes;
+    document.getElementById("eventNotifyMode").value = (ev.notifyMode === "quest") ? "quest" : "event";
     refreshWeekdayButtons();
   } else {
     titleEl.textContent = "New event";
@@ -7417,7 +7472,6 @@ function openEventModal(eventId, opts){
     document.getElementById("eventEndDateToggle").checked = false;
     document.getElementById("eventEndDateRow").style.display = "none";
     document.getElementById("eventRepeatUntil").value = "";
-    document.getElementById("eventRemindHours").value = "";
     setEventRepeatVisible(false);
     document.getElementById("eventQuestToggle").checked = !!opts.exportToQuest;
     document.getElementById("eventQuestOptions").style.display = document.getElementById("eventQuestToggle").checked ? "block" : "none";
@@ -7425,13 +7479,24 @@ function openEventModal(eventId, opts){
     document.getElementById("eventQuestBeforeDays").value = 0;
     document.getElementById("eventQuestBeforeHours").value = 0;
     document.getElementById("eventQuestBeforeMinutes").value = 0;
+    document.getElementById("eventNotifyToggle").checked = false;
+    document.getElementById("eventNotifyOptions").style.display = "none";
+    document.getElementById("eventNotifyHours").value = 0;
+    document.getElementById("eventNotifyMinutes").value = 0;
+    document.getElementById("eventNotifyMode").value = "event";
     refreshWeekdayButtons();
   }
+  // "When quest is created" only makes sense when the event appears as a quest
+  const questNotifyOpt = document.querySelector('#eventNotifyMode option[value="quest"]');
+  if(questNotifyOpt) questNotifyOpt.disabled = !document.getElementById("eventQuestToggle").checked;
   document.getElementById("eventTaskView").classList.add("active");
   if(window.innerWidth >= 1024) document.body.classList.add("qb-creating");
 }
 function closeEventModal(){
-  document.getElementById("eventTaskView").classList.remove("active");
+  const view = document.getElementById("eventTaskView");
+  view.classList.remove("active");
+  view.style.top = "";
+  view.style.height = "";
   if(window.innerWidth >= 1024) document.body.classList.remove("qb-creating");
   document.getElementById("eventPriorityPopover").classList.remove("show");
   editingEventId = null;
@@ -7467,14 +7532,22 @@ function saveEventModal(){
   const qMinutes = Math.max(0, parseInt(document.getElementById("eventQuestBeforeMinutes").value, 10) || 0);
 
   const events = loadEvents();
-  const remindRaw = parseFloat(document.getElementById("eventRemindHours").value);
-  const remindHours = (!isNaN(remindRaw) && remindRaw >= 0) ? remindRaw : null;
+  const notifyEnabled = document.getElementById("eventNotifyToggle").checked;
+  const nHours = Math.max(0, parseFloat(document.getElementById("eventNotifyHours").value) || 0);
+  const nMinutes = Math.max(0, parseInt(document.getElementById("eventNotifyMinutes").value, 10) || 0);
+  const nMode = document.getElementById("eventNotifyMode").value;
+  const effMode = (nMode === "quest" && appearAsQuest) ? "quest" : "event";
+  const notifyActive = notifyEnabled && (effMode === "quest" || nHours > 0 || nMinutes > 0);
   const fields = {
     name, day, startTime, durationMinutes,
     repeat,
     repeatDays: repeat ? modalRepeatDays.slice() : [],
     repeatUntil: repeat ? repeatUntil : "",
-    remindHours,
+    notifyEnabled: notifyActive,
+    notifyHours: nHours,
+    notifyMinutes: nMinutes,
+    notifyMode: notifyActive ? effMode : "event",
+    remindHours: (notifyActive && effMode === "event") ? Math.round((nHours + nMinutes / 60) * 100) / 100 : null,
     priority: eventPriority,
     appearAsQuest,
     questMode: appearAsQuest ? qMode : "day",
@@ -7524,8 +7597,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("eventEndDateToggle").addEventListener("change", (e) => {
     document.getElementById("eventEndDateRow").style.display = e.target.checked ? "block" : "none";
   });
+  document.getElementById("eventNotifyToggle").addEventListener("change", (e) => {
+    document.getElementById("eventNotifyOptions").style.display = e.target.checked ? "block" : "none";
+  });
   document.getElementById("eventQuestToggle").addEventListener("change", (e) => {
     document.getElementById("eventQuestOptions").style.display = e.target.checked ? "block" : "none";
+    const questNotifyOpt = document.querySelector('#eventNotifyMode option[value="quest"]');
+    if(questNotifyOpt) questNotifyOpt.disabled = !e.target.checked;
+    const modeSel = document.getElementById("eventNotifyMode");
+    if(!e.target.checked && modeSel.value === "quest") modeSel.value = "event";
     if(e.target.checked) syncEventQuests();
   });
   document.querySelectorAll('#eventQuestOptions input[name="eventQuestMode"]').forEach(r => {
@@ -9385,6 +9465,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.7</div>
+<div class="version-watermark" aria-hidden="true">v1.5.8</div>
 </body>
 </html>
