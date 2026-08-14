@@ -7083,12 +7083,13 @@ function renderCalendar(){
     } else {
       const first = dayEvents[0];
       const last = dayEvents[dayEvents.length - 1];
-      const endTime = addMinutesToTime(last.startTime, last.durationMinutes || 0);
+      const lastNoDur = (last.durationMinutes === null || last.durationMinutes === undefined);
+      const endTime = lastNoDur ? null : addMinutesToTime(last.startTime, last.durationMinutes);
       times.className = "cal-times";
-      times.innerHTML = `${formatTime12h(first.startTime)}<br>${formatTime12h(endTime)}`;
+      times.innerHTML = `${formatTime12h(first.startTime)}<br>${lastNoDur ? "-" : formatTime12h(endTime)}`;
 
       const startMin = timeToMinutes(first.startTime);
-      let endMin = timeToMinutes(endTime);
+      let endMin = lastNoDur ? startMin : timeToMinutes(endTime);
       if(endMin < startMin) endMin += 24 * 60; // spans past midnight
       const spanHours = (endMin - startMin) / 60;
 
@@ -9694,6 +9695,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.33</div>
+<div class="version-watermark" aria-hidden="true">v1.5.34</div>
 </body>
 </html>
