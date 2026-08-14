@@ -6017,7 +6017,7 @@ function resetNewTaskForm(){
   document.getElementById("ntNotifyMinutes").value = 0;
   document.getElementById("ntNotifyMode").value = "now";
   document.getElementById("ntNotifyEventRow").style.display = "none";
-  document.getElementById("ntNotifyEvent").innerHTML = "";
+  populateNtNotifyEvents();
   setNtPriority(3);
 }
 
@@ -6260,9 +6260,11 @@ function createNewTask(){
 function populateNtNotifyEvents(){
   const tKey = todayStr();
   const select = document.getElementById("ntNotifyEvent");
+  const modeOpt = document.querySelector("#ntNotifyMode option[value='event']");
   const events = loadEvents()
     .filter(ev => !ev.repeat && ev.day && ev.day >= tKey)
     .sort((a, b) => (a.day + (a.startTime || "")).localeCompare(b.day + (b.startTime || "")));
+  if(modeOpt) modeOpt.disabled = events.length === 0;
   select.innerHTML = "";
   if(events.length === 0){
     const opt = document.createElement("option");
@@ -6278,6 +6280,8 @@ function populateNtNotifyEvents(){
     opt.textContent = `${ev.name || "Event"} · ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}${ev.startTime ? " " + formatTime12h(ev.startTime) : ""}`;
     select.appendChild(opt);
   });
+  // auto-select the soonest event so "before event" always has a target
+  select.value = events[0].id;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -6936,6 +6940,9 @@ function checkReminders(){
             d.setDate(d.getDate() + 1);
           }
         }
+      } else if(t.notifyMode === "event"){
+        // "before event" but no event selected (or the event was deleted) - do
+        // not fall through, a "from now" reminder would fire at the wrong time
       } else {
         if(t.oneTime){
           if(t.checkedAt) return;
@@ -9635,6 +9642,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.26</div>
+<div class="version-watermark" aria-hidden="true">v1.5.27</div>
 </body>
 </html>
