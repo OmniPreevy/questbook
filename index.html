@@ -6582,6 +6582,8 @@ document.addEventListener("keydown", (e) => {
   else if(document.getElementById("monthView").classList.contains("active")) closeMonthView();
   else if(document.getElementById("hiddenView").classList.contains("active")) closeHiddenView();
   else if(document.getElementById("retroView").classList.contains("active")) closeRetroView();
+  else if(document.getElementById("bringOverlay").classList.contains("active")) cancelBring();
+  else if(document.getElementById("trashOverlay").classList.contains("active")) closeTrash();
   else if(document.getElementById("fabChoicePopover").classList.contains("show")) document.getElementById("fabChoicePopover").classList.remove("show");
 });
 
@@ -9652,6 +9654,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.29</div>
+<div class="version-watermark" aria-hidden="true">v1.5.30</div>
 </body>
 </html>
