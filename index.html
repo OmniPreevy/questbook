@@ -1326,29 +1326,27 @@
     accent-color:var(--accent);
     margin:0;
   }
-  /* three-column option grid in the event modal: end date | appear as quest | notification */
+  /* stacked option rows in the event modal: each option opens its own line under it */
   .nt-opts-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    display:flex;
+    flex-direction:column;
     gap:10px;
     margin-bottom:12px;
-    align-items:start;
   }
   .nt-opt-col{
     display:flex;
     flex-direction:column;
-    align-items:center;
-    text-align:center;
+    align-items:flex-start;
     min-width:0;
   }
   .nt-opt-col .modal-checkbox-row{
     margin-bottom:0;
-    justify-content:center;
+    justify-content:flex-start;
   }
   .nt-end-date-input{
     width:100%;
     max-width:150px;
-    margin-left:auto;
+    margin-left:0;
     margin-right:auto;
   }
   .nt-notify-label{
@@ -9518,6 +9516,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.9</div>
+<div class="version-watermark" aria-hidden="true">v1.5.10</div>
 </body>
 </html>
