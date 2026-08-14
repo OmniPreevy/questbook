@@ -5042,11 +5042,15 @@ function saveEdit(){
     }
 
     const wrRaw = document.getElementById("editWeekReset").value;
+    const prevResetDay = t.weekResetDay;
     t.weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
     // Re-anchor the week key to the new reset day WITHOUT wiping this week's
     // progress - otherwise changing the reset day instantly zeroes the weekly
     // counter. It now resets at the next actual reset-day boundary instead.
     t.weekKey = weekStrFor(t.weekResetDay);
+    // Remember when the reset day was (re)assigned so the first-window grace in
+    // normalize() doesn't wipe the count at the first boundary after the change.
+    if(t.weekResetDay !== prevResetDay) t.weekResetAt = Date.now();
   }
 
   const remindRaw = parseFloat(document.getElementById("editRemindHours").value);
@@ -5090,6 +5094,12 @@ function weekStrFor(day, d = new Date()){
   const off = (date.getDay() + 7 - anchor) % 7; // 0 = reset day
   date.setDate(date.getDate() - off);
   return todayStr(date);
+}
+// Date string n days after s (s is a YYYY-MM-DD date string).
+function addDaysStr(s, n){
+  const d = new Date(s + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return todayStr(d);
 }
 // Days until each weekday (0=Sun..6=Sat) from today: "tomorrow", "in 2 days", etc.
 function daysUntilWeekday(day, d = new Date()){
@@ -5289,20 +5299,36 @@ function normalize(tasks){
     }
     const tw = weekStrFor(task.weekResetDay);
     if(task.weekKey !== tw){
-      if(!task.oneTime && task.weekKey){
-        logHistoryEvent({
-          type: "week_result",
-          weekKey: task.weekKey,
-          taskName: task.name,
-          priority: task.priority,
-          weekCount: task.weekCount,
-          perWeek: task.perWeek,
-          hit: task.weekCount >= task.perWeek
-        });
+      // First-window grace: a quest created (or given its reset day) in the
+      // middle of a reset window would otherwise be wiped at the very next
+      // boundary after only a partial week. Skip that one rollover so weekly
+      // progress isn't zeroed right after setup; the first full wipe happens
+      // at the boundary after that instead. Only applies to custom reset days.
+      let grace = false;
+      if(task.weekResetDay !== null && task.weekResetDay !== undefined){
+        const anchorMs = Math.max(task.createdAt || 0, task.weekResetAt || 0);
+        if(anchorMs > 0){
+          const anchorDay = todayStr(new Date(anchorMs));
+          const anchorWin = weekStrFor(task.weekResetDay, new Date(anchorMs));
+          grace = (anchorDay > anchorWin && t <= addDaysStr(anchorWin, 7));
+        }
+      }
+      if(!grace){
+        if(!task.oneTime && task.weekKey){
+          logHistoryEvent({
+            type: "week_result",
+            weekKey: task.weekKey,
+            taskName: task.name,
+            priority: task.priority,
+            weekCount: task.weekCount,
+            perWeek: task.perWeek,
+            hit: task.weekCount >= task.perWeek
+          });
+        }
+        task.weekCount = 0;
+        task.lastCheckedAt = null;
       }
       task.weekKey = tw;
-      task.weekCount = 0;
-      task.lastCheckedAt = null;
     }
     if(typeof task.priority !== "number") task.priority = 3;
     if(typeof task.order !== "number") task.order = i;
@@ -5931,6 +5957,7 @@ function createNewTask(){
     weekCount: 0,
     weekKey: weekStrFor(weekResetDay),
     weekResetDay,
+    weekResetAt: weekResetDay !== null ? Date.now() : null,
     notes,
     remindHours: null,
     oneTime: isOneTime,
@@ -9251,6 +9278,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.3</div>
+<div class="version-watermark" aria-hidden="true">v1.5.4</div>
 </body>
 </html>
