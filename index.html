@@ -7546,7 +7546,11 @@ function syncEventQuests(){
         const scheduled = (ev.questMode === "before")
           ? shiftOccurrenceKey(occKey, -ev.questBeforeDays, -ev.questBeforeHours, -ev.questBeforeMinutes)
           : occKey;
+        // never spawn a quest for an occurrence that has already ended - the
+        // removal pass only deletes quests that already exist, so without this
+        // guard an occurrence that ended before this sync would be created stale
         if(scheduled <= tKey && scheduled <= occKey &&
+           eventEndMs(ev, occKey) > now &&
            !(ev.questSkipped && ev.questSkipped[occKey])){
           const exists = tasks.some(tt =>
             tt.broughtFromEventId === ev.id &&
@@ -9631,6 +9635,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.25</div>
+<div class="version-watermark" aria-hidden="true">v1.5.26</div>
 </body>
 </html>
