@@ -1344,11 +1344,30 @@
     margin-bottom:0;
     justify-content:flex-start;
   }
-  .nt-end-date-input{
-    width:100%;
+  .nt-end-date-group .nt-end-date-input{
+    width:150px;
     max-width:150px;
-    margin-left:0;
-    margin-right:auto;
+    margin:0;
+  }
+  .event-repeat-options{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .nt-end-date-group{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    margin-left:auto;
+    min-width:0;
+  }
+  .nt-end-date-hint{
+    font-size:11px;
+    color:var(--dim);
+    text-align:right;
+    margin-top:3px;
   }
   .nt-notify-label{
     font-size:13px;
@@ -3132,16 +3151,13 @@
       <button type="button" class="weekday-btn" data-day="5">F</button>
       <button type="button" class="weekday-btn" data-day="6">S</button>
     </div>
+    <div class="nt-end-date-group">
+      <input type="date" id="eventRepeatUntil" class="nt-end-date-input nt-text-input" aria-label="End date">
+      <div class="nt-end-date-hint">mm/dd/yyyy</div>
+    </div>
   </div>
 
   <div class="nt-opts-grid">
-    <div class="nt-opt-col" id="eventEndDateCol">
-      <label class="modal-checkbox-row">
-        <input type="checkbox" id="eventEndDateToggle">
-        <span>end date</span>
-      </label>
-      <input type="date" id="eventRepeatUntil" class="nt-end-date-input nt-text-input" style="display:none;">
-    </div>
     <div class="nt-opt-col">
       <label class="modal-checkbox-row">
         <input type="checkbox" id="eventQuestToggle">
@@ -7567,14 +7583,9 @@ function setEventRepeatVisible(visible){
   document.getElementById("eventRepeatToggle").classList.toggle("on", eventRepeatOn);
   const stateEl = document.getElementById("eventRepeatState");
   if(stateEl) stateEl.textContent = eventRepeatOn ? "On" : "Off";
-  document.getElementById("eventRepeatOptions").style.display = eventRepeatOn ? "block" : "none";
-  // the end date only matters for repeating events
-  const endCol = document.getElementById("eventEndDateCol");
-  if(endCol) endCol.style.display = eventRepeatOn ? "" : "none";
+  document.getElementById("eventRepeatOptions").style.display = eventRepeatOn ? "" : "none";
   if(!eventRepeatOn){
-    document.getElementById("eventEndDateToggle").checked = false;
     document.getElementById("eventRepeatUntil").value = "";
-    document.getElementById("eventRepeatUntil").style.display = "none";
   }
 }
 function setEventQuestMode(mode){
@@ -7623,8 +7634,6 @@ function openEventModal(eventId, opts){
     setEventPriority((typeof ev.priority === "number" && ev.priority >= 1 && ev.priority <= 5) ? ev.priority : 3);
     modalRepeatDays = ev.repeatDays.slice();
     const endDate = ev.repeatUntil || "";
-    document.getElementById("eventEndDateToggle").checked = !!endDate;
-    document.getElementById("eventRepeatUntil").style.display = endDate ? "block" : "none";
     document.getElementById("eventRepeatUntil").value = endDate;
     setEventRepeatVisible(ev.repeat);
     document.getElementById("eventQuestToggle").checked = !!ev.appearAsQuest;
@@ -7658,8 +7667,6 @@ function openEventModal(eventId, opts){
     document.getElementById("eventDuration").value = "";
     setEventPriority(3);
     modalRepeatDays = [];
-    document.getElementById("eventEndDateToggle").checked = false;
-    document.getElementById("eventRepeatUntil").style.display = "none";
     document.getElementById("eventRepeatUntil").value = "";
     setEventRepeatVisible(false);
     document.getElementById("eventQuestToggle").checked = !!opts.exportToQuest;
@@ -7786,9 +7793,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("eventRepeatToggle").addEventListener("click", () => {
     setEventRepeatVisible(!eventRepeatOn);
-  });
-  document.getElementById("eventEndDateToggle").addEventListener("change", (e) => {
-    document.getElementById("eventRepeatUntil").style.display = e.target.checked ? "block" : "none";
   });
   document.getElementById("eventNotifyToggle").addEventListener("change", (e) => {
     document.getElementById("eventNotifyOptions").style.display = e.target.checked ? "block" : "none";
@@ -9663,6 +9667,6 @@ if(todayEventsAtBoot.length > 0){
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.19</div>
+<div class="version-watermark" aria-hidden="true">v1.5.20</div>
 </body>
 </html>
