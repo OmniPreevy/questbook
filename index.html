@@ -5472,6 +5472,27 @@ function updateTrashBtn(list){
 
 const ONE_TIME_LINGER_MS = 5 * 60 * 60 * 1000; // one-time quests vanish 5 hours after being checked off
 
+// While a checked-off one-time quest is on screen, re-render once a minute so
+// the "clears in …" counter stays live, and force a render exactly when the
+// quest is due to vanish - it disappears even with the app left open instead
+// of sitting at a stale "clears in 0m" until the next interaction.
+let oneTimeQuestTimer = null;
+function scheduleOneTimeQuestRenders(tasks){
+  clearTimeout(oneTimeQuestTimer);
+  const now = Date.now();
+  let next = null;
+  tasks.forEach(t => {
+    if(!t.oneTime || !t.checkedAt) return;
+    const expiry = t.checkedAt + ONE_TIME_LINGER_MS;
+    if(expiry > now){
+      next = (next === null) ? Math.min(expiry, now + 60000) : Math.min(next, expiry, now + 60000);
+    }
+  });
+  if(next !== null){
+    oneTimeQuestTimer = setTimeout(() => render(), next - now);
+  }
+}
+
 function normalize(tasks){
   const t = todayStr();
   const w = weekStr();
@@ -5939,6 +5960,8 @@ function render(){
   } else {
     expandBtn.style.display = "none";
   }
+
+  scheduleOneTimeQuestRenders(tasks);
 }
 
 function collapseQuestList(){
@@ -9608,6 +9631,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.24</div>
+<div class="version-watermark" aria-hidden="true">v1.5.25</div>
 </body>
 </html>
