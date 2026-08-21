@@ -7541,10 +7541,19 @@ function renderDayView(){
     del.className = "del";
     del.textContent = "×";
     del.onclick = () => {
-      const remaining = loadEvents().filter(e => e.id !== ev.id);
-      saveEvents(remaining);
-      syncEventQuests();
-      refreshOpenViews();
+      const doDelete = () => {
+        const remaining = loadEvents().filter(e => e.id !== ev.id);
+        saveEvents(remaining);
+        syncEventQuests();
+        refreshOpenViews();
+      };
+      // deleting silently is fine while the event is still empty; once it
+      // carries notes, ask first so they aren't lost to a stray click
+      if(eventHasData(ev)){
+        openConfirmGeneric(`Delete "${ev.name || "event"}"? Its notes will be gone for good.`, "Delete", doDelete, true);
+      } else {
+        doDelete();
+      }
     };
 
     row.appendChild(info);
@@ -7673,6 +7682,15 @@ function shiftDayStr(dayStr, delta){
    after the occurrence when the event has no defined end hour. Deleting or
    hiding the quest by hand marks that occurrence so it isn't brought again
    until the next one. Notes live on the event, so they survive the quest. */
+// True when an event carries anything worth protecting: checklist or counter
+// items are always deliberate, text blocks only count once they have content
+// (quests always append one empty text line to their notes)
+function eventHasData(ev){
+  return Array.isArray(ev.noteBlocks) && ev.noteBlocks.some(b =>
+    (b.type !== "text") ||
+    (b.type === "text" && String(b.content || "").trim() !== ""));
+}
+
 function cloneEventBlocks(blocks){
   const out = (Array.isArray(blocks) ? blocks : []).map(b => ({
     id: generateId(), type: b.type, label: b.label || "",
@@ -8736,12 +8754,10 @@ function resetAllData(){
 const RESET_CHOICES = [
   { id: "progress",  label: "Level & XP",            desc: "Level returns to 1 and the XP bar empties." },
   { id: "credits",   label: "Credits",               desc: "Hexagon balance goes back to zero." },
-  { id: "themes",    label: "Owned & custom themes", desc: "Bought and self-made themes are forgotten; back to the default accent." },
+  { id: "themes",    label: "Owned & custom themes", desc: "Bought and self-made themes are forgotten, their purchase receipts with them; back to the default accent." },
   { id: "quests",    label: "Quests",                desc: "Every quest, including hidden and event-brought ones." },
   { id: "events",    label: "Events",                desc: "All calendar events; their auto-brought quests go with them." },
-  { id: "history",   label: "History & retro stats", desc: "Quest log, weekly hits/misses and earned XP records." },
-  { id: "trash",     label: "Trash",                 desc: "Recently deleted quests." },
-  { id: "purchases", label: "Purchase log",          desc: "Theme purchase receipts." }
+  { id: "history",   label: "History & retro stats", desc: "Quest log, weekly hits/misses and earned XP records. Old entries are trimmed automatically once the log tops about a thousand, so this rarely needs a reset." }
 ];
 function buildResetChoices(){
   const wrap = document.getElementById("resetChoices");
@@ -8790,16 +8806,30 @@ function applyResetSelection(){
     if(chosen.includes("themes")){
       localStorage.removeItem(OWNED_KEY);
       localStorage.removeItem(CUSTOM_KEY);
+      // purchase receipts ride along with the themes they belong to
+      localStorage.removeItem(PURCHASES_KEY);
       localStorage.setItem(THEME_KEY, ACCENTS[0].id);
     }
     if(chosen.includes("quests")) localStorage.removeItem(STORAGE_KEY);
     if(chosen.includes("events")) localStorage.removeItem(EVENTS_KEY);
     if(chosen.includes("history")) localStorage.removeItem(HISTORY_KEY);
-    if(chosen.includes("trash")) localStorage.removeItem(TRASH_KEY);
-    if(chosen.includes("purchases")) localStorage.removeItem(PURCHASES_KEY);
     location.reload();
   }, true);
 }
+// Number inputs (notification minutes, durations, counts...) select their
+// prefilled value when focused or clicked so typing replaces it instead of
+// parking the caret next to it. Values longer than 4 digits are left alone.
+function selectShortNumberValue(inp){
+  const v = String(inp.value ?? "");
+  if(v.length >= 1 && v.length <= 4) inp.select();
+}
+document.addEventListener("focusin", (e) => {
+  if(e.target instanceof HTMLInputElement && e.target.type === "number") selectShortNumberValue(e.target);
+});
+document.addEventListener("click", (e) => {
+  if(e.target instanceof HTMLInputElement && e.target.type === "number") selectShortNumberValue(e.target);
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("settingsBtn").addEventListener("click", () => {
     if(document.getElementById("settingsView").classList.contains("active")) closeSettings();
@@ -8962,7 +8992,7 @@ syncEventQuests();
   <div class="modal-card">
     <div class="modal-title">Reset specific</div>
     <div class="reset-choices" id="resetChoices"></div>
-    <div class="reset-note">Pick what you want wiped - everything else is kept.</div>
+    <div class="reset-note">Pick what you want wiped. Everything else stays.</div>
     <div class="modal-actions">
       <button type="button" class="modal-btn secondary" id="resetCancel">Cancel</button>
       <button type="button" class="modal-btn primary" id="resetApply">Reset selected</button>
@@ -9985,6 +10015,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.40</div>
+<div class="version-watermark" aria-hidden="true">v1.5.41</div>
 </body>
 </html>
