@@ -5302,6 +5302,7 @@ function saveEdit(){
     if(weekDelta !== 0){
       addXp(weekDelta * t.perDay * xpReward(t));
     }
+    logWeekHit(t);
 
     const wrRaw = document.getElementById("editWeekReset").value;
     const prevResetDay = t.weekResetDay;
@@ -5477,16 +5478,40 @@ function previousWeekKey(d = new Date()){
   return dateToStr(thisMonday);
 }
 
+// Called whenever a quest's weekly count may have just reached its target.
+// Records a week_hit keyed to the Monday-week the target was finished in, so
+// quests with a custom reset day appear in the retro of the week they were
+// actually completed. Deduped per reset window so undo/re-check cycles and
+// repeated calls never double-count.
+function logWeekHit(t){
+  if(!t || t.oneTime || !(t.perWeek > 0) || t.weekCount < t.perWeek) return;
+  const history = loadHistory();
+  if(history.some(e => e.type === "week_hit" && e.taskId === t.id && e.winKey === t.weekKey)) return;
+  logHistoryEvent({
+    type: "week_hit",
+    weekKey: weekStr(),
+    taskId: t.id,
+    winKey: t.weekKey,
+    taskName: t.name,
+    priority: t.priority,
+    weekCount: t.weekCount,
+    perWeek: t.perWeek
+  });
+}
+
 function computeWeeklyStats(weekKey){
   const history = loadHistory();
   const inWeek = e => weekStr(new Date(e.ts)) === weekKey;
 
   const completions = history.filter(e => e.type === "quest_done" && inWeek(e));
+  // misses logged at the reset (week_result) + hits logged the moment a
+  // quest's weekly target was reached (week_hit, keyed to that Monday week)
   const weekResults = history.filter(e => e.type === "week_result" && e.weekKey === weekKey);
+  const weekHits = history.filter(e => e.type === "week_hit" && e.weekKey === weekKey);
 
   const questsCompleted = completions.length;
   const xpEarned = completions.reduce((sum, e) => sum + (e.xp || 0), 0);
-  const questsHit = weekResults.filter(e => e.hit).length;
+  const questsHit = weekResults.filter(e => e.hit).length + weekHits.length;
   const questsMissed = weekResults.filter(e => !e.hit).length;
 
   // events occurring anywhere in that Mon-Sun window
@@ -5541,9 +5566,11 @@ function closeRetroView(){
   document.getElementById("retroOverlay").classList.remove("show");
 }
 
-// Auto-surface once per week: first time the app is opened after a week
-// boundary passes, show what happened last week.
+// Auto-surface once per week: on the first Monday opening after the week
+// flipped, show what happened last week. Quest-level week reset days have no
+// influence on this - the retro always follows Monday weeks.
 function maybeAutoShowRetro(){
+  if(new Date().getDay() !== 1) return;
   const lastShown = localStorage.getItem("checklist_last_retro_shown");
   const lastWeek = previousWeekKey();
   if(lastShown === lastWeek) return;
@@ -5654,15 +5681,22 @@ function normalize(tasks){
         }
       }
       if(!grace){
-        if(!task.oneTime && task.weekKey){
+        if(!task.oneTime && task.weekKey && task.weekCount < task.perWeek){
+          // Only MISSES are logged here - hits were already recorded the
+          // moment the weekly target was reached (week_hit). A miss surfaces
+          // in the first retro AFTER the reset: default Monday-reset quests
+          // keep their own (Monday) week key, custom reset days are
+          // attributed to the Monday-week containing the reset so they land
+          // in the following week's retro instead of never matching one.
+          const customReset = !(task.weekResetDay === null || task.weekResetDay === undefined);
           logHistoryEvent({
             type: "week_result",
-            weekKey: task.weekKey,
+            weekKey: customReset ? weekStr(new Date(tw + "T00:00:00")) : task.weekKey,
             taskName: task.name,
             priority: task.priority,
             weekCount: task.weekCount,
             perWeek: task.perWeek,
-            hit: task.weekCount >= task.perWeek
+            hit: false
           });
         }
         task.weekCount = 0;
@@ -6004,6 +6038,7 @@ function render(){
             t.lastCheckedAt = Date.now();
           }
           saveTasks(all);
+          if(dayFullyDone) logWeekHit(t);
           const xp = xpReward(t);
           const leveledUp = addXp(xp);
           if(dayFullyDone){
@@ -9835,6 +9870,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.36</div>
+<div class="version-watermark" aria-hidden="true">v1.5.37</div>
 </body>
 </html>
