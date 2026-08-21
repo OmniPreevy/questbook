@@ -6455,27 +6455,33 @@ function populateNtNotifyEvents(){
   const tKey = todayStr();
   const select = document.getElementById("ntNotifyEvent");
   const modeOpt = document.querySelector("#ntNotifyMode option[value='event']");
+  // One-off events still ahead plus every repeating event both work as
+  // reminder targets - the scan walks occurrences with eventOccursOnDay.
+  // nextEventOccurrenceKey resolves the upcoming day for either kind and
+  // repeating events show it in their label so the target is obvious.
   const events = loadEvents()
-    .filter(ev => !ev.repeat && ev.day && ev.day >= tKey)
-    .sort((a, b) => (a.day + (a.startTime || "")).localeCompare(b.day + (b.startTime || "")));
+    .map(ev => ({ ev, next: nextEventOccurrenceKey(ev) }))
+    .filter(x => x.next)
+    .sort((a, b) => (a.next + (a.ev.startTime || "")).localeCompare(b.next + (b.ev.startTime || "")));
   if(modeOpt) modeOpt.disabled = events.length === 0;
   select.innerHTML = "";
   if(events.length === 0){
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "No upcoming one-time events";
+    opt.textContent = "No upcoming events";
     select.appendChild(opt);
     return;
   }
-  events.forEach(ev => {
+  events.forEach(({ ev, next }) => {
     const opt = document.createElement("option");
     opt.value = ev.id;
-    const d = new Date(ev.day + "T00:00:00");
-    opt.textContent = `${ev.name || "Event"} · ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}${ev.startTime ? " " + formatTime12h(ev.startTime) : ""}`;
+    const d = new Date(next + "T00:00:00");
+    opt.textContent = `${ev.name || "Event"} · ${d.getDate()} ${MONTH_ABBR[d.getMonth()]}` +
+      `${ev.startTime ? " " + formatTime12h(ev.startTime) : ""}${ev.repeat ? " · repeats" : ""}`;
     select.appendChild(opt);
   });
   // auto-select the soonest event so "before event" always has a target
-  select.value = events[0].id;
+  select.value = events[0].ev.id;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -7086,6 +7092,7 @@ function checkReminders(){
       d.setDate(d.getDate() + dayOffset);
       const dKey = dateToStr(d);
       if(!eventOccursOnDay(ev, d, dKey)) continue;
+      if(!ev.startTime) return; // imported event without a start time can't be timed
       const startMs = new Date(`${dKey}T${ev.startTime}:00`).getTime();
       const remindAt = startMs - ev.remindHours * 3600000;
       const key = `event-${ev.id}-${dKey}`;
@@ -7250,7 +7257,7 @@ function renderCalendar(){
     const dayEvents = events
       .filter(e => eventOccursOnDay(e, d, dayKey))
       .slice()
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
 
     const cell = document.createElement("div");
     let spanClass = "";
@@ -7267,13 +7274,15 @@ function renderCalendar(){
     } else {
       const first = dayEvents[0];
       const last = dayEvents[dayEvents.length - 1];
-      const lastNoDur = (last.durationMinutes === null || last.durationMinutes === undefined);
+      // events without a start time (only possible via imported backups) are
+      // shown with a "-" and treated as starting at midnight for the span
+      const lastNoDur = (last.durationMinutes === null || last.durationMinutes === undefined) || !last.startTime;
       const endTime = lastNoDur ? null : addMinutesToTime(last.startTime, last.durationMinutes);
       times.className = "cal-times";
-      times.innerHTML = `${formatTime12h(first.startTime)}<br>${lastNoDur ? "-" : formatTime12h(endTime)}`;
+      times.innerHTML = `${first.startTime ? formatTime12h(first.startTime) : "-"}<br>${endTime ? formatTime12h(endTime) : "-"}`;
 
-      const startMin = timeToMinutes(first.startTime);
-      let endMin = lastNoDur ? startMin : timeToMinutes(endTime);
+      const startMin = timeToMinutes(first.startTime || "00:00");
+      let endMin = endTime ? timeToMinutes(endTime) : startMin;
       if(endMin < startMin) endMin += 24 * 60; // spans past midnight
       const spanHours = (endMin - startMin) / 60;
 
@@ -7471,7 +7480,7 @@ function renderDayView(){
   const dateObj = currentDayDateObj || new Date(currentDayKey + "T00:00:00");
   const events = loadEvents()
     .filter(e => eventOccursOnDay(e, dateObj, currentDayKey))
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
 
   if(events.length === 0){
     emptyMsg.style.display = "block";
@@ -7481,7 +7490,10 @@ function renderDayView(){
 
   const tasks = loadTasks();
   events.forEach(ev => {
-    const endTime = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
+    // imported backups can carry events without a start time - show "-"
+    const noStart = !ev.startTime;
+    const noDur = noStart || (ev.durationMinutes === null || ev.durationMinutes === undefined);
+    const endLabel = noDur ? "" : ` - ${formatTime12h(addMinutesToTime(ev.startTime, ev.durationMinutes))}`;
     const row = document.createElement("div");
     row.className = "event-row";
 
@@ -7489,12 +7501,11 @@ function renderDayView(){
     info.className = "info";
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)}`;
+    name.textContent = ev.name || (noStart ? "Event" : `${formatTime12h(ev.startTime)}${endLabel}`);
     const meta = document.createElement("div");
     meta.className = "meta";
-    const noDur = (ev.durationMinutes === null || ev.durationMinutes === undefined);
     const durLabel = noDur ? "" : ` · ${ev.durationMinutes} min`;
-    const timeLabel = noDur ? formatTime12h(ev.startTime) : `${formatTime12h(ev.startTime)} - ${formatTime12h(endTime)}`;
+    const timeLabel = noStart ? "-" : (noDur ? formatTime12h(ev.startTime) : `${formatTime12h(ev.startTime)}${endLabel}`);
     meta.textContent = timeLabel + durLabel + repeatSummary(ev);
     info.appendChild(name);
     info.appendChild(meta);
@@ -7604,8 +7615,8 @@ function finishBringQuest(ev, dayStr){
   const note = dayStr === tKey
     ? `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event`
     : `brought from ${dateObj.getDate()}/${dateObj.getMonth() + 1} event, appears on ${dayStr}`;
-  const end = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
-  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(end)}`;
+  const end = addMinutesToTime(ev.startTime || "00:00", ev.durationMinutes || 0);
+  const name = ev.name || `${formatTime12h(ev.startTime || "00:00")} - ${formatTime12h(end)}`;
   const tasks = loadTasks();
   // a manual re-bring wins over the auto-bring "skipped" mark for that day
   if(ev.appearAsQuest && ev.questSkipped && ev.questSkipped[dayStr]){
@@ -7701,8 +7712,8 @@ function shiftOccurrenceKey(occKey, days, hours, minutes){
 
 function makeEventQuest(ev, occKey, scheduledDay){
   const tKey = todayStr();
-  const end = addMinutesToTime(ev.startTime, ev.durationMinutes || 0);
-  const name = ev.name || `${formatTime12h(ev.startTime)} - ${formatTime12h(end)}`;
+  const end = addMinutesToTime(ev.startTime || "00:00", ev.durationMinutes || 0);
+  const name = ev.name || `${formatTime12h(ev.startTime || "00:00")} - ${formatTime12h(end)}`;
   return {
     id: generateId(),
     name,
@@ -9974,6 +9985,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.39</div>
+<div class="version-watermark" aria-hidden="true">v1.5.40</div>
 </body>
 </html>
