@@ -1333,10 +1333,13 @@
   /* "When quest is created" needs no h/m boxes: hide them and let the select
      stretch to fill the rest of the row */
   #eventNotifyOptions.quest-mode .nt-notify-row input[type=number],
-  #eventNotifyOptions.quest-mode .nt-notify-unit{
+  #eventNotifyOptions.quest-mode .nt-notify-unit,
+  #editNotifyOptions.quest-mode .nt-notify-row input[type=number],
+  #editNotifyOptions.quest-mode .nt-notify-unit{
     display:none;
   }
-  #eventNotifyOptions.quest-mode .nt-notify-row{
+  #eventNotifyOptions.quest-mode .nt-notify-row,
+  #editNotifyOptions.quest-mode .nt-notify-row{
     width:100%;
   }
   .weekday-picker{
@@ -5150,6 +5153,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---------------- Edit modal ---------------- */
 let editingTaskId = null;
 let editMode = "once";
+let editingEventQuest = false;
 
 function setEditMode(mode){
   editMode = mode;
@@ -5163,6 +5167,11 @@ function setEditMode(mode){
     : "Remind me (hrs before day ends, optional)";
 }
 
+function setEditNotifyQuestModeVisual(){
+  document.getElementById("editNotifyOptions").classList.toggle(
+    "quest-mode", document.getElementById("editNotifyMode").value === "quest");
+}
+
 function openEdit(taskId){
   const tasks = normalize(loadTasks());
   const t = tasks.find(x => x.id === taskId);
@@ -5172,14 +5181,50 @@ function openEdit(taskId){
 
   document.getElementById("editName").value = t.name;
   document.getElementById("editPriority").value = t.priority;
-  const wc = document.getElementById("editWeekCount");
-  wc.value = t.weekCount;
-  wc.max = t.perWeek;
-  document.getElementById("editPerWeek").value = t.perWeek;
-  document.getElementById("editPerDay").value = t.perDay;
-  document.getElementById("editWeekReset").value = (t.weekResetDay === null || t.weekResetDay === undefined) ? "" : t.weekResetDay;
-  document.getElementById("editRemindHours").value = (t.remindHours === null || t.remindHours === undefined) ? "" : t.remindHours;
-  setEditMode(t.oneTime ? "once" : "repeat");
+
+  // Quests brought from events get a reduced editor: only name, priority and
+  // the event's notification settings. Everything else lives on the event and
+  // is shared by every occurrence, so it isn't editable per quest.
+  editingEventQuest = !!(t.autoQuest && t.broughtFromEventId);
+  ["editModeToggle", "editRepeatFields", "editOnceInfo", "editRemindLabel", "editRemindHours"].forEach(id => {
+    document.getElementById(id).style.display = editingEventQuest ? "none" : "";
+  });
+  document.getElementById("editNotifyBlock").style.display = editingEventQuest ? "block" : "none";
+
+  if(editingEventQuest){
+    const evs = loadEvents();
+    const ev = evs.find(x => x.id === t.broughtFromEventId);
+    if(ev){
+      // same prefill rules as the event modal - legacy remindHours maps into it
+      let notifyOn = !!ev.notifyEnabled;
+      let nHours = (typeof ev.notifyHours === "number") ? ev.notifyHours : 0;
+      let nMinutes = (typeof ev.notifyMinutes === "number") ? ev.notifyMinutes : 0;
+      if(!notifyOn && typeof ev.remindHours === "number" && ev.remindHours > 0){
+        notifyOn = true;
+        nHours = Math.floor(ev.remindHours);
+        nMinutes = Math.round((ev.remindHours - Math.floor(ev.remindHours)) * 60);
+      }
+      document.getElementById("editNotifyToggle").checked = notifyOn;
+      document.getElementById("editNotifyOptions").style.display = notifyOn ? "block" : "none";
+      document.getElementById("editNotifyHours").value = nHours;
+      document.getElementById("editNotifyMinutes").value = nMinutes;
+      document.getElementById("editNotifyMode").value =
+        (ev.notifyMode === "quest" || ev.notifyMode === "now") ? ev.notifyMode : "event";
+      setEditNotifyQuestModeVisual();
+    } else {
+      // event is gone - there is nowhere to persist notification settings
+      document.getElementById("editNotifyBlock").style.display = "none";
+    }
+  } else {
+    const wc = document.getElementById("editWeekCount");
+    wc.value = t.weekCount;
+    wc.max = t.perWeek;
+    document.getElementById("editPerWeek").value = t.perWeek;
+    document.getElementById("editPerDay").value = t.perDay;
+    document.getElementById("editWeekReset").value = (t.weekResetDay === null || t.weekResetDay === undefined) ? "" : t.weekResetDay;
+    document.getElementById("editRemindHours").value = (t.remindHours === null || t.remindHours === undefined) ? "" : t.remindHours;
+    setEditMode(t.oneTime ? "once" : "repeat");
+  }
 
   document.getElementById("editOverlay").classList.add("active");
 }
@@ -5199,6 +5244,14 @@ function saveEdit(){
   if(name) t.name = name;
 
   t.priority = parseInt(document.getElementById("editPriority").value, 10);
+
+  if(editingEventQuest && t.broughtFromEventId){
+    saveTasks(all);
+    applyEventQuestEdits(t);
+    closeEdit();
+    render();
+    return;
+  }
 
   const switchingMode = (editMode === "once") !== !!t.oneTime;
   t.oneTime = editMode === "once";
@@ -5257,12 +5310,61 @@ function saveEdit(){
   render();
 }
 
+// Changes made through an event quest's reduced editor are written back to the
+// event (the same way its notes already are), so every occurrence keeps them -
+// including quests brought later. Existing auto-brought quests of the event are
+// refreshed in place so already-scheduled occurrences pick up the new values.
+function applyEventQuestEdits(task){
+  const evs = loadEvents();
+  const ev = evs.find(x => x.id === task.broughtFromEventId);
+  if(!ev) return;
+  ev.name = task.name;
+  if(typeof task.priority === "number" && task.priority >= 1 && task.priority <= 5){
+    ev.priority = task.priority;
+  }
+  if(document.getElementById("editNotifyBlock").style.display !== "none"){
+    const notifyOn = document.getElementById("editNotifyToggle").checked;
+    let nHours = parseFloat(document.getElementById("editNotifyHours").value);
+    let nMinutes = parseInt(document.getElementById("editNotifyMinutes").value, 10);
+    if(isNaN(nHours) || nHours < 0) nHours = 0;
+    if(isNaN(nMinutes) || nMinutes < 0) nMinutes = 0;
+    const nMode = document.getElementById("editNotifyMode").value;
+    const effMode = (nMode === "quest") ? "quest" : (nMode === "now") ? "now" : "event";
+    const notifyActive = notifyOn && (effMode === "quest" || nHours > 0 || nMinutes > 0);
+    ev.notifyEnabled = notifyActive;
+    ev.notifyHours = nHours;
+    ev.notifyMinutes = nMinutes;
+    ev.notifyMode = notifyActive ? effMode : "event";
+    ev.remindHours = (notifyActive && effMode === "event")
+      ? Math.round((nHours + nMinutes / 60) * 100) / 100
+      : null;
+  }
+  saveEvents(evs);
+  const tasks = normalize(loadTasks());
+  let changed = false;
+  tasks.forEach(tt => {
+    if(tt.autoQuest && tt.broughtFromEventId === ev.id &&
+       (tt.name !== ev.name || tt.priority !== ev.priority)){
+      tt.name = ev.name;
+      tt.priority = ev.priority;
+      changed = true;
+    }
+  });
+  if(changed) saveTasks(tasks);
+  syncEventQuests();
+  refreshOpenViews();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("editCancel").addEventListener("click", closeEdit);
   document.getElementById("editSave").addEventListener("click", saveEdit);
   document.querySelectorAll("#editModeToggle .ot-toggle-btn").forEach(btn => {
     btn.addEventListener("click", () => setEditMode(btn.dataset.mode));
   });
+  document.getElementById("editNotifyToggle").addEventListener("change", (e) => {
+    document.getElementById("editNotifyOptions").style.display = e.target.checked ? "block" : "none";
+  });
+  document.getElementById("editNotifyMode").addEventListener("change", setEditNotifyQuestModeVisual);
   document.getElementById("editName").addEventListener("keydown", (e) => {
     if(e.key === "Enter") saveEdit();
   });
@@ -7573,6 +7675,10 @@ function syncEventQuests(){
       if(!ev) return true;
       const occ = tt.scheduledOccurrence || tt.scheduledDay;
       if(!occ) return true;
+      // the occurrence this quest was brought for no longer exists on the
+      // event - its day, weekdays or end date were edited - so it's stale
+      const occDate = new Date(occ + "T00:00:00");
+      if(isNaN(occDate.getTime()) || !eventOccursOnDay(ev, occDate, occ)) return true;
       return now >= eventEndMs(ev, occ);
     })()
   ).map(tt => tt.id);
@@ -8636,6 +8742,27 @@ syncEventQuests();
       <option value="5">P5 · high</option>
     </select>
 
+    <div id="editNotifyBlock" style="display:none;">
+      <label class="modal-checkbox-row">
+        <input type="checkbox" id="editNotifyToggle">
+        <span>notification</span>
+      </label>
+      <div id="editNotifyOptions" style="display:none;">
+        <div class="nt-notify-row">
+          <span class="nt-notify-label">notify me</span>
+          <input type="number" id="editNotifyHours" min="0" value="0" aria-label="Hours">
+          <span class="nt-notify-unit">h</span>
+          <input type="number" id="editNotifyMinutes" min="0" max="59" value="0" aria-label="Minutes">
+          <span class="nt-notify-unit">m</span>
+          <select id="editNotifyMode" class="nt-select nt-notify-mode" aria-label="Notify relative to">
+            <option value="event">Before event</option>
+            <option value="now">From now</option>
+            <option value="quest">When quest is created</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <div class="ot-toggle" id="editModeToggle">
       <button type="button" class="ot-toggle-btn" data-mode="once">One-time</button>
       <button type="button" class="ot-toggle-btn" data-mode="repeat">Repeatable</button>
@@ -9695,6 +9822,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.34</div>
+<div class="version-watermark" aria-hidden="true">v1.5.35</div>
 </body>
 </html>
