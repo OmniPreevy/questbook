@@ -2894,9 +2894,10 @@
   .settings-danger-row #resetDataBtn{flex:1.7;padding:15px;font-size:14px;}
   .settings-danger-row #resetSpecificBtn{flex:0.8;padding:9px 12px;font-size:12px;}
   /* Reset specific panel: checkbox list of everything that can be wiped
-     individually. Sits below the generic confirm overlay (both are
-     .modal-overlay) so the final "are you sure" stacks on top of it. */
-  #resetPanel{z-index:70;}
+     individually. Above the settings sheet (70) so its blur never covers
+     the panel, below the generic confirm overlay (75) so the final
+     "are you sure" still stacks on top of it. */
+  #resetPanel{z-index:72;}
   #resetPanel .modal-card{max-width:380px;}
   .reset-choices{
     margin-bottom:10px;
@@ -9973,6 +9974,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.38</div>
+<div class="version-watermark" aria-hidden="true">v1.5.39</div>
 </body>
 </html>
