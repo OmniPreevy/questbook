@@ -1342,6 +1342,19 @@
   #editNotifyOptions.quest-mode .nt-notify-row{
     width:100%;
   }
+  /* Quest editing menu: bigger "notify me" / "h" / "m" in the main text
+     colour, and the card a little wider than the other modals */
+  #editOverlay .modal-card{
+    max-width:380px;
+  }
+  #editNotifyBlock .nt-notify-label{
+    font-size:15px;
+    color:var(--text);
+  }
+  #editNotifyBlock .nt-notify-unit{
+    font-size:14px;
+    color:var(--text);
+  }
   .weekday-picker{
     display:flex;
     gap:5px;
@@ -9822,6 +9835,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.35</div>
+<div class="version-watermark" aria-hidden="true">v1.5.36</div>
 </body>
 </html>
