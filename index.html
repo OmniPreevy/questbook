@@ -2892,7 +2892,39 @@
   }
   .settings-action-danger:active{background:var(--danger);color:#fff;}
   .settings-danger-row #resetDataBtn{flex:1.7;padding:15px;font-size:14px;}
-  .settings-danger-row #resetExpBtn{flex:0.8;padding:9px 12px;font-size:12px;}
+  .settings-danger-row #resetSpecificBtn{flex:0.8;padding:9px 12px;font-size:12px;}
+  /* Reset specific panel: checkbox list of everything that can be wiped
+     individually. Sits below the generic confirm overlay (both are
+     .modal-overlay) so the final "are you sure" stacks on top of it. */
+  #resetPanel{z-index:70;}
+  #resetPanel .modal-card{max-width:380px;}
+  .reset-choices{
+    margin-bottom:10px;
+    max-height:46vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .reset-choice{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 2px;
+    cursor:pointer;
+    border-bottom:1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .reset-choice:last-child{border-bottom:none;}
+  .reset-choice input[type=checkbox]{
+    width:16px;height:16px;
+    accent-color:var(--accent);
+    margin:2px 0 0;
+    flex:0 0 auto;
+    cursor:pointer;
+  }
+  .rc-text{flex:1;min-width:0;}
+  .rc-label{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;}
+  .rc-desc{font-size:11.5px;color:var(--dim);margin-top:1px;line-height:1.35;}
+  .reset-note{font-size:11px;color:var(--dim);margin:-4px 0 12px 2px;}
+  #resetPanel .modal-btn.primary:disabled{opacity:.45;pointer-events:none;}
   .switch{
     width:52px;height:30px;
     border-radius:999px;
@@ -6736,6 +6768,7 @@ document.addEventListener("keydown", (e) => {
   else if(document.getElementById("detailView").classList.contains("active")) closeDetail();
   else if(document.getElementById("newTaskView").classList.contains("active")) closeNewTaskView();
   else if(document.getElementById("editOverlay").classList.contains("active")) closeEdit();
+  else if(document.getElementById("resetPanel").classList.contains("active")) closeResetPanel();
   else if(document.getElementById("eventTaskView").classList.contains("active")) closeEventModal();
   else if(document.getElementById("dayView").classList.contains("active")) closeDayView();
   else if(document.getElementById("monthView").classList.contains("active")) closeMonthView();
@@ -8687,13 +8720,73 @@ function resetAllData(){
   localStorage.removeItem("checklist_last_retro_shown");
   location.reload();
 }
-function resetExp(){
-  const state = loadState();
-  state.xp = 0;
-  state.credits = 0;
-  saveState(state);
-  renderLevelBar();
-  sfx.undo();
+/* ---- Reset specific: pick exactly which parts of the questbook get wiped ---- */
+const RESET_CHOICES = [
+  { id: "progress",  label: "Level & XP",            desc: "Level returns to 1 and the XP bar empties." },
+  { id: "credits",   label: "Credits",               desc: "Hexagon balance goes back to zero." },
+  { id: "themes",    label: "Owned & custom themes", desc: "Bought and self-made themes are forgotten; back to the default accent." },
+  { id: "quests",    label: "Quests",                desc: "Every quest, including hidden and event-brought ones." },
+  { id: "events",    label: "Events",                desc: "All calendar events; their auto-brought quests go with them." },
+  { id: "history",   label: "History & retro stats", desc: "Quest log, weekly hits/misses and earned XP records." },
+  { id: "trash",     label: "Trash",                 desc: "Recently deleted quests." },
+  { id: "purchases", label: "Purchase log",          desc: "Theme purchase receipts." }
+];
+function buildResetChoices(){
+  const wrap = document.getElementById("resetChoices");
+  const apply = document.getElementById("resetApply");
+  wrap.innerHTML = "";
+  RESET_CHOICES.forEach(c => {
+    const row = document.createElement("label");
+    row.className = "reset-choice";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.dataset.resetId = c.id;
+    box.addEventListener("change", () => {
+      apply.disabled = !wrap.querySelector("input:checked");
+    });
+    const text = document.createElement("div");
+    text.className = "rc-text";
+    const lab = document.createElement("div");
+    lab.className = "rc-label";
+    lab.textContent = c.label;
+    const desc = document.createElement("div");
+    desc.className = "rc-desc";
+    desc.textContent = c.desc;
+    text.append(lab, desc);
+    row.append(box, text);
+    wrap.appendChild(row);
+  });
+  apply.disabled = true;
+}
+function openResetPanel(){
+  buildResetChoices();
+  document.getElementById("resetPanel").classList.add("active");
+}
+function closeResetPanel(){
+  document.getElementById("resetPanel").classList.remove("active");
+}
+function applyResetSelection(){
+  const chosen = [...document.querySelectorAll("#resetChoices input:checked")].map(b => b.dataset.resetId);
+  if(chosen.length === 0) return;
+  const labels = chosen.map(id => RESET_CHOICES.find(c => c.id === id).label).join(", ");
+  openConfirmGeneric(`Reset: ${labels}? This can't be undone.`, "Reset", () => {
+    const state = loadState();
+    let stateDirty = false;
+    if(chosen.includes("progress")){ state.xp = 0; stateDirty = true; }
+    if(chosen.includes("credits")){ state.credits = 0; stateDirty = true; }
+    if(stateDirty) saveState(state);
+    if(chosen.includes("themes")){
+      localStorage.removeItem(OWNED_KEY);
+      localStorage.removeItem(CUSTOM_KEY);
+      localStorage.setItem(THEME_KEY, ACCENTS[0].id);
+    }
+    if(chosen.includes("quests")) localStorage.removeItem(STORAGE_KEY);
+    if(chosen.includes("events")) localStorage.removeItem(EVENTS_KEY);
+    if(chosen.includes("history")) localStorage.removeItem(HISTORY_KEY);
+    if(chosen.includes("trash")) localStorage.removeItem(TRASH_KEY);
+    if(chosen.includes("purchases")) localStorage.removeItem(PURCHASES_KEY);
+    location.reload();
+  }, true);
 }
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("settingsBtn").addEventListener("click", () => {
@@ -8711,13 +8804,11 @@ document.addEventListener("DOMContentLoaded", () => {
   if(shopFreeBtn) shopFreeBtn.addEventListener("click", () => {
     if(typeof window.adminCreateFreeTheme === "function") window.adminCreateFreeTheme();
   });
-  document.getElementById("resetExpBtn").addEventListener("click", () => {
-    openConfirmGeneric(
-      "Reset all exp and credits? Your level returns to 1, the bar empties and the credit balance resets. Quests, events and bought themes are kept.",
-      "Reset exp",
-      resetExp,
-      true
-    );
+  document.getElementById("resetSpecificBtn").addEventListener("click", openResetPanel);
+  document.getElementById("resetCancel").addEventListener("click", closeResetPanel);
+  document.getElementById("resetApply").addEventListener("click", applyResetSelection);
+  document.getElementById("resetPanel").addEventListener("click", (e) => {
+    if(e.target === e.currentTarget) closeResetPanel();
   });
   document.getElementById("resetDataBtn").addEventListener("click", () => {
     openConfirmGeneric(
@@ -8855,6 +8946,18 @@ syncEventQuests();
   </div>
 </div>
 
+<div class="modal-overlay" id="resetPanel">
+  <div class="modal-card">
+    <div class="modal-title">Reset specific</div>
+    <div class="reset-choices" id="resetChoices"></div>
+    <div class="reset-note">Pick what you want wiped - everything else is kept.</div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="resetCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="resetApply">Reset selected</button>
+    </div>
+  </div>
+</div>
+
 <div class="detail-view" id="detailView">
   <div class="detail-header">
     <button class="back-btn" id="backBtn">‹ Collapse</button>
@@ -8946,7 +9049,7 @@ syncEventQuests();
       <div class="settings-danger-zone">
         <div class="settings-sub">Danger zone - these can't be undone.</div>
         <div class="settings-danger-row">
-          <button type="button" class="settings-action settings-action-danger" id="resetExpBtn">Reset exp</button>
+          <button type="button" class="settings-action settings-action-danger" id="resetSpecificBtn">Reset specific</button>
           <button type="button" class="settings-action settings-action-danger" id="resetDataBtn">Reset all data</button>
         </div>
       </div>
@@ -9870,6 +9973,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.37</div>
+<div class="version-watermark" aria-hidden="true">v1.5.38</div>
 </body>
 </html>
