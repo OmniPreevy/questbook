@@ -4248,7 +4248,9 @@ function closeConfirm(){
 function doDeleteQuest(taskId){
   const tasks = normalize(loadTasks());
   const t = tasks.find(x => x.id === taskId);
-  if(t) markEventQuestSkipped(t);
+  // only deleting an AUTO-brought quest suppresses its occurrence - deleting
+  // a manually brought one must leave the scheduled auto-creation alone
+  if(t && t.autoQuest) markEventQuestSkipped(t);
   if(t && !t.autoQuest) pushToTrash(t);
   saveTasks(tasks.filter(x => x.id !== taskId));
   sfx.del();
@@ -6900,15 +6902,41 @@ function lastWeekSundayStr(){
   return dateToStr(monday);
 }
 
+// The effective last day of a repeating series: repeatUntil snapped back to
+// the most recent actual occurrence day - a raw end date can land on a day
+// the event doesn't happen (a Sunday for a Mon/Wed/Fri event), so scheduling,
+// rendering and export all use the snapped value. Returns null for endless
+// series, "" when no occurrence day exists before the end date.
+function effectiveRepeatUntil(ev){
+  if(!ev.repeat || !ev.repeatUntil) return null;
+  const days = Array.isArray(ev.repeatDays) ? ev.repeatDays : [];
+  let d = new Date(ev.repeatUntil + "T00:00:00");
+  if(isNaN(d.getTime())) return null;
+  for(let i = 0; i < 8; i++){
+    const k = dateToStr(d);
+    if(ev.day && k < ev.day) break;
+    if(days.includes(d.getDay())) return k;
+    d.setDate(d.getDate() - 1);
+  }
+  return "";
+}
+
 // Drop events that can no longer occur: one-off events whose day is in the past
-// and repeating events whose repeatUntil has passed. Repeating events without a
-// repeatUntil never end and are always kept. Runs on load so old events (including
-// stale ones brought in by an imported backup) leave no traces in storage.
+// and repeating events whose (effective) repeatUntil has passed. Repeating
+// events without a repeatUntil never end and are always kept. Runs on load so
+// old events (including stale ones brought in by an imported backup) leave no
+// traces in storage.
 function pruneEndedEvents(){
   const cutoff = lastWeekSundayStr();
   const events = loadEvents();
   const kept = events.filter(ev => {
-    const last = ev.repeat ? (ev.repeatUntil || "") : (ev.day || "");
+    let last;
+    if(ev.repeat){
+      const eff = effectiveRepeatUntil(ev);
+      last = (eff === null) ? "" : eff;
+    } else {
+      last = ev.day || "";
+    }
     return !last || last >= cutoff;
   });
   if(kept.length !== events.length) saveEvents(kept);
@@ -6916,14 +6944,16 @@ function pruneEndedEvents(){
 pruneEndedEvents();
 
 // Does this event occur on the given date? Handles both one-off and
-// repeating events (repeat runs from event.day up to event.repeatUntil,
-// inclusive, on whichever weekdays are checked).
+// repeating events (repeat runs from event.day up to the effective end -
+// repeatUntil snapped to the last real occurrence day - inclusive, on
+// whichever weekdays are checked).
 function eventOccursOnDay(event, dateObj, dayKey){
   if(!event.repeat){
     return event.day === dayKey;
   }
   if(!event.day || dayKey < event.day) return false;
-  if(event.repeatUntil && dayKey > event.repeatUntil) return false;
+  const untilEff = effectiveRepeatUntil(event);
+  if(untilEff !== null && dayKey > untilEff) return false; // "" ends every day
   return event.repeatDays.includes(dateObj.getDay());
 }
 
@@ -6994,7 +7024,8 @@ function buildIcsContent(){
       if(ev.repeat && ev.repeatDays.length){
         const byday = ev.repeatDays.slice().sort().map(d => ICS_WEEKDAY[d]).join(",");
         let rrule = `FREQ=WEEKLY;BYDAY=${byday}`;
-        if(ev.repeatUntil) rrule += `;UNTIL=${ev.repeatUntil.replace(/-/g, "")}T235959Z`;
+        const untilEff = effectiveRepeatUntil(ev);
+        if(untilEff) rrule += `;UNTIL=${untilEff.replace(/-/g, "")}T235959Z`;
         lines.push(`RRULE:${rrule}`);
       }
       lines.push("END:VEVENT");
@@ -7021,7 +7052,8 @@ function buildIcsContent(){
     if(ev.repeat && ev.repeatDays.length){
       const byday = ev.repeatDays.slice().sort().map(d => ICS_WEEKDAY[d]).join(",");
       let rrule = `FREQ=WEEKLY;BYDAY=${byday}`;
-      if(ev.repeatUntil) rrule += `;UNTIL=${ev.repeatUntil.replace(/-/g, "")}T235959Z`;
+      const untilEff = effectiveRepeatUntil(ev);
+      if(untilEff) rrule += `;UNTIL=${untilEff.replace(/-/g, "")}T235959Z`;
       lines.push(`RRULE:${rrule}`);
     }
     lines.push("END:VEVENT");
@@ -7467,7 +7499,8 @@ function closeDayView(){
 function repeatSummary(ev){
   if(!ev.repeat || ev.repeatDays.length === 0) return "";
   const days = ev.repeatDays.slice().sort().map(d => WEEKDAY_ABBR[d]).join("/");
-  const until = ev.repeatUntil ? ` until ${ev.repeatUntil}` : "";
+  const untilEff = effectiveRepeatUntil(ev);
+  const until = untilEff ? ` until ${untilEff}` : "";
   return ` · repeats ${days}${until}`;
 }
 
@@ -7567,8 +7600,11 @@ function renderDayView(){
 let pendingBringEvent = null;
 
 function eventEndsToday(ev, tKey){
-  if(ev.repeat) return !!ev.repeatUntil && ev.repeatUntil === tKey;
-  return ev.day === tKey;
+  if(!ev.repeat) return ev.day === tKey;
+  // the snapped end date is guaranteed to be a real occurrence day, so this
+  // shortcut can never pin a quest to a day the event doesn't happen
+  const untilEff = effectiveRepeatUntil(ev);
+  return !!untilEff && untilEff === tKey;
 }
 
 // Next day (>= today) on which this event actually occurs - the day a quest
@@ -7580,10 +7616,11 @@ function nextEventOccurrenceKey(ev){
   }
   const d = new Date();
   d.setHours(0, 0, 0, 0);
+  const untilEff = effectiveRepeatUntil(ev);
   for(let i = 0; i < 366; i++){
     const k = dateToStr(d);
     if(k >= tKey && k >= (ev.day || "") &&
-       (!ev.repeatUntil || k <= ev.repeatUntil) &&
+       (untilEff === null || k <= untilEff) &&
        ev.repeatDays.includes(d.getDay())){
       return k;
     }
@@ -7677,11 +7714,15 @@ function shiftDayStr(dayStr, delta){
 
 /* ---- events that "appear as quest": auto-bring + lifecycle ----
    Every occurrence of an event with appearAsQuest gets its own one-time
-   quest, scheduled for the occurrence day (or a bit before it). The quest
-   is removed once that occurrence's end time passes, or at 3am the day
-   after the occurrence when the event has no defined end hour. Deleting or
-   hiding the quest by hand marks that occurrence so it isn't brought again
-   until the next one. Notes live on the event, so they survive the quest. */
+   quest, scheduled for the occurrence day (or a bit before it). Any quest
+   brought from an event - auto or manual - is removed 5 hours after its
+   occurrence's end time (or after 3am the day after the occurrence when
+   the event has no defined end hour). Bringing one manually never cancels
+   the automatic creation: at bring time the sync sees a quest already
+   exists for that occurrence and leaves it be. Deleting or hiding an AUTO
+   quest by hand marks that occurrence so it isn't brought again until the
+   next one; deleting a manual bring doesn't. Notes live on the event, so
+   they survive the quest. */
 // True when an event carries anything worth protecting: checklist or counter
 // items are always deliberate, text blocks only count once they have content
 // (quests always append one empty text line to their notes)
@@ -7706,8 +7747,12 @@ function cloneEventBlocks(blocks){
   return out;
 }
 
-// ms after which an occurrence's quest is removed: its end time, or 3am on
-// the day after the occurrence when there's no defined end hour
+// How long past its occurrence's end a brought quest sticks around before
+// the sync removes it - 5 hours, for auto-brought and manual brings alike
+const QUEST_LINGER_MS = 5 * 60 * 60 * 1000;
+
+// ms when an occurrence ends: its end time, or 3am on the day after the
+// occurrence when there's no defined end hour
 function eventEndMs(ev, occKey){
   if(ev.startTime && ev.durationMinutes && ev.durationMinutes > 0){
     const [h, m] = ev.startTime.split(":").map(Number);
@@ -7760,7 +7805,7 @@ function makeEventQuest(ev, occKey, scheduledDay){
 // Remember that the user removed/hid an auto-brought quest for an occurrence,
 // so syncEventQuests leaves that occurrence alone until the next one.
 function markEventQuestSkipped(task){
-  if(!task || !task.broughtFromEventId) return;
+  if(!task || !task.autoQuest || !task.broughtFromEventId) return;
   const events = loadEvents();
   const ev = events.find(e => e.id === task.broughtFromEventId);
   if(!ev) return;
@@ -7778,19 +7823,22 @@ function syncEventQuests(){
   const events = loadEvents();
   let tasks = loadTasks();
 
-  // remove auto-brought quests whose occurrence has ended
+  // remove quests brought from events once their occurrence has been over
+  // for 5 hours - covers auto-brought and manually brought quests alike
   const toRemove = tasks.filter(tt =>
-    tt.autoQuest && tt.broughtFromEventId &&
+    tt.broughtFromEventId &&
     (() => {
       const ev = events.find(e => e.id === tt.broughtFromEventId);
       if(!ev) return true;
       const occ = tt.scheduledOccurrence || tt.scheduledDay;
       if(!occ) return true;
-      // the occurrence this quest was brought for no longer exists on the
-      // event - its day, weekdays or end date were edited - so it's stale
       const occDate = new Date(occ + "T00:00:00");
-      if(isNaN(occDate.getTime()) || !eventOccursOnDay(ev, occDate, occ)) return true;
-      return now >= eventEndMs(ev, occ);
+      if(isNaN(occDate.getTime())) return true;
+      // an auto quest pinned to an occurrence that no longer exists on the
+      // event (its day, weekdays or end date were edited) is stale; manual
+      // brings may deliberately target off-days, so they're exempt from this
+      if(tt.autoQuest && !eventOccursOnDay(ev, occDate, occ)) return true;
+      return now >= eventEndMs(ev, occ) + QUEST_LINGER_MS;
     })()
   ).map(tt => tt.id);
   if(toRemove.length){
@@ -8029,6 +8077,17 @@ function saveEventModal(){
     questBeforeHours: appearAsQuest ? qHours : 0,
     questBeforeMinutes: appearAsQuest ? qMinutes : 0
   };
+
+  // snap a raw end date back to the last real occurrence day before storing
+  // (a Sunday "repeats until" for a Mon/Wed/Fri event becomes that Friday)
+  if(repeat && fields.repeatUntil){
+    fields.repeatUntil = effectiveRepeatUntil({
+      repeat: true,
+      day,
+      repeatDays: fields.repeatDays,
+      repeatUntil: fields.repeatUntil
+    }) || fields.repeatUntil;
+  }
 
   let saved = null;
   if(editingEventId){
@@ -10015,6 +10074,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.41</div>
+<div class="version-watermark" aria-hidden="true">v1.5.42</div>
 </body>
 </html>
