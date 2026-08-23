@@ -7339,7 +7339,16 @@ function renderCalendar(){
       times.innerHTML = `${first.startTime ? formatTime12h(first.startTime) : "-"}<br>${endTime ? formatTime12h(endTime) : "-"}`;
 
       const startMin = timeToMinutes(first.startTime || "00:00");
-      let endMin = endTime ? timeToMinutes(endTime) : startMin;
+      let endMin;
+      if(endTime){
+        endMin = timeToMinutes(endTime);
+      } else if(dayEvents.length > 1){
+        // the last event has no fixed end - still count it by its start so a
+        // multi-event day isn't measured as if it ended before that event
+        endMin = timeToMinutes(last.startTime || first.startTime || "00:00");
+      } else {
+        endMin = startMin;
+      }
       if(endMin < startMin) endMin += 24 * 60; // spans past midnight
       const spanHours = (endMin - startMin) / 60;
 
@@ -10154,6 +10163,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.45</div>
+<div class="version-watermark" aria-hidden="true">v1.5.46</div>
 </body>
 </html>
