@@ -4274,7 +4274,8 @@ function doDeleteQuest(taskId){
   // only deleting an AUTO-brought quest suppresses its occurrence - deleting
   // a manually brought one must leave the scheduled auto-creation alone
   if(t && t.autoQuest) markEventQuestSkipped(t);
-  if(t && !t.autoQuest) pushToTrash(t);
+  // throwaway test quests vanish outright - they'd only ever pollute the trash
+  if(t && !t.autoQuest && !t.test) pushToTrash(t);
   saveTasks(tasks.filter(x => x.id !== taskId));
   sfx.del();
   sfx.gun();
@@ -10163,6 +10164,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.46</div>
+<div class="version-watermark" aria-hidden="true">v1.5.47</div>
 </body>
 </html>
