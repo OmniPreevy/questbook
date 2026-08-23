@@ -5684,6 +5684,30 @@ function updateTrashBtn(list){
 
 const ONE_TIME_LINGER_MS = 5 * 60 * 60 * 1000; // one-time quests vanish 5 hours after being checked off
 
+// Rewrites a "clears in Xh Ym" label from its data-checked-at stamp; returns
+// true when the linger window is up. Backed by a lazy 30s ticker below so the
+// countdown actually ticks and the quest gets swept even if the app sits idle.
+function refreshOneTimeCountdown(el){
+  const checkedAt = parseInt(el.dataset.checkedAt, 10);
+  if(!checkedAt) return false;
+  const minsLeft = Math.max(0, Math.ceil((ONE_TIME_LINGER_MS - (Date.now() - checkedAt)) / 60000));
+  if(minsLeft <= 0){ el.textContent = "clears in 0m"; return true; }
+  const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
+  el.textContent = `clears in ${h > 0 ? h + "h " : ""}${m}m`;
+  return false;
+}
+let otCountdownTimer = null;
+function ensureOneTimeCountdownTimer(){
+  if(otCountdownTimer) return;
+  otCountdownTimer = setInterval(() => {
+    const labels = document.querySelectorAll(".ot-countdown");
+    if(labels.length === 0) return;
+    let expired = false;
+    labels.forEach(el => { if(refreshOneTimeCountdown(el)) expired = true; });
+    if(expired) render();
+  }, 30000);
+}
+
 // While a checked-off one-time quest is on screen, re-render once a minute so
 // the "clears in …" counter stays live, and force a render exactly when the
 // quest is due to vanish - it disappears even with the app left open instead
@@ -5994,9 +6018,10 @@ function render(){
     meta.className = "meta";
     if(task.oneTime){
       if(oneTimeDone){
-        const minsLeft = Math.max(0, Math.ceil((ONE_TIME_LINGER_MS - (Date.now() - task.checkedAt)) / 60000));
-        const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
-        meta.textContent = `clears in ${h > 0 ? h + "h " : ""}${m}m`;
+        meta.classList.add("ot-countdown");
+        meta.dataset.checkedAt = String(task.checkedAt);
+        refreshOneTimeCountdown(meta);
+        ensureOneTimeCountdownTimer();
       } else {
         meta.textContent = "one-time";
       }
