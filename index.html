@@ -985,6 +985,9 @@
     font-size:12px;
     cursor:pointer;
     flex:0 0 auto;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
   }
   .event-bring:active{opacity:.7;}
   .event-bring.done{
@@ -7561,8 +7564,8 @@ function renderDayView(){
       };
     } else {
       bring.textContent = "→ quest";
-      bring.title = "Bring this event into the quest list";
-      bring.onclick = () => bringEventToQuests(ev);
+      bring.title = "Bring now, or hold to schedule";
+      wireBringButton(bring, ev);
     }
 
     const edit = document.createElement("button");
@@ -7599,12 +7602,51 @@ function renderDayView(){
 
 let pendingBringEvent = null;
 
-function eventEndsToday(ev, tKey){
-  if(!ev.repeat) return ev.day === tKey;
-  // the snapped end date is guaranteed to be a real occurrence day, so this
-  // shortcut can never pin a quest to a day the event doesn't happen
-  const untilEff = effectiveRepeatUntil(ev);
-  return !!untilEff && untilEff === tKey;
+/* ---- bringing events into the quest list ----
+   A tap on "→ quest" brings the quest immediately for today - that button is
+   the "bypass the timer and bring it now" action. Holding the button opens
+   the scheduling dialog instead, for parking a quest on a future day. */
+const BRING_HOLD_MS = 450;
+
+// Tap: bring right away, no questions asked
+function bringEventToQuests(ev){
+  finishBringQuest(ev, todayStr());
+}
+
+// Hold: pick the day the quest should appear on, pre-filled with the event's
+// next occurrence
+function openBringSchedule(ev){
+  pendingBringEvent = ev;
+  const tKey = todayStr();
+  const dateInput = document.getElementById("bringDateInput");
+  dateInput.value = nextEventOccurrenceKey(ev) || tKey;
+  dateInput.min = tKey;
+  document.getElementById("bringOverlay").classList.add("active");
+  requestAnimationFrame(() => dateInput.focus());
+}
+
+// Wires hold-to-schedule onto a bring button without breaking plain clicks:
+// pointerdown starts a timer, and if it fires before release the following
+// click is swallowed so the quest isn't also brought for today.
+function wireBringButton(btn, ev){
+  let holdTimer = null;
+  let longPressed = false;
+  btn.addEventListener("contextmenu", e => e.preventDefault());
+  const cancelHold = () => { if(holdTimer){ clearTimeout(holdTimer); holdTimer = null; } };
+  btn.addEventListener("pointerdown", () => {
+    longPressed = false;
+    cancelHold();
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      longPressed = true;
+      openBringSchedule(ev);
+    }, BRING_HOLD_MS);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(t => btn.addEventListener(t, cancelHold));
+  btn.addEventListener("click", () => {
+    if(longPressed){ longPressed = false; return; }
+    bringEventToQuests(ev);
+  });
 }
 
 // Next day (>= today) on which this event actually occurs - the day a quest
@@ -7630,17 +7672,7 @@ function nextEventOccurrenceKey(ev){
 }
 
 function bringEventToQuests(ev){
-  const tKey = todayStr();
-  if(eventEndsToday(ev, tKey)){
-    finishBringQuest(ev, tKey);
-    return;
-  }
-  pendingBringEvent = ev;
-  const dateInput = document.getElementById("bringDateInput");
-  dateInput.value = nextEventOccurrenceKey(ev) || tKey;
-  dateInput.min = tKey;
-  document.getElementById("bringOverlay").classList.add("active");
-  requestAnimationFrame(() => dateInput.focus());
+  finishBringQuest(ev, todayStr());
 }
 
 function confirmBringDay(){
@@ -10074,6 +10106,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.42</div>
+<div class="version-watermark" aria-hidden="true">v1.5.43</div>
 </body>
 </html>
