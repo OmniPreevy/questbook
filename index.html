@@ -2242,6 +2242,15 @@
     gap:14px;
     margin-bottom:12px;
   }
+  .nt-quest-hint{
+    font-size:11px;
+    color:var(--dim);
+    margin:-2px 0 8px;
+  }
+  .nt-disappear-row{
+    margin-top:10px;
+    margin-bottom:6px;
+  }
   .nt-radio{
     display:flex;
     align-items:center;
@@ -3181,6 +3190,7 @@
         <span>appear as quest</span>
       </label>
       <div id="eventQuestOptions" style="display:none;">
+        <div class="nt-quest-hint">The quest's data is stored with the event</div>
         <div class="nt-quest-radio-row">
           <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
           <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span></label>
@@ -3193,6 +3203,17 @@
             <span class="nt-notify-unit">h</span>
             <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
             <span class="nt-notify-unit">m</span>
+          </div>
+        </div>
+        <label class="modal-checkbox-row nt-disappear-row">
+          <input type="checkbox" id="eventQuestDisappearToggle" checked>
+          <span>disappear on event end</span>
+        </label>
+        <div id="eventQuestLingerRow">
+          <div class="nt-notify-row">
+            <span class="nt-notify-label">remove after</span>
+            <input type="number" id="eventQuestLingerHours" min="0" step="0.5" value="5" aria-label="Hours after end">
+            <span class="nt-notify-unit">h</span>
           </div>
         </div>
       </div>
@@ -6881,6 +6902,8 @@ function normalizeEvent(e){
     questBeforeHours: (typeof e.questBeforeHours === "number" && e.questBeforeHours >= 0) ? e.questBeforeHours : 0,
     questBeforeMinutes: (typeof e.questBeforeMinutes === "number" && e.questBeforeMinutes >= 0) ? e.questBeforeMinutes : 0,
     questSkipped: (e.questSkipped && typeof e.questSkipped === "object") ? e.questSkipped : {},
+    questDisappearOnEnd: (typeof e.questDisappearOnEnd === "boolean") ? e.questDisappearOnEnd : true,
+    questLingerHours: (typeof e.questLingerHours === "number" && e.questLingerHours >= 0) ? e.questLingerHours : 5,
     noteBlocks: Array.isArray(e.noteBlocks) ? e.noteBlocks : []
   };
 }
@@ -7746,15 +7769,16 @@ function shiftDayStr(dayStr, delta){
 
 /* ---- events that "appear as quest": auto-bring + lifecycle ----
    Every occurrence of an event with appearAsQuest gets its own one-time
-   quest, scheduled for the occurrence day (or a bit before it). Any quest
-   brought from an event - auto or manual - is removed 5 hours after its
-   occurrence's end time (or after 3am the day after the occurrence when
-   the event has no defined end hour). Bringing one manually never cancels
-   the automatic creation: at bring time the sync sees a quest already
-   exists for that occurrence and leaves it be. Deleting or hiding an AUTO
-   quest by hand marks that occurrence so it isn't brought again until the
-   next one; deleting a manual bring doesn't. Notes live on the event, so
-   they survive the quest. */
+   quest, scheduled for the occurrence day (or a bit before it). Whether a
+   brought quest - auto or manual - is removed on a timer is up to the
+   event: "disappear on event end" removes it after the event's own linger
+   window past its occurrence's end (default 5 hours; untimed events count
+   from 3am the day after). Events with the toggle off never expire their
+   quests. Bringing one manually never cancels the automatic creation: at
+   bring time the sync sees a quest already exists for that occurrence and
+   leaves it be. Deleting or hiding an AUTO quest by hand marks that
+   occurrence so it isn't brought again until the next one; deleting a
+   manual bring doesn't. Notes live on the event, so they survive. */
 // True when an event carries anything worth protecting: checklist or counter
 // items are always deliberate, text blocks only count once they have content
 // (quests always append one empty text line to their notes)
@@ -7779,8 +7803,8 @@ function cloneEventBlocks(blocks){
   return out;
 }
 
-// How long past its occurrence's end a brought quest sticks around before
-// the sync removes it - 5 hours, for auto-brought and manual brings alike
+// Fallback linger window past an occurrence's end - 5 hours - used when an
+// event has "disappear on event end" but no valid custom duration stored
 const QUEST_LINGER_MS = 5 * 60 * 60 * 1000;
 
 // ms when an occurrence ends: its end time, or 3am on the day after the
@@ -7870,7 +7894,13 @@ function syncEventQuests(){
       // event (its day, weekdays or end date were edited) is stale; manual
       // brings may deliberately target off-days, so they're exempt from this
       if(tt.autoQuest && !eventOccursOnDay(ev, occDate, occ)) return true;
-      return now >= eventEndMs(ev, occ) + QUEST_LINGER_MS;
+      // time-based removal is per-event: disappear-on-end uses the event's
+      // own linger window; without it quests stay until handled by hand
+      if(!ev.questDisappearOnEnd) return false;
+      const lingerMs = (typeof ev.questLingerHours === "number" && ev.questLingerHours >= 0)
+        ? ev.questLingerHours * 3600000
+        : QUEST_LINGER_MS;
+      return now >= eventEndMs(ev, occ) + lingerMs;
     })()
   ).map(tt => tt.id);
   if(toRemove.length){
@@ -7949,6 +7979,15 @@ function setEventQuestMode(mode){
   });
   document.getElementById("eventQuestBeforeRow").style.display = (mode === "before") ? "block" : "none";
 }
+// disappear-on-event-end toggle + its custom linger window (falls back to
+// the built-in 5 hours whenever the stored value is missing or invalid)
+function setEventQuestDisappear(disappearOn, lingerHours){
+  const tgl = document.getElementById("eventQuestDisappearToggle");
+  tgl.checked = !!disappearOn;
+  document.getElementById("eventQuestLingerRow").style.display = tgl.checked ? "block" : "none";
+  document.getElementById("eventQuestLingerHours").value =
+    (typeof lingerHours === "number" && lingerHours >= 0) ? lingerHours : 5;
+}
 function setEventNotifyQuestModeVisual(){
   document.getElementById("eventNotifyOptions").classList.toggle(
     "quest-mode", document.getElementById("eventNotifyMode").value === "quest");
@@ -7997,6 +8036,7 @@ function openEventModal(eventId, opts){
     document.getElementById("eventQuestBeforeDays").value = (typeof ev.questBeforeDays === "number" && ev.questBeforeDays >= 0) ? ev.questBeforeDays : 0;
     document.getElementById("eventQuestBeforeHours").value = (typeof ev.questBeforeHours === "number" && ev.questBeforeHours >= 0) ? ev.questBeforeHours : 0;
     document.getElementById("eventQuestBeforeMinutes").value = (typeof ev.questBeforeMinutes === "number" && ev.questBeforeMinutes >= 0) ? ev.questBeforeMinutes : 0;
+    setEventQuestDisappear(ev.questDisappearOnEnd !== false, ev.questLingerHours);
     // notify me setter (legacy remindHours maps into it)
     let notifyOn = !!ev.notifyEnabled;
     let nHours = (typeof ev.notifyHours === "number") ? ev.notifyHours : 0;
@@ -8030,6 +8070,7 @@ function openEventModal(eventId, opts){
     document.getElementById("eventQuestBeforeDays").value = 0;
     document.getElementById("eventQuestBeforeHours").value = 0;
     document.getElementById("eventQuestBeforeMinutes").value = 0;
+    setEventQuestDisappear(true, 5);
     document.getElementById("eventNotifyToggle").checked = false;
     document.getElementById("eventNotifyOptions").style.display = "none";
     document.getElementById("eventNotifyHours").value = 0;
@@ -8065,6 +8106,9 @@ function saveEventModal(){
   const repeat = eventRepeatOn;
   const repeatUntil = document.getElementById("eventRepeatUntil").value || "";
   const appearAsQuest = document.getElementById("eventQuestToggle").checked;
+  const questDisappearOnEnd = document.getElementById("eventQuestDisappearToggle").checked;
+  const lingerRaw = parseFloat(document.getElementById("eventQuestLingerHours").value);
+  const questLingerHours = isNaN(lingerRaw) ? 5 : Math.max(0, lingerRaw);
 
   if(!day || !startTime){
     alert("Please fill in a day and a start time.");
@@ -8107,7 +8151,9 @@ function saveEventModal(){
     questMode: appearAsQuest ? qMode : "day",
     questBeforeDays: appearAsQuest ? qDays : 0,
     questBeforeHours: appearAsQuest ? qHours : 0,
-    questBeforeMinutes: appearAsQuest ? qMinutes : 0
+    questBeforeMinutes: appearAsQuest ? qMinutes : 0,
+    questDisappearOnEnd: appearAsQuest ? questDisappearOnEnd : true,
+    questLingerHours: appearAsQuest ? questLingerHours : 5
   };
 
   // snap a raw end date back to the last real occurrence day before storing
@@ -8172,6 +8218,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!e.target.checked && modeSel.value === "quest") modeSel.value = "event";
     setEventNotifyQuestModeVisual();
     if(e.target.checked) syncEventQuests();
+  });
+  document.getElementById("eventQuestDisappearToggle").addEventListener("change", (e) => {
+    document.getElementById("eventQuestLingerRow").style.display = e.target.checked ? "block" : "none";
   });
   document.getElementById("eventNotifyMode").addEventListener("change", () => {
     setEventNotifyQuestModeVisual();
@@ -10106,6 +10155,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.43</div>
+<div class="version-watermark" aria-hidden="true">v1.5.44</div>
 </body>
 </html>
