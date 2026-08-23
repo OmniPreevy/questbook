@@ -8745,8 +8745,10 @@ function renderShop(){
       const refundBtn = document.createElement("button");
       refundBtn.type = "button";
       refundBtn.className = "shop-item-btn shop-item-btn-refund";
-      refundBtn.textContent = `Refund · ${CUSTOM_THEME_PRICE} ◇`;
-      refundBtn.title = "Delete this theme and get back " + CUSTOM_THEME_PRICE + " credits";
+      refundBtn.textContent = t.free ? "Delete" : `Refund · ${CUSTOM_THEME_PRICE} ◇`;
+      refundBtn.title = t.free
+        ? "This theme was created for free - deleting it returns no credits"
+        : "Delete this theme and get back " + CUSTOM_THEME_PRICE + " credits";
       refundBtn.onclick = () => refundCustomTheme(t);
       btnWrap.appendChild(refundBtn);
     }
@@ -8859,14 +8861,19 @@ document.addEventListener("DOMContentLoaded", () => {
   if(exitBtn) exitBtn.addEventListener("click", exitInspectMode);
 });
 function refundCustomTheme(t){
+  const paid = !t.free; // free admin-created themes never cost anything, so they refund nothing
   openConfirmGeneric(
-    `Refund ${t.name}? It will be deleted and you'll get ${CUSTOM_THEME_PRICE} credits back.`,
-    "Refund",
+    paid
+      ? `Refund ${t.name}? It will be deleted and you'll get ${CUSTOM_THEME_PRICE} credits back.`
+      : `Delete ${t.name}? It was created for free, so there is nothing to refund.`,
+    paid ? "Refund" : "Delete",
     () => {
-      const state = loadState();
-      state.credits = (state.credits || 0) + CUSTOM_THEME_PRICE;
-      saveState(state);
-      renderLevelBar();
+      if(paid){
+        const state = loadState();
+        state.credits = (state.credits || 0) + CUSTOM_THEME_PRICE;
+        saveState(state);
+        renderLevelBar();
+      }
       saveCustomThemes(loadCustomThemes().filter(c => c.id !== t.id));
       saveOwnedThemes(loadOwnedThemes().filter(o => o !== t.id));
       try{
@@ -8890,7 +8897,7 @@ function refundCustomTheme(t){
       renderShop();
       if(typeof renderThemeSwatches === "function") renderThemeSwatches();
       sfx.undo();
-      showToast(`${t.name} refunded · +${CUSTOM_THEME_PRICE} ◇`);
+      showToast(paid ? `${t.name} refunded · +${CUSTOM_THEME_PRICE} ◇` : `${t.name} deleted`);
     },
     true
   );
@@ -9968,7 +9975,8 @@ syncEventQuests();
       accent: "#4f9d69",
       card: "#1c1c1c",
       border: "#2b2b2b",
-      custom: true
+      custom: true,
+      free: !!free
     };
     const customThemes = loadCustomThemes();
     customThemes.push(t);
