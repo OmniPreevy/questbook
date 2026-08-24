@@ -1486,6 +1486,19 @@
     font-size:15px;
     flex:0 0 auto;
   }
+  /* Side-panel flip control - only meaningful where panes dock beside the
+     main column, so it stays hidden until the wide-screen layout kicks in */
+  .pane-move-btn{
+    background:var(--shop-btn-bg, var(--card));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--shop-btn-color, var(--text));
+    border-radius:8px;
+    padding:8px 11px;
+    font-size:15px;
+    line-height:1;
+    flex:0 0 auto;
+    display:none;
+  }
   .detail-title{
     font-size:17px;
     font-weight:600;
@@ -3005,6 +3018,7 @@
     }
     .detail-view:not(.active){display:none;}
     .detail-view.pane-left{order:1;}
+    .pane-move-btn{display:inline-block;}
     .fab-add{z-index:40;}
     .fab-choice-popover{z-index:41;}
   }
@@ -3282,6 +3296,7 @@
 <div class="detail-view" id="monthView">
   <div class="detail-header">
     <button class="back-btn" id="monthBackBtn">‹ Collapse</button>
+    <button type="button" class="pane-move-btn" data-pane="monthView" title="Move panel to the other side" aria-label="Move panel to the other side">⇄</button>
     <div class="detail-title">Calendar</div>
   </div>
   <div class="month-nav">
@@ -3309,6 +3324,7 @@
 <div class="detail-view" id="hiddenView">
   <div class="detail-header">
     <button class="back-btn" id="hiddenBackBtn">‹ Collapse</button>
+    <button type="button" class="pane-move-btn" data-pane="hiddenView" title="Move panel to the other side" aria-label="Move panel to the other side">⇄</button>
     <div class="detail-title">Hidden quests</div>
   </div>
   <div class="detail-scroll">
@@ -3330,6 +3346,7 @@
 <div class="detail-view" id="dayView">
   <div class="detail-header">
     <button class="back-btn" id="dayBackBtn">‹ Collapse</button>
+    <button type="button" class="pane-move-btn" data-pane="dayView" title="Move panel to the other side" aria-label="Move panel to the other side">⇄</button>
     <div class="detail-title" id="dayViewTitle">Day</div>
     <div class="detail-header-actions">
       <button type="button" id="dayAddEventBtn" class="icon-add-btn" aria-label="Add event" title="Add event">+</button>
@@ -9035,6 +9052,21 @@ function syncPaneBackLabels(){
     if(el && el.textContent !== label) el.textContent = label;
   });
 }
+// ⇄ button in each side-panel header - flips the panel to the opposite
+// side of the main column, even when the window only fits main + one pane
+document.querySelectorAll(".pane-move-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if(window.innerWidth < 1024) return;
+    const id = btn.dataset.pane;
+    const el = paneEl(id);
+    if(!el || !el.classList.contains("active")) return;
+    const target = paneSideOf(id) === "left" ? "right" : "left";
+    const occupant = activePaneOnSide(target);
+    if(occupant && occupant !== id) closePane(occupant);
+    setPaneSide(id, target);
+    sfx.click();
+  });
+});
 syncPaneBackLabels();
 
 render();
@@ -9168,6 +9200,7 @@ syncEventQuests();
 <div class="detail-view" id="detailView">
   <div class="detail-header">
     <button class="back-btn" id="backBtn">‹ Collapse</button>
+    <button type="button" class="pane-move-btn" data-pane="detailView" title="Move panel to the other side" aria-label="Move panel to the other side">⇄</button>
     <div class="detail-title" id="detailTitle">Task</div>
     <div class="detail-header-actions">
       <button type="button" id="addCheckItemBtn" class="icon-add-btn" aria-label="Add checklist item" title="Add checklist item">☑</button>
@@ -10181,6 +10214,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.50</div>
+<div class="version-watermark" aria-hidden="true">v1.5.51</div>
 </body>
 </html>
