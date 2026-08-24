@@ -5716,23 +5716,9 @@ function ensureOneTimeCountdownTimer(){
 // the "clears in …" counter stays live, and force a render exactly when the
 // quest is due to vanish - it disappears even with the app left open instead
 // of sitting at a stale "clears in 0m" until the next interaction.
-let oneTimeQuestTimer = null;
-function scheduleOneTimeQuestRenders(tasks){
-  clearTimeout(oneTimeQuestTimer);
-  const now = Date.now();
-  let next = null;
-  tasks.forEach(t => {
-    if(!t.oneTime || !t.checkedAt) return;
-    const expiry = t.checkedAt + ONE_TIME_LINGER_MS;
-    if(expiry > now){
-      next = (next === null) ? Math.min(expiry, now + 60000) : Math.min(next, expiry, now + 60000);
-    }
-  });
-  if(next !== null){
-    oneTimeQuestTimer = setTimeout(() => render(), next - now);
-  }
-}
-
+// The "clears in ..." labels tick via ensureOneTimeCountdownTimer (started at
+// boot below) - it also forces the render that sweeps each quest once its
+// linger window is up, even if the app sits idle.
 function normalize(tasks){
   const t = todayStr();
   const w = weekStr();
@@ -6207,8 +6193,6 @@ function render(){
   } else {
     expandBtn.style.display = "none";
   }
-
-  scheduleOneTimeQuestRenders(tasks);
 }
 
 function collapseQuestList(){
@@ -7655,10 +7639,6 @@ let pendingBringEvent = null;
 const BRING_HOLD_MS = 450;
 
 // Tap: bring right away, no questions asked
-function bringEventToQuests(ev){
-  finishBringQuest(ev, todayStr());
-}
-
 // Hold: pick the day the quest should appear on, pre-filled with the event's
 // next occurrence
 function openBringSchedule(ev){
@@ -7684,6 +7664,9 @@ function wireBringButton(btn, ev){
     cancelHold();
     holdTimer = setTimeout(() => {
       holdTimer = null;
+      // a rerender may have replaced this row mid-hold; opening the scheduler
+      // from a detached button would pop a dialog up out of nowhere
+      if(!btn.isConnected) return;
       longPressed = true;
       openBringSchedule(ev);
     }, BRING_HOLD_MS);
@@ -9045,6 +9028,7 @@ function syncPaneBackLabels(){
   });
 }
 syncPaneBackLabels();
+ensureOneTimeCountdownTimer();
 
 render();
 renderLevelBar();
@@ -10190,6 +10174,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.58</div>
+<div class="version-watermark" aria-hidden="true">v1.5.59</div>
 </body>
 </html>
