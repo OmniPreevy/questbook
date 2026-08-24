@@ -5449,7 +5449,11 @@ document.addEventListener("DOMContentLoaded", () => {
 /* --------------------------------------------- */
 
 function todayStr(d = new Date()){
-  return d.toISOString().slice(0,10);
+  // local date, not UTC - the old toISOString() version made "today" flip to
+  // another day partway through the real day in every non-UTC timezone,
+  // desyncing quest resets, reminders and auto-quest creation from the
+  // local-date event engine
+  return dateToStr(d);
 }
 // Monday-based week key (default). Repeatable quests can set their own reset day
 // via task.weekResetDay (0=Sun..6=Sat); weekStrFor() anchors on that instead.
@@ -10181,6 +10185,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.53</div>
+<div class="version-watermark" aria-hidden="true">v1.5.54</div>
 </body>
 </html>
