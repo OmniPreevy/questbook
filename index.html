@@ -6947,14 +6947,6 @@ function saveEvents(events){
   updateSaveSize();
 }
 
-// Date string of the Sunday that ended last week (Mon-Sun weeks). Anything that
-// could last occur before this day can never appear in the calendar again.
-function lastWeekSundayStr(){
-  const monday = new Date(previousWeekKey() + "T00:00:00");
-  monday.setDate(monday.getDate() + 6);
-  return dateToStr(monday);
-}
-
 // The effective last day of a repeating series: repeatUntil snapped back to
 // the most recent actual occurrence day - a raw end date can land on a day
 // the event doesn't happen (a Sunday for a Mon/Wed/Fri event), so scheduling,
@@ -6978,9 +6970,11 @@ function effectiveRepeatUntil(ev){
 // and repeating events whose (effective) repeatUntil has passed. Repeating
 // events without a repeatUntil never end and are always kept. Runs on load so
 // old events (including stale ones brought in by an imported backup) leave no
-// traces in storage.
+// traces in storage. The cutoff is the previous week's Monday so events that
+// ended anywhere inside last week survive - the retro recap still counts the
+// full prior Mon-Sun window.
 function pruneEndedEvents(){
-  const cutoff = lastWeekSundayStr();
+  const cutoff = previousWeekKey();
   const events = loadEvents();
   const kept = events.filter(ev => {
     let last;
@@ -10196,6 +10190,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.55</div>
+<div class="version-watermark" aria-hidden="true">v1.5.56</div>
 </body>
 </html>
