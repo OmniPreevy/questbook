@@ -6082,7 +6082,6 @@ function render(){
           render();
           scheduleDoneReposition();
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
-          maybeOpenCalendarAfterDone();
         } else {
           t.checkedAt = null;
           t.lastCheckedAt = null;
@@ -6140,7 +6139,6 @@ function render(){
           render();
           if(dayFullyDone) scheduleDoneReposition();
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
-          if(dayFullyDone) maybeOpenCalendarAfterDone();
         } else {
           // today's target was already fully met - tap again to undo the whole day
           const earnedToday = t.dayCount * xpReward(t);
@@ -7471,20 +7469,6 @@ function applyEventMarkerColors(){
 })();
 function closeMonthView(){
   closePane("monthView");
-}
-// After a quest is finished, surface the month calendar on the right side -
-// but only when the right slot is free, so it never shoves another panel aside.
-function maybeOpenCalendarAfterDone(){
-  if(window.innerWidth < 1024) return;
-  if(paneActive("monthView")) return;
-  if(paneSideTaken("right")) return;
-  const now = new Date();
-  monthViewYear = now.getFullYear();
-  monthViewMonth = now.getMonth();
-  applyEventMarkerColors();
-  renderMonthGrid();
-  setPaneSide("monthView", "right");
-  paneEl("monthView").classList.add("active");
 }
 function shiftMonth(delta){
   monthViewMonth += delta;
@@ -10197,6 +10181,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.47</div>
+<div class="version-watermark" aria-hidden="true">v1.5.50</div>
 </body>
 </html>
