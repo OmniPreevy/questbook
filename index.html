@@ -9052,21 +9052,30 @@ function syncPaneBackLabels(){
     if(el && el.textContent !== label) el.textContent = label;
   });
 }
-// ⇄ button in each side-panel header - flips the panel to the opposite
-// side of the main column, even when the window only fits main + one pane
-document.querySelectorAll(".pane-move-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    if(window.innerWidth < 1024) return;
-    const id = btn.dataset.pane;
-    const el = paneEl(id);
-    if(!el || !el.classList.contains("active")) return;
-    const target = paneSideOf(id) === "left" ? "right" : "left";
-    const occupant = activePaneOnSide(target);
-    if(occupant && occupant !== id) closePane(occupant);
-    setPaneSide(id, target);
-    sfx.click();
+// \u21c4 button in each side-panel header - flips the panel to the opposite
+// side of the main column, even when the window only fits main + one pane.
+// Wired on DOMContentLoaded because some panel headers (detailView) sit
+// later in the document than this script block.
+function wirePaneMoveButtons(){
+  document.querySelectorAll(".pane-move-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if(window.innerWidth < 1024) return;
+      const id = btn.dataset.pane;
+      const el = paneEl(id);
+      if(!el || !el.classList.contains("active")) return;
+      const target = paneSideOf(id) === "left" ? "right" : "left";
+      const occupant = activePaneOnSide(target);
+      if(occupant && occupant !== id) closePane(occupant);
+      setPaneSide(id, target);
+      sfx.click();
+    });
   });
-});
+}
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", wirePaneMoveButtons);
+} else {
+  wirePaneMoveButtons();
+}
 syncPaneBackLabels();
 
 render();
