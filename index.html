@@ -7079,7 +7079,7 @@ function buildIcsContent(){
         const byday = ev.repeatDays.slice().sort().map(d => ICS_WEEKDAY[d]).join(",");
         let rrule = `FREQ=WEEKLY;BYDAY=${byday}`;
         const untilEff = effectiveRepeatUntil(ev);
-        if(untilEff) rrule += `;UNTIL=${untilEff.replace(/-/g, "")}T235959Z`;
+        if(untilEff) rrule += `;UNTIL=${untilEff.replace(/-/g, "")}T235959`;
         lines.push(`RRULE:${rrule}`);
       }
       lines.push("END:VEVENT");
@@ -10190,6 +10190,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.56</div>
+<div class="version-watermark" aria-hidden="true">v1.5.57</div>
 </body>
 </html>
