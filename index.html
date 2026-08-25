@@ -3636,18 +3636,33 @@ async function sbResetPassword(email){
   const { error } = await sb.auth.resetPasswordForEmail(email);
   if(error) throw error;
 }
+function openLogin(){
+  updateAccountUI();
+  const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+  const statusEl = document.getElementById("acctSyncStatus");
+  if(statusEl) statusEl.textContent = lastSync ? "Last sync: " + new Date(lastSync).toLocaleString() : "Not synced yet";
+  document.getElementById("loginView").classList.add("active");
+}
+function closeLogin(){ document.getElementById("loginView").classList.remove("active"); }
 function updateAccountUI(){
-  const loggedOut = document.getElementById("acctLoggedOut");
-  const loggedIn = document.getElementById("acctLoggedIn");
+  const loggedOut = document.getElementById("loginLoggedOut");
+  const loggedIn = document.getElementById("loginLoggedIn");
   const emailEl = document.getElementById("acctEmail");
-  if(!loggedOut || !loggedIn || !emailEl) return;
-  if(currentUser){
-    loggedOut.style.display = "none";
-    loggedIn.style.display = "";
-    emailEl.textContent = currentUser.email;
-  } else {
-    loggedOut.style.display = "";
-    loggedIn.style.display = "none";
+  const label = document.getElementById("acctLabel");
+  const sub = document.getElementById("acctSub");
+  if(loggedOut && loggedIn){
+    if(currentUser){
+      loggedOut.style.display = "none";
+      loggedIn.style.display = "";
+      if(emailEl) emailEl.textContent = currentUser.email;
+      if(label) label.textContent = currentUser.email;
+      if(sub) sub.textContent = "Tap to manage";
+    } else {
+      loggedOut.style.display = "";
+      loggedIn.style.display = "none";
+      if(label) label.textContent = "Log in";
+      if(sub) sub.textContent = "Sync your data across devices";
+    }
   }
 }
 
@@ -7564,16 +7579,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const pass = document.getElementById("acctPassIn").value;
     if(!email || !pass){ acctMsg("Enter email and password", false); return; }
     acctMsg("Creating account...", true);
-    try { await sbSignUp(email, pass); acctMsg("Check your email to confirm, then sign in.", true); }
+    try { await sbSignUp(email, pass); acctMsg("Check your email to confirm, then log in.", true); }
     catch(e){ acctMsg(e.message || "Sign up failed", false); }
   });
   document.getElementById("acctSignInBtn").addEventListener("click", async () => {
     const email = document.getElementById("acctEmailIn").value.trim();
     const pass = document.getElementById("acctPassIn").value;
     if(!email || !pass){ acctMsg("Enter email and password", false); return; }
-    acctMsg("Signing in...", true);
+    acctMsg("Logging in...", true);
     try { await sbSignIn(email, pass); acctMsg("", true); }
-    catch(e){ acctMsg(e.message || "Sign in failed", false); }
+    catch(e){ acctMsg(e.message || "Log in failed", false); }
   });
   document.getElementById("acctSignOutBtn").addEventListener("click", async () => {
     try { await sbSignOut(); } catch(e){ console.error(e); }
@@ -7590,6 +7605,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try { await syncToCloud(); acctMsg("Synced!", true); }
     catch(e){ acctMsg(e.message || "Sync failed", false); }
   });
+  document.getElementById("acctRow").addEventListener("click", openLogin);
+  document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
 
   // Init supabase on load
   initSupabase();
@@ -7600,6 +7617,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("keydown", (e) => {
   if(e.key !== "Escape") return;
   if(document.getElementById("confirmOverlay").classList.contains("active")) { closeConfirm(); render(); }
+  else if(document.getElementById("loginView").classList.contains("active")) { closeLogin(); updateAccountUI(); }
   else if(document.getElementById("shopView").classList.contains("active")) { closeShop(); }
   else if(document.getElementById("settingsView").classList.contains("active")) { closeSettings(); }
   else if(document.getElementById("customDayOverlay").classList.contains("active")) closeCustomDayModal();
@@ -9695,9 +9713,6 @@ function openSettings(){
   renderSoundBtn();
   updateNotifyHint();
   updateAccountUI();
-  const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-  const statusEl = document.getElementById("acctSyncStatus");
-  if(statusEl) statusEl.textContent = lastSync ? "Last sync: " + new Date(lastSync).toLocaleString() : "Not synced yet";
   document.getElementById("settingsView").classList.add("active");
 }
 function closeSettings(){
@@ -10114,42 +10129,13 @@ syncEventQuests();
 
       <div class="settings-section">
         <div class="settings-section-title">Account</div>
-        <div id="acctLoggedOut">
-          <div class="settings-row">
-            <div class="settings-row-text">
-              <div class="settings-row-title">Email</div>
+        <div class="settings-row" id="acctRow" style="cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div>
+              <div class="settings-row-title" id="acctLabel">Log in</div>
+              <div class="settings-row-sub" id="acctSub"></div>
             </div>
-            <input type="email" id="acctEmailIn" class="settings-input" placeholder="you@example.com" autocomplete="email">
-          </div>
-          <div class="settings-row">
-            <div class="settings-row-text">
-              <div class="settings-row-title">Password</div>
-            </div>
-            <input type="password" id="acctPassIn" class="settings-input" placeholder="Min 6 characters" autocomplete="current-password">
-          </div>
-          <div class="settings-danger-row" style="margin-top:8px;">
-            <button type="button" class="settings-action" id="acctSignInBtn" style="flex:1;border-color:var(--accent);">Sign In</button>
-            <button type="button" class="settings-action" id="acctSignUpBtn" style="flex:1;border-color:var(--accent);">Sign Up</button>
-          </div>
-          <div style="text-align:center;margin-top:8px;">
-            <button type="button" id="acctForgotBtn" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password?</button>
-          </div>
-          <div id="acctAuthMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:6px;min-height:18px;"></div>
-        </div>
-        <div id="acctLoggedIn" style="display:none;">
-          <div class="settings-row">
-            <div class="settings-row-text">
-              <div class="settings-row-title" id="acctEmail"></div>
-              <div class="settings-row-sub">Synced to Supabase</div>
-            </div>
-            <button type="button" class="settings-action" id="acctSignOutBtn" style="border-color:var(--danger);">Sign Out</button>
-          </div>
-          <div class="settings-row" style="margin-top:6px;">
-            <div class="settings-row-text">
-              <div class="settings-row-title">Sync now</div>
-              <div class="settings-row-sub" id="acctSyncStatus"></div>
-            </div>
-            <button type="button" class="settings-action" id="acctSyncBtn" style="border-color:var(--accent);">Sync</button>
           </div>
         </div>
       </div>
@@ -10162,6 +10148,50 @@ syncEventQuests();
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<div class="settings-overlay" id="loginView">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <button type="button" class="back-btn" id="loginBackBtn" aria-label="Close">‹ Back</button>
+      <div class="settings-title" id="loginTitle">Log In</div>
+    </div>
+    <div class="settings-scroll" style="padding:16px;">
+      <div id="loginLoggedOut">
+        <div style="margin-bottom:14px;">
+          <div class="settings-row-title" style="margin-bottom:6px;">Email</div>
+          <input type="email" id="acctEmailIn" class="settings-input" style="width:100%;" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div style="margin-bottom:14px;">
+          <div class="settings-row-title" style="margin-bottom:6px;">Password</div>
+          <input type="password" id="acctPassIn" class="settings-input" style="width:100%;" placeholder="Min 6 characters" autocomplete="current-password">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button type="button" class="settings-action" id="acctSignInBtn" style="flex:1;border-color:var(--accent);padding:12px;">Log In</button>
+          <button type="button" class="settings-action" id="acctSignUpBtn" style="flex:1;border-color:var(--accent);padding:12px;">Sign Up</button>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+          <button type="button" id="acctForgotBtn" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password?</button>
+        </div>
+        <div id="acctAuthMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:10px;min-height:18px;"></div>
+      </div>
+      <div id="loginLoggedIn" style="display:none;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div class="settings-row-title" id="acctEmail" style="font-size:14px;"></div>
+          <div class="settings-row-sub">Synced to Supabase</div>
+        </div>
+        <div class="settings-row" style="margin-bottom:10px;">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Sync now</div>
+            <div class="settings-row-sub" id="acctSyncStatus"></div>
+          </div>
+          <button type="button" class="settings-action" id="acctSyncBtn" style="border-color:var(--accent);">Sync</button>
+        </div>
+        <button type="button" class="settings-action" id="acctSignOutBtn" style="width:100%;border-color:var(--danger);margin-top:10px;padding:12px;">Log Out</button>
+      </div>
     </div>
   </div>
 </div>
@@ -11082,6 +11112,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.74</div>
+<div class="version-watermark" aria-hidden="true">v1.5.75</div>
 </body>
 </html>
