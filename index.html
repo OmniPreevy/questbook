@@ -3243,17 +3243,18 @@
         <div class="nt-quest-hint">The quest's data is stored with the event</div>
         <div class="nt-quest-radio-row">
           <label class="nt-radio"><input type="radio" name="eventQuestMode" value="day" checked><span>Day of</span></label>
-          <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span></label>
-        </div>
-        <div id="eventQuestBeforeRow" style="display:none;">
-          <div class="nt-notify-row">
-            <input type="number" id="eventQuestBeforeDays" min="0" placeholder="d" aria-label="Days before">
-            <span class="nt-notify-unit">d</span>
-            <input type="number" id="eventQuestBeforeHours" min="0" placeholder="h" aria-label="Hours before">
-            <span class="nt-notify-unit">h</span>
-            <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
-            <span class="nt-notify-unit">m</span>
-          </div>
+          <label class="nt-radio"><input type="radio" name="eventQuestMode" value="before"><span>Time Before</span>
+            <div id="eventQuestBeforeRow" style="display:none;">
+              <div class="nt-notify-row">
+                <input type="number" id="eventQuestBeforeDays" min="0" placeholder="d" aria-label="Days before">
+                <span class="nt-notify-unit">d</span>
+                <input type="number" id="eventQuestBeforeHours" min="0" placeholder="h" aria-label="Hours before">
+                <span class="nt-notify-unit">h</span>
+                <input type="number" id="eventQuestBeforeMinutes" min="0" max="59" placeholder="m" aria-label="Minutes before">
+                <span class="nt-notify-unit">m</span>
+              </div>
+            </div>
+          </label>
         </div>
         <label class="modal-checkbox-row nt-disappear-row">
           <input type="checkbox" id="eventQuestDisappearToggle" checked>
@@ -10855,6 +10856,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.69</div>
+<div class="version-watermark" aria-hidden="true">v1.5.70</div>
 </body>
 </html>
