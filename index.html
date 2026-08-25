@@ -2934,6 +2934,18 @@
     cursor:pointer;
   }
   .settings-action:active{border-color:var(--accent);color:var(--accent);}
+  .settings-input{
+    background:var(--shop-btn-bg, var(--bg));
+    border:1px solid var(--shop-btn-color, var(--border));
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 12px;
+    font-size:13px;
+    width:160px;
+    flex:0 0 auto;
+  }
+  .settings-input:focus{border-color:var(--accent);outline:none;}
+  .settings-input::placeholder{color:var(--dim);}
   .settings-danger-zone{
     margin-top:26px;
     padding-top:18px;
@@ -3570,11 +3582,121 @@
   </div>
 </div>
 
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const STORAGE_KEY = "checklist_tasks_v1";
 const STATE_KEY = "checklist_state_v1";
 const AUTO_HIDE_DONE_KEY = "checklist_autohide_done_v1";
 const EVENTS_KEY = "checklist_events_v1";
+
+// ── Supabase Auth ───────────────────────────────────────────────────
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON = window.SUPABASE_ANON || "";
+let sbClient = null;
+let currentUser = null;
+function initSupabase(){
+  if(sbClient || !SUPABASE_URL || !SUPABASE_ANON || !window.supabase) return sbClient;
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  sbClient.auth.onAuthStateChange((_event, session) => {
+    currentUser = session ? session.user : null;
+    updateAccountUI();
+  });
+  sbClient.auth.getSession().then(({ data }) => {
+    currentUser = data.session ? data.session.user : null;
+    updateAccountUI();
+  });
+  return sbClient;
+}
+async function sbSignUp(email, password){
+  const sb = initSupabase();
+  if(!sb) throw new Error("Supabase not configured");
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if(error) throw error;
+  return data;
+}
+async function sbSignIn(email, password){
+  const sb = initSupabase();
+  if(!sb) throw new Error("Supabase not configured");
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error) throw error;
+  return data;
+}
+async function sbSignOut(){
+  const sb = initSupabase();
+  if(!sb) return;
+  const { error } = await sb.auth.signOut();
+  if(error) throw error;
+  currentUser = null;
+  updateAccountUI();
+}
+async function sbResetPassword(email){
+  const sb = initSupabase();
+  if(!sb) throw new Error("Supabase not configured");
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  if(error) throw error;
+}
+function updateAccountUI(){
+  const loggedOut = document.getElementById("acctLoggedOut");
+  const loggedIn = document.getElementById("acctLoggedIn");
+  const emailEl = document.getElementById("acctEmail");
+  if(!loggedOut || !loggedIn || !emailEl) return;
+  if(currentUser){
+    loggedOut.style.display = "none";
+    loggedIn.style.display = "";
+    emailEl.textContent = currentUser.email;
+  } else {
+    loggedOut.style.display = "";
+    loggedIn.style.display = "none";
+  }
+}
+
+// ── Cloud Sync ──────────────────────────────────────────────────────
+const RECEPTS_KEY = "qb_sync_receipts";
+const LAST_SYNC_KEY = "qb_last_sync_at";
+function loadReceipts(){ try{ return JSON.parse(localStorage.getItem(RECEPTS_KEY)) || []; }catch(e){ return []; }}
+function saveReceipts(r){ localStorage.setItem(RECEPTS_KEY, JSON.stringify(r)); }
+function queueReceipt(entry){
+  const r = loadReceipts();
+  entry.ts = Date.now();
+  r.push(entry);
+  saveReceipts(r);
+}
+function applyPayloadToStorage(data){
+  if(!data) return;
+  if(data.tasks) localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tasks));
+  if(data.state) localStorage.setItem(STATE_KEY, JSON.stringify(data.state));
+  if(data.events) localStorage.setItem(EVENTS_KEY, JSON.stringify(data.events));
+  if(data.history) localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history));
+  if(data.currentTheme) localStorage.setItem(THEME_KEY, data.currentTheme);
+  if(data.ownedThemes) localStorage.setItem(OWNED_KEY, JSON.stringify(data.ownedThemes));
+  if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
+  if(data.themeOverrides) localStorage.setItem("qb-admin-overrides", JSON.stringify(data.themeOverrides));
+}
+async function syncToCloud(){
+  const sb = initSupabase();
+  if(!sb || !currentUser) throw new Error("Not signed in");
+  const payload = savePayloadData();
+  payload.syncedAt = new Date().toISOString();
+  const { error } = await sb.from("user_data").upsert({
+    user_id: currentUser.id,
+    data: payload,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "user_id" });
+  if(error) throw error;
+  localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  const statusEl = document.getElementById("acctSyncStatus");
+  if(statusEl) statusEl.textContent = "Last sync: just now";
+}
+async function syncFromCloud(){
+  const sb = initSupabase();
+  if(!sb || !currentUser) throw new Error("Not signed in");
+  const { data, error } = await sb.from("user_data").select("data, updated_at").eq("user_id", currentUser.id).single();
+  if(error) throw error;
+  if(data && data.data) applyPayloadToStorage(data.data);
+  localStorage.setItem(LAST_SYNC_KEY, data.updated_at || new Date().toISOString());
+  return data;
+}
 
 // Manual name tables - avoids relying on toLocaleDateString/Intl, which can
 // be unreliable or missing full locale data on some Android WebViews and
@@ -7434,6 +7556,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if(file) importDataFromFile(file);
     fileInput.value = "";
   });
+
+  // Account auth buttons
+  const acctMsg = (msg, ok) => { const el = document.getElementById("acctAuthMsg"); if(el){ el.textContent = msg; el.style.color = ok ? "var(--accent)" : "var(--danger)"; } };
+  document.getElementById("acctSignUpBtn").addEventListener("click", async () => {
+    const email = document.getElementById("acctEmailIn").value.trim();
+    const pass = document.getElementById("acctPassIn").value;
+    if(!email || !pass){ acctMsg("Enter email and password", false); return; }
+    acctMsg("Creating account...", true);
+    try { await sbSignUp(email, pass); acctMsg("Check your email to confirm, then sign in.", true); }
+    catch(e){ acctMsg(e.message || "Sign up failed", false); }
+  });
+  document.getElementById("acctSignInBtn").addEventListener("click", async () => {
+    const email = document.getElementById("acctEmailIn").value.trim();
+    const pass = document.getElementById("acctPassIn").value;
+    if(!email || !pass){ acctMsg("Enter email and password", false); return; }
+    acctMsg("Signing in...", true);
+    try { await sbSignIn(email, pass); acctMsg("", true); }
+    catch(e){ acctMsg(e.message || "Sign in failed", false); }
+  });
+  document.getElementById("acctSignOutBtn").addEventListener("click", async () => {
+    try { await sbSignOut(); } catch(e){ console.error(e); }
+  });
+  document.getElementById("acctForgotBtn").addEventListener("click", async () => {
+    const email = document.getElementById("acctEmailIn").value.trim();
+    if(!email){ acctMsg("Enter your email first", false); return; }
+    acctMsg("Sending reset email...", true);
+    try { await sbResetPassword(email); acctMsg("Check your inbox for a reset link.", true); }
+    catch(e){ acctMsg(e.message || "Reset failed", false); }
+  });
+  document.getElementById("acctSyncBtn").addEventListener("click", async () => {
+    acctMsg("Syncing...", true);
+    try { await syncToCloud(); acctMsg("Synced!", true); }
+    catch(e){ acctMsg(e.message || "Sync failed", false); }
+  });
+
+  // Init supabase on load
+  initSupabase();
 });
 /* --------------------------------------------------- */
 
@@ -9535,6 +9694,10 @@ function openSettings(){
   renderThemeSwatches();
   renderSoundBtn();
   updateNotifyHint();
+  updateAccountUI();
+  const lastSync = localStorage.getItem(LAST_SYNC_KEY);
+  const statusEl = document.getElementById("acctSyncStatus");
+  if(statusEl) statusEl.textContent = lastSync ? "Last sync: " + new Date(lastSync).toLocaleString() : "Not synced yet";
   document.getElementById("settingsView").classList.add("active");
 }
 function closeSettings(){
@@ -9951,6 +10114,44 @@ syncEventQuests();
 
       <div class="settings-section">
         <div class="settings-section-title">Account</div>
+        <div id="acctLoggedOut">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-title">Email</div>
+            </div>
+            <input type="email" id="acctEmailIn" class="settings-input" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-title">Password</div>
+            </div>
+            <input type="password" id="acctPassIn" class="settings-input" placeholder="Min 6 characters" autocomplete="current-password">
+          </div>
+          <div class="settings-danger-row" style="margin-top:8px;">
+            <button type="button" class="settings-action" id="acctSignInBtn" style="flex:1;border-color:var(--accent);">Sign In</button>
+            <button type="button" class="settings-action" id="acctSignUpBtn" style="flex:1;border-color:var(--accent);">Sign Up</button>
+          </div>
+          <div style="text-align:center;margin-top:8px;">
+            <button type="button" id="acctForgotBtn" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password?</button>
+          </div>
+          <div id="acctAuthMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:6px;min-height:18px;"></div>
+        </div>
+        <div id="acctLoggedIn" style="display:none;">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-title" id="acctEmail"></div>
+              <div class="settings-row-sub">Synced to Supabase</div>
+            </div>
+            <button type="button" class="settings-action" id="acctSignOutBtn" style="border-color:var(--danger);">Sign Out</button>
+          </div>
+          <div class="settings-row" style="margin-top:6px;">
+            <div class="settings-row-text">
+              <div class="settings-row-title">Sync now</div>
+              <div class="settings-row-sub" id="acctSyncStatus"></div>
+            </div>
+            <button type="button" class="settings-action" id="acctSyncBtn" style="border-color:var(--accent);">Sync</button>
+          </div>
+        </div>
       </div>
 
       <div class="settings-danger-zone">
@@ -10881,6 +11082,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.73</div>
+<div class="version-watermark" aria-hidden="true">v1.5.74</div>
 </body>
 </html>
