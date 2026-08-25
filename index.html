@@ -8852,9 +8852,25 @@ document.addEventListener("DOMContentLoaded", () => {
     r.addEventListener("change", () => setEventQuestMode(r.value));
   });
   document.querySelectorAll("#weekdayPicker .weekday-btn").forEach(btn => {
+    let clickTimer = null;
     btn.addEventListener("click", () => {
+      if(clickTimer){ clearTimeout(clickTimer); clickTimer = null; return; }
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        const day = parseInt(btn.dataset.day, 10);
+        setWeekdaySelected(day, !modalRepeatDays.includes(day));
+      }, 220);
+    });
+    btn.addEventListener("dblclick", () => {
+      if(clickTimer){ clearTimeout(clickTimer); clickTimer = null; }
+      modalRepeatDays = [0,1,2,3,4,5,6];
+      refreshWeekdayButtons();
+    });
+    btn.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
       const day = parseInt(btn.dataset.day, 10);
-      setWeekdaySelected(day, !modalRepeatDays.includes(day));
+      modalRepeatDays = [0,1,2,3,4,5,6].filter(d => d !== day);
+      refreshWeekdayButtons();
     });
   });
   // event priority popover
@@ -10839,6 +10855,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.68</div>
+<div class="version-watermark" aria-hidden="true">v1.5.69</div>
 </body>
 </html>
