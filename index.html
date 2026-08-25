@@ -2428,6 +2428,29 @@
   }
   .dynamic-active{color:var(--accent);}
   .dynamic-missed{color:var(--orange, #f97316);}
+  .nt-editable-val{
+    background:transparent;
+    border:1px solid transparent;
+    color:var(--text);
+    font-weight:600;
+    font-size:13px;
+    width:36px;
+    text-align:right;
+    padding:2px 4px;
+    border-radius:4px;
+    cursor:pointer;
+    -moz-appearance:textfield;
+  }
+  .nt-editable-val::-webkit-outer-spin-button,
+  .nt-editable-val::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .nt-editable-val:hover,.nt-editable-val:focus{
+    border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 10%, transparent);
+    outline:none;
+  }
   input[type=range]{
     -webkit-appearance:none;
     width:100%;
@@ -3440,7 +3463,7 @@
       <label class="modal-checkbox-row nt-inline-check">
         <input type="checkbox" id="ntPerDurationToggle" checked>
         <span>Times it should be done in each duration</span>
-        <span class="nt-slider-val" id="ntWeekVal">4</span>
+        <input type="number" class="nt-slider-val nt-editable-val" id="ntWeekVal" min="1" max="7" value="4">
       </label>
       <input type="range" id="ntWeekSlider" min="1" max="7" value="4">
     </div>
@@ -3449,7 +3472,7 @@
       <label class="modal-checkbox-row nt-inline-check">
         <input type="checkbox" id="ntPerDayToggle">
         <span>Repetitions needed each day for completion</span>
-        <span class="nt-slider-val" id="ntDayVal">1</span>
+        <input type="number" class="nt-slider-val nt-editable-val" id="ntDayVal" min="1" max="5" value="1">
       </label>
       <div id="ntPerDaySliderRow" style="display:none;">
         <div class="nt-day-row">
@@ -3468,10 +3491,10 @@
   </label>
 
   <div id="ntDynamicFields" class="nt-dynamic-fields" style="display:none;">
-    <div class="nt-slider-group">
+      <div class="nt-slider-group">
       <div class="nt-slider-label">
         <span>Deadline (days)</span>
-        <span class="nt-slider-val" id="ntDynamicDeadlineVal">7</span>
+        <input type="number" class="nt-slider-val nt-editable-val" id="ntDynamicDeadlineVal" min="1" max="90" value="7">
       </div>
       <input type="range" id="ntDynamicDeadlineSlider" min="1" max="90" value="7">
     </div>
@@ -6663,7 +6686,11 @@ function setNtDynamic(on){
     document.getElementById("ntPriorityBar").style.opacity = "0.3";
     document.getElementById("ntPriorityBar").style.pointerEvents = "none";
   } else {
+    // Turning off dynamic: uncheck Repeats and hide its subsections
+    ntRepeat = false;
+    document.getElementById("ntRepeatToggle").checked = false;
     document.getElementById("ntRepeatToggle").disabled = false;
+    document.getElementById("ntSliders").style.display = "none";
     document.getElementById("ntPriorityBar").style.opacity = "";
     document.getElementById("ntPriorityBar").style.pointerEvents = "";
   }
@@ -6706,10 +6733,10 @@ function resetNewTaskForm(){
   document.getElementById("ntName").value = "";
   document.getElementById("ntNotes").value = "";
   document.getElementById("ntWeekSlider").value = 4;
-  document.getElementById("ntWeekVal").textContent = 4;
+  document.getElementById("ntWeekVal").value = 4;
   document.getElementById("ntDaySlider").value = 1;
   ntPerDay = 1;
-  document.getElementById("ntDayVal").textContent = 1;
+  document.getElementById("ntDayVal").value = 1;
   document.getElementById("ntWeekReset").value = "";
   document.getElementById("ntDurationType").value = "weekly";
   ntDurationType = "weekly";
@@ -6727,7 +6754,7 @@ function resetNewTaskForm(){
   document.getElementById("ntDynamicToggle").checked = false;
   document.getElementById("ntDynamicFields").style.display = "none";
   document.getElementById("ntDynamicDeadlineSlider").value = 7;
-  document.getElementById("ntDynamicDeadlineVal").textContent = 7;
+  document.getElementById("ntDynamicDeadlineVal").value = 7;
   ntDynamicDeadlineDays = 7;
   document.getElementById("ntThresholdP2").value = 50;
   document.getElementById("ntThresholdP3").value = 80;
@@ -7182,15 +7209,34 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("ntPerDurationToggle").addEventListener("change", (e) => {
     ntPerDurationEnabled = e.target.checked;
     document.getElementById("ntWeekSlider").style.display = e.target.checked ? "" : "none";
+    document.getElementById("ntWeekVal").style.display = e.target.checked ? "" : "none";
   });
 
   // per-day checkbox
   document.getElementById("ntPerDayToggle").addEventListener("change", (e) => {
     ntPerDayEnabled = e.target.checked;
     document.getElementById("ntPerDaySliderRow").style.display = e.target.checked ? "" : "none";
+    document.getElementById("ntDayVal").style.display = e.target.checked ? "" : "none";
     if(e.target.checked){
       document.getElementById("ntDaySlider").value = Math.max(1, ntPerDay);
-      document.getElementById("ntDayVal").textContent = ntPerDay;
+      document.getElementById("ntDayVal").value = ntPerDay;
+    }
+  });
+
+  // editable value: times per duration
+  document.getElementById("ntWeekVal").addEventListener("input", (e) => {
+    const v = parseInt(e.target.value, 10);
+    if(!isNaN(v) && v >= 1){
+      document.getElementById("ntWeekSlider").value = Math.min(v, parseInt(document.getElementById("ntWeekSlider").max, 10));
+    }
+  });
+
+  // editable value: reps per day
+  document.getElementById("ntDayVal").addEventListener("input", (e) => {
+    const v = parseInt(e.target.value, 10);
+    if(!isNaN(v) && v >= 1){
+      ntPerDay = v;
+      document.getElementById("ntDaySlider").value = Math.min(v, parseInt(document.getElementById("ntDaySlider").max, 10));
     }
   });
 
@@ -7198,7 +7244,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const dynamicDeadlineSlider = document.getElementById("ntDynamicDeadlineSlider");
   dynamicDeadlineSlider.addEventListener("input", () => {
     ntDynamicDeadlineDays = parseInt(dynamicDeadlineSlider.value, 10);
-    document.getElementById("ntDynamicDeadlineVal").textContent = ntDynamicDeadlineDays;
+    document.getElementById("ntDynamicDeadlineVal").value = ntDynamicDeadlineDays;
   });
 
   // notify me block
@@ -7229,14 +7275,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // weekly slider
   const weekSlider = document.getElementById("ntWeekSlider");
   weekSlider.addEventListener("input", () => {
-    document.getElementById("ntWeekVal").textContent = weekSlider.value;
+    document.getElementById("ntWeekVal").value = weekSlider.value;
   });
 
   // daily slider (1-5) + custom value that can exceed it
   const daySlider = document.getElementById("ntDaySlider");
   daySlider.addEventListener("input", () => {
     ntPerDay = parseInt(daySlider.value, 10);
-    document.getElementById("ntDayVal").textContent = ntPerDay;
+    document.getElementById("ntDayVal").value = ntPerDay;
   });
   document.getElementById("ntDayCustomBtn").addEventListener("click", () => {
     document.getElementById("customDayInput").value = ntPerDay;
@@ -7270,7 +7316,7 @@ function saveCustomDay(){
   const n = parseInt(document.getElementById("customDayInput").value, 10);
   if(!isNaN(n) && n >= 1){
     ntPerDay = n;
-    document.getElementById("ntDayVal").textContent = n;
+    document.getElementById("ntDayVal").value = n;
     document.getElementById("ntDaySlider").value = Math.min(n, 5);
   }
   closeCustomDayModal();
@@ -10791,6 +10837,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.64</div>
+<div class="version-watermark" aria-hidden="true">v1.5.65</div>
 </body>
 </html>
