@@ -4761,6 +4761,47 @@ function restorePendingFocus(){
   }
 }
 
+// Navigate from one note-editable (textarea or label input) to the previous or
+// next one in document order; used by ArrowUp/ArrowDown at block edges.
+function focusAdjacentBlock(currentBlockId, direction){
+  const doc = document.getElementById("notesDoc");
+  const children = Array.from(doc.children);
+  let currentIdx = -1;
+  for(let i = 0; i < children.length; i++){
+    if(children[i].dataset?.blockId === currentBlockId){ currentIdx = i; break; }
+    const nested = children[i].querySelector?.(`[data-block-id="${currentBlockId}"]`);
+    if(nested){ currentIdx = i; break; }
+  }
+  if(currentIdx === -1) return;
+  const step = direction === "prev" ? -1 : 1;
+  for(let i = currentIdx + step; i >= 0 && i < children.length; i += step){
+    const el = children[i];
+    const ta = (el.tagName === "TEXTAREA" && el.classList.contains("notes-line-text")) ? el : el.querySelector?.("textarea.notes-line-text");
+    if(ta){
+      ta.focus();
+      ta.setSelectionRange(0, 0);
+      lastCursorInfo = { blockId: ta.dataset.blockId, pos: 0 };
+      return;
+    }
+    const inp = el.querySelector?.(".item-label-input");
+    if(inp){ inp.focus(); return; }
+  }
+}
+
+// Insert a new blank text line after a checklist / counter label on Enter
+function addTextLineAfter(blockId){
+  const newId = generateId();
+  withCurrentTask(t => {
+    const idx = t.noteBlocks.findIndex(b => b.id === blockId);
+    if(idx === -1) return;
+    t.noteBlocks.splice(idx + 1, 0, { id: newId, type: "text", content: "" });
+    ensureTrailingTextBlock(t);
+  });
+  pendingFocus = { kind: "text", blockId: newId, pos: 0 };
+  renderNotesDoc();
+  restorePendingFocus();
+}
+
 function addCheckItem(){
   if(!currentDetailTaskId) return;
   const block = { id: generateId(), type: "check", label: "", checked: false, resetMode: "none", periodKey: null };
@@ -4918,6 +4959,12 @@ function renderNotesDoc(){
         if(e.key === "Backspace" && ta.selectionStart === 0 && ta.selectionEnd === 0){
           e.preventDefault();
           handleBackspaceAtStart(block.id);
+        } else if(e.key === "ArrowUp" && ta.selectionStart === 0 && ta.selectionEnd === 0){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "prev");
+        } else if(e.key === "ArrowDown" && ta.selectionStart === ta.value.length && ta.selectionEnd === ta.value.length){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "next");
         }
       });
       doc.appendChild(ta);
@@ -4939,6 +4986,18 @@ function renderNotesDoc(){
       label.value = block.label;
       label.placeholder = "Checklist item";
       label.oninput = () => { updateBlockLabel(block.id, label.value); updateNotesStats(); };
+      label.addEventListener("keydown", (e) => {
+        if(e.key === "Enter"){
+          e.preventDefault();
+          addTextLineAfter(block.id);
+        } else if(e.key === "ArrowUp"){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "prev");
+        } else if(e.key === "ArrowDown"){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "next");
+        }
+      });
 
       const toggle = document.createElement("button");
       toggle.type = "button";
@@ -4973,6 +5032,18 @@ function renderNotesDoc(){
       label.value = block.label;
       label.placeholder = "Counter label";
       label.oninput = () => { updateBlockLabel(block.id, label.value); updateNotesStats(); };
+      label.addEventListener("keydown", (e) => {
+        if(e.key === "Enter"){
+          e.preventDefault();
+          addTextLineAfter(block.id);
+        } else if(e.key === "ArrowUp"){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "prev");
+        } else if(e.key === "ArrowDown"){
+          e.preventDefault();
+          focusAdjacentBlock(block.id, "next");
+        }
+      });
 
       const reset = document.createElement("button");
       reset.type = "button";
@@ -10188,6 +10259,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.61</div>
+<div class="version-watermark" aria-hidden="true">v1.5.62</div>
 </body>
 </html>
