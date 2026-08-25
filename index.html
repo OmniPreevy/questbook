@@ -5737,6 +5737,21 @@ function normalize(tasks){
       task.lastCheckedAt = null;
     }
     const tw = weekStrFor(task.weekResetDay);
+    // Realign legacy week keys before comparing: versions before the local-
+    // timezone fix formatted the anchored date through UTC, so stored keys
+    // landed a day early (a Sunday for Monday-anchored quests etc.). A real
+    // key always carries the anchor weekday - if it doesn't, roll it forward
+    // to the true anchor INSTEAD of treating it as a new week and wiping the
+    // weekly progress.
+    if(typeof task.weekKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(task.weekKey)){
+      const anchorWd = (task.weekResetDay === null || task.weekResetDay === undefined) ? 1 : task.weekResetDay;
+      const kwDate = new Date(task.weekKey + "T00:00:00");
+      if(!isNaN(kwDate.getTime()) && kwDate.getDay() !== anchorWd){
+        const fixed = new Date(kwDate);
+        do { fixed.setDate(fixed.getDate() + 1); } while(fixed.getDay() !== anchorWd);
+        task.weekKey = dateToStr(fixed);
+      }
+    }
     if(task.weekKey !== tw){
       // First-window grace: a quest created (or given its reset day) in the
       // middle of a reset window would otherwise be wiped at the very next
@@ -10173,6 +10188,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.60</div>
+<div class="version-watermark" aria-hidden="true">v1.5.61</div>
 </body>
 </html>
