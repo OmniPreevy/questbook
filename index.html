@@ -2399,6 +2399,35 @@
     font-size:13px;
     margin-top:2px;
   }
+  .nt-duration-row{display:flex;gap:12px;margin-bottom:12px;}
+  .nt-duration-reset-group{flex:1;}
+  .nt-duration-type-group{flex:1;}
+  .nt-inline-check{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;}
+  .nt-inline-check input[type=checkbox]{margin:0;}
+  .nt-inline-check .nt-slider-val{margin-left:auto;}
+  .nt-dynamic-fields{
+    margin-top:8px;
+    padding:12px;
+    background:color-mix(in srgb, var(--card) 60%, transparent);
+    border-radius:10px;
+    border:1px solid var(--border);
+  }
+  .nt-threshold-row{margin-top:8px;}
+  .nt-threshold-label{font-size:12px;color:var(--dim);display:block;margin-bottom:6px;}
+  .nt-threshold-inputs{display:flex;gap:8px;flex-wrap:wrap;}
+  .nt-threshold-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);}
+  .nt-threshold-item input[type=number]{
+    width:48px;
+    background:color-mix(in srgb, var(--card) 82%, #0b0b0b);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    padding:4px 6px;
+    font-size:12px;
+    text-align:center;
+  }
+  .dynamic-active{color:var(--accent);}
+  .dynamic-missed{color:var(--orange, #f97316);}
   input[type=range]{
     -webkit-appearance:none;
     width:100%;
@@ -3370,41 +3399,106 @@
   </label>
 
   <div class="nt-sliders" id="ntSliders" style="display:none;">
-    <div class="nt-slider-group">
-      <div class="nt-slider-label">
-        <span>Times per week</span>
-        <span class="nt-slider-val" id="ntWeekVal">4</span>
+    <div class="nt-duration-row">
+      <div class="nt-slider-group nt-duration-reset-group">
+        <div class="nt-slider-label">
+          <span>Duration resets on</span>
+        </div>
+        <select id="ntWeekReset" class="nt-select" aria-label="Day this quest's duration resets">
+          <option value="">Default (Monday)</option>
+          <option value="0">Sunday</option>
+          <option value="1">Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5">Friday</option>
+          <option value="6">Saturday</option>
+        </select>
       </div>
+      <div class="nt-slider-group nt-duration-type-group">
+        <div class="nt-slider-label">
+          <span>Set duration</span>
+        </div>
+        <select id="ntDurationType" class="nt-select" aria-label="Duration length">
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Bi-weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="ntCustomDurationRow" class="nt-slider-group" style="display:none;">
+      <div class="nt-slider-label">
+        <span>Custom duration (days)</span>
+        <span class="nt-slider-val" id="ntCustomDurationVal">7</span>
+      </div>
+      <input type="range" id="ntCustomDurationSlider" min="2" max="90" value="7">
+    </div>
+
+    <div id="ntPerDurationGroup" class="nt-slider-group">
+      <label class="modal-checkbox-row nt-inline-check">
+        <input type="checkbox" id="ntPerDurationToggle" checked>
+        <span>Days per duration</span>
+        <span class="nt-slider-val" id="ntWeekVal">4</span>
+      </label>
       <input type="range" id="ntWeekSlider" min="1" max="7" value="4">
     </div>
 
     <div class="nt-slider-group">
-      <div class="nt-slider-label">
+      <label class="modal-checkbox-row nt-inline-check">
+        <input type="checkbox" id="ntPerDayToggle">
         <span>Times per day</span>
         <span class="nt-slider-val" id="ntDayVal">1</span>
-      </div>
-      <div class="nt-day-row">
-        <input type="range" id="ntDaySlider" min="1" max="5" value="1">
-        <button type="button" id="ntDayCustomBtn" class="nt-custom-btn">Custom</button>
+      </label>
+      <div id="ntPerDaySliderRow" style="display:none;">
+        <div class="nt-day-row">
+          <input type="range" id="ntDaySlider" min="1" max="5" value="1">
+          <button type="button" id="ntDayCustomBtn" class="nt-custom-btn">Custom</button>
+        </div>
       </div>
     </div>
 
     <div class="nt-event-note">Want your quest to appear on specific days? <span class="nt-event-link" id="ntCreateEventLink">Create an event instead!</span></div>
 
-    <div class="nt-slider-group">
-      <div class="nt-slider-label">
-        <span>Week resets on</span>
+    <label class="modal-checkbox-row">
+      <input type="checkbox" id="ntDynamicToggle">
+      <span>Dynamic Reset Time</span>
+    </label>
+
+    <div id="ntDynamicFields" class="nt-dynamic-fields" style="display:none;">
+      <div class="nt-slider-group">
+        <div class="nt-slider-label">
+          <span>Deadline (days)</span>
+          <span class="nt-slider-val" id="ntDynamicDeadlineVal">7</span>
+        </div>
+        <input type="range" id="ntDynamicDeadlineSlider" min="1" max="90" value="7">
       </div>
-      <select id="ntWeekReset" class="nt-select" aria-label="Day this quest's week resets">
-        <option value="">Default (Monday)</option>
-        <option value="0">Sunday</option>
-        <option value="1">Monday</option>
-        <option value="2">Tuesday</option>
-        <option value="3">Wednesday</option>
-        <option value="4">Thursday</option>
-        <option value="5">Friday</option>
-        <option value="6">Saturday</option>
-      </select>
+      <div class="nt-threshold-row">
+        <span class="nt-threshold-label">Auto-priority thresholds:</span>
+        <div class="nt-threshold-inputs">
+          <div class="nt-threshold-item">
+            <span>P2</span>
+            <input type="number" id="ntThresholdP2" min="1" max="99" value="50">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P3</span>
+            <input type="number" id="ntThresholdP3" min="1" max="99" value="80">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P4</span>
+            <input type="number" id="ntThresholdP4" min="1" max="99" value="90">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P5</span>
+            <input type="number" id="ntThresholdP5" min="1" max="100" value="100">
+            <span>%</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3965,6 +4059,17 @@ function formatTimerMs(ms){
   const tenths = Math.floor((totalMs % 1000) / 100);
   const pad = n => String(n).padStart(2, "0");
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}.${tenths}` : `${pad(m)}:${pad(s)}.${tenths}`;
+}
+
+// Formats milliseconds into a human-readable duration like "3d 12h" or "2h 30m"
+function formatDurationMs(ms){
+  const totalSec = Math.floor(Math.abs(ms) / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  if(days > 0) return `${days}d ${hours}h`;
+  if(hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 function getTaskTimerElapsedMs(t){
@@ -5365,6 +5470,28 @@ function openEdit(taskId){
     document.getElementById("editPerDay").value = t.perDay;
     document.getElementById("editWeekReset").value = (t.weekResetDay === null || t.weekResetDay === undefined) ? "" : t.weekResetDay;
     document.getElementById("editRemindHours").value = (t.remindHours === null || t.remindHours === undefined) ? "" : t.remindHours;
+
+    // Duration type
+    const editDt = document.getElementById("editDurationType");
+    editDt.value = t.durationType || "weekly";
+    document.getElementById("editCustomDurationRow").style.display = (t.durationType === "custom") ? "" : "none";
+    document.getElementById("editCustomDurationDays").value = t.customDurationDays || 7;
+
+    // Dynamic mode
+    const dynSec = document.getElementById("editDynamicSection");
+    if(t.dynamic){
+      dynSec.style.display = "";
+      document.getElementById("editDynamicDeadline").value = t.dynamicDeadlineDays || 7;
+      document.getElementById("editThresholdP2").value = t.dynamicThresholds?.p2 ?? 50;
+      document.getElementById("editThresholdP3").value = t.dynamicThresholds?.p3 ?? 80;
+      document.getElementById("editThresholdP4").value = t.dynamicThresholds?.p4 ?? 90;
+      document.getElementById("editThresholdP5").value = t.dynamicThresholds?.p5 ?? 100;
+      document.getElementById("editPriority").disabled = true;
+    } else {
+      dynSec.style.display = "none";
+      document.getElementById("editPriority").disabled = false;
+    }
+
     setEditMode(t.oneTime ? "once" : "repeat");
   }
 
@@ -5439,10 +5566,42 @@ function saveEdit(){
     // Re-anchor the week key to the new reset day WITHOUT wiping this week's
     // progress - otherwise changing the reset day instantly zeroes the weekly
     // counter. It now resets at the next actual reset-day boundary instead.
-    t.weekKey = weekStrFor(t.weekResetDay);
+    t.weekKey = durationKeyFor(t);
     // Remember when the reset day was (re)assigned so the first-window grace in
     // normalize() doesn't wipe the count at the first boundary after the change.
     if(t.weekResetDay !== prevResetDay) t.weekResetAt = Date.now();
+
+    // Duration type
+    const editDt = document.getElementById("editDurationType").value;
+    t.durationType = editDt;
+    const editCustomDays = parseInt(document.getElementById("editCustomDurationDays").value, 10);
+    if(editDt === "custom" && !isNaN(editCustomDays) && editCustomDays >= 2) t.customDurationDays = editCustomDays;
+  }
+
+  // Dynamic mode
+  const wasDynamic = t.dynamic;
+  const editDynSection = document.getElementById("editDynamicSection");
+  t.dynamic = (editMode === "repeat") && (editDynSection.style.display !== "none");
+  if(t.dynamic){
+    const newDynDeadline = parseInt(document.getElementById("editDynamicDeadline").value, 10);
+    if(!isNaN(newDynDeadline) && newDynDeadline >= 1) t.dynamicDeadlineDays = newDynDeadline;
+    t.dynamicThresholds = {
+      p2: parseInt(document.getElementById("editThresholdP2").value, 10) || 50,
+      p3: parseInt(document.getElementById("editThresholdP3").value, 10) || 80,
+      p4: parseInt(document.getElementById("editThresholdP4").value, 10) || 90,
+      p5: parseInt(document.getElementById("editThresholdP5").value, 10) || 100
+    };
+    if(!wasDynamic){
+      t.dynamicDeadlineStart = Date.now();
+      t.dynamicCompletedCount = 0;
+      t.dynamicMissedCount = 0;
+    }
+    t.oneTime = false;
+  } else if(wasDynamic){
+    // Turning off dynamic mode
+    t.dynamicDeadlineStart = 0;
+    t.dynamicCompletedCount = 0;
+    t.dynamicMissedCount = 0;
   }
 
   const remindRaw = parseFloat(document.getElementById("editRemindHours").value);
@@ -5511,6 +5670,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("editName").addEventListener("keydown", (e) => {
     if(e.key === "Enter") saveEdit();
   });
+
+  // Edit form: duration type selector
+  document.getElementById("editDurationType").addEventListener("change", (e) => {
+    document.getElementById("editCustomDurationRow").style.display = (e.target.value === "custom") ? "" : "none";
+  });
+
   const overlay = document.getElementById("editOverlay");
   overlay.addEventListener("click", (e) => {
     if(e.target === overlay) closeEdit();
@@ -5539,6 +5704,80 @@ function weekStrFor(day, d = new Date()){
   const off = (date.getDay() + 7 - anchor) % 7; // 0 = reset day
   date.setDate(date.getDate() - off);
   return todayStr(date);
+}
+
+// Returns the number of days in a duration cycle.
+function durationDays(task){
+  switch(task.durationType){
+    case "biweekly": return 14;
+    case "monthly": {
+      const d = task.createdAt ? new Date(task.createdAt) : new Date();
+      const anchorDay = d.getDate();
+      // Count days from anchorDay to the same day next month
+      const next = new Date(d);
+      next.setMonth(next.getMonth() + 1);
+      return Math.round((next - d) / 86400000);
+    }
+    case "custom": return Math.max(2, task.customDurationDays || 7);
+    default: return 7; // weekly
+  }
+}
+
+// Returns a YYYY-MM-DD key for the start of the current duration window.
+// For weekly: same as weekStrFor (7-day window anchored to reset day).
+// For biweekly: 14-day window anchored to reset day.
+// For monthly: calendar-month window anchored to creation day-of-month.
+// For custom: N-day window anchored to creation date.
+function durationKeyFor(task, d = new Date()){
+  if(task.durationType === "weekly" || !task.durationType){
+    return weekStrFor(task.weekResetDay, d);
+  }
+  if(task.durationType === "biweekly"){
+    // Same anchor as weekly, but 14-day blocks
+    const weekStart = weekStrFor(task.weekResetDay, d);
+    const weekStartDate = new Date(weekStart + "T00:00:00");
+    // Determine which 2-week block we're in based on createdAt
+    const createdDate = task.createdAt ? new Date(task.createdAt) : weekStartDate;
+    const daysSinceCreated = Math.floor((weekStartDate - createdDate) / 86400000);
+    const blocksSinceCreated = Math.floor(daysSinceCreated / 14);
+    const blockStart = new Date(createdDate);
+    blockStart.setDate(blockStart.getDate() + blocksSinceCreated * 14);
+    return todayStr(blockStart);
+  }
+  if(task.durationType === "monthly"){
+    const dObj = new Date(d);
+    const anchorDay = task.createdAt ? new Date(task.createdAt).getDate() : dObj.getDate();
+    // Find the most recent month where the anchor day exists
+    let year = dObj.getFullYear();
+    let month = dObj.getMonth();
+    // Go back months until we find one where anchorDay exists and is <= today
+    for(let i = 0; i < 24; i++){
+      const candidate = new Date(year, month, anchorDay);
+      if(candidate <= dObj){
+        const key = todayStr(candidate);
+        // Check if next month's anchor is still in the future
+        const nextMonth = new Date(year, month + 1, anchorDay);
+        if(dObj < nextMonth) return key;
+      }
+      month--;
+      if(month < 0){ month = 11; year--; }
+    }
+    return todayStr(new Date(dObj.getFullYear(), dObj.getMonth(), anchorDay));
+  }
+  if(task.durationType === "custom"){
+    const days = Math.max(2, task.customDurationDays || 7);
+    const createdMs = task.createdAt || Date.now();
+    const createdDate = new Date(createdMs);
+    createdDate.setHours(0, 0, 0, 0);
+    const target = new Date(d);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((target - createdDate) / 86400000);
+    const blockIndex = Math.floor(diffDays / days);
+    const blockStart = new Date(createdDate);
+    blockStart.setDate(blockStart.getDate() + blockIndex * days);
+    return todayStr(blockStart);
+  }
+  return weekStrFor(task.weekResetDay, d);
 }
 // Date string n days after s (s is a YYYY-MM-DD date string).
 function addDaysStr(s, n){
@@ -5807,20 +6046,22 @@ function normalize(tasks){
       task.dayCount = 0;
       task.lastCheckedAt = null;
     }
-    const tw = weekStrFor(task.weekResetDay);
+    const tw = durationKeyFor(task);
     // Realign legacy week keys before comparing: versions before the local-
     // timezone fix formatted the anchored date through UTC, so stored keys
     // landed a day early (a Sunday for Monday-anchored quests etc.). A real
     // key always carries the anchor weekday - if it doesn't, roll it forward
     // to the true anchor INSTEAD of treating it as a new week and wiping the
-    // weekly progress.
-    if(typeof task.weekKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(task.weekKey)){
-      const anchorWd = (task.weekResetDay === null || task.weekResetDay === undefined) ? 1 : task.weekResetDay;
-      const kwDate = new Date(task.weekKey + "T00:00:00");
-      if(!isNaN(kwDate.getTime()) && kwDate.getDay() !== anchorWd){
-        const fixed = new Date(kwDate);
-        do { fixed.setDate(fixed.getDate() + 1); } while(fixed.getDay() !== anchorWd);
-        task.weekKey = dateToStr(fixed);
+    // weekly progress. Only applies to weekly duration type.
+    if(task.durationType === "weekly" || !task.durationType){
+      if(typeof task.weekKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(task.weekKey)){
+        const anchorWd = (task.weekResetDay === null || task.weekResetDay === undefined) ? 1 : task.weekResetDay;
+        const kwDate = new Date(task.weekKey + "T00:00:00");
+        if(!isNaN(kwDate.getTime()) && kwDate.getDay() !== anchorWd){
+          const fixed = new Date(kwDate);
+          do { fixed.setDate(fixed.getDate() + 1); } while(fixed.getDay() !== anchorWd);
+          task.weekKey = dateToStr(fixed);
+        }
       }
     }
     if(task.weekKey !== tw){
@@ -5828,15 +6069,13 @@ function normalize(tasks){
       // middle of a reset window would otherwise be wiped at the very next
       // boundary after only a partial week. Skip that one rollover so weekly
       // progress isn't zeroed right after setup; the first full wipe happens
-      // at the boundary after that instead. Only applies to custom reset days.
+      // at the boundary after that instead.
       let grace = false;
-      if(task.weekResetDay !== null && task.weekResetDay !== undefined){
-        const anchorMs = Math.max(task.createdAt || 0, task.weekResetAt || 0);
-        if(anchorMs > 0){
-          const anchorDay = todayStr(new Date(anchorMs));
-          const anchorWin = weekStrFor(task.weekResetDay, new Date(anchorMs));
-          grace = (anchorDay > anchorWin && t <= addDaysStr(anchorWin, 7));
-        }
+      const anchorMs = Math.max(task.createdAt || 0, task.weekResetAt || 0);
+      if(anchorMs > 0){
+        const anchorDay = todayStr(new Date(anchorMs));
+        const anchorWin = durationKeyFor(task, new Date(anchorMs));
+        grace = (anchorDay > anchorWin && t <= addDaysStr(anchorWin, durationDays(task)));
       }
       if(!grace){
         if(!task.oneTime && task.weekKey && task.weekCount < task.perWeek){
@@ -5882,6 +6121,38 @@ function normalize(tasks){
     if(typeof task.notifyMinutes !== "number" || task.notifyMinutes < 0) task.notifyMinutes = 0;
     if(task.notifyMode !== "event" && task.notifyMode !== "now") task.notifyMode = "now";
     if(typeof task.notifyEventId !== "string") task.notifyEventId = null;
+
+    // Duration system
+    if(typeof task.durationType !== "string") task.durationType = "weekly";
+    if(typeof task.customDurationDays !== "number" || task.customDurationDays < 2) task.customDurationDays = 7;
+
+    // Dynamic Reset Time
+    if(typeof task.dynamic !== "boolean") task.dynamic = false;
+    if(typeof task.dynamicDeadlineDays !== "number" || task.dynamicDeadlineDays < 1) task.dynamicDeadlineDays = 7;
+    if(typeof task.dynamicDeadlineStart !== "number") task.dynamicDeadlineStart = 0;
+    if(typeof task.dynamicCompletedCount !== "number") task.dynamicCompletedCount = 0;
+    if(typeof task.dynamicMissedCount !== "number") task.dynamicMissedCount = 0;
+    if(!task.dynamicThresholds || typeof task.dynamicThresholds !== "object"){
+      task.dynamicThresholds = { p2: 50, p3: 80, p4: 90, p5: 100 };
+    } else {
+      if(typeof task.dynamicThresholds.p2 !== "number") task.dynamicThresholds.p2 = 50;
+      if(typeof task.dynamicThresholds.p3 !== "number") task.dynamicThresholds.p3 = 80;
+      if(typeof task.dynamicThresholds.p4 !== "number") task.dynamicThresholds.p4 = 90;
+      if(typeof task.dynamicThresholds.p5 !== "number") task.dynamicThresholds.p5 = 100;
+    }
+
+    // Dynamic priority auto-escalation: priority is driven by deadline progress
+    if(task.dynamic && task.dynamicDeadlineStart > 0){
+      const elapsed = Date.now() - task.dynamicDeadlineStart;
+      const deadlineMs = task.dynamicDeadlineDays * 86400000;
+      const pct = (elapsed / deadlineMs) * 100;
+      const th = task.dynamicThresholds;
+      if(pct >= th.p5) task.priority = 5;
+      else if(pct >= th.p4) task.priority = 4;
+      else if(pct >= th.p3) task.priority = 3;
+      else if(pct >= th.p2) task.priority = 2;
+      else task.priority = 1;
+    }
 
     // Migrate old plain-notes / separate-items model into unified noteBlocks
     if(!Array.isArray(task.noteBlocks)){
@@ -6091,7 +6362,17 @@ function render(){
 
     const meta = document.createElement("div");
     meta.className = "meta";
-    if(task.oneTime){
+    if(task.dynamic && task.dynamicDeadlineStart > 0){
+      const elapsed = Date.now() - task.dynamicDeadlineStart;
+      const deadlineMs = task.dynamicDeadlineDays * 86400000;
+      const remaining = deadlineMs - elapsed;
+      if(remaining >= 0){
+        meta.textContent = formatDurationMs(remaining) + " remaining";
+      } else {
+        meta.textContent = formatDurationMs(-remaining) + " overdue";
+      }
+      meta.classList.add(task.dynamic && task.dynamicMissedCount > 0 ? "dynamic-missed" : "dynamic-active");
+    } else if(task.oneTime){
       if(oneTimeDone){
         meta.classList.add("ot-countdown");
         meta.dataset.checkedAt = String(task.checkedAt);
@@ -6101,9 +6382,15 @@ function render(){
         meta.textContent = "one-time";
       }
     } else if(weekDone){
-      meta.textContent = "done for the week";
+      meta.textContent = task.durationType === "biweekly" ? "done for the period" :
+        task.durationType === "monthly" ? "done for the month" :
+        task.durationType === "custom" ? "done for the period" :
+        "done for the week";
     } else {
-      meta.textContent = `${task.weekCount}/${task.perWeek}x this week` +
+      const periodLabel = task.durationType === "biweekly" ? "period" :
+        task.durationType === "monthly" ? "month" :
+        task.durationType === "custom" ? "period" : "week";
+      meta.textContent = `${task.weekCount}/${task.perWeek}x this ${periodLabel}` +
         (task.perDay > 1 ? ` · ${task.dayCount}/${task.perDay} today` : "");
     }
     info.appendChild(name);
@@ -6165,6 +6452,38 @@ function render(){
           sfx.undo();
           render();
         }
+      };
+    } else if(task.dynamic){
+      // Dynamic quest: check off resets the timer, tracks missed/completed
+      box.onclick = (e) => {
+        e.stopPropagation();
+        const all = normalize(loadTasks());
+        const t = all.find(x => x.id === task.id);
+        if(!t) return;
+        const now = Date.now();
+        const wasMissed = t.dynamicDeadlineStart > 0 && now > t.dynamicDeadlineStart + (t.dynamicDeadlineDays * 86400000);
+        if(wasMissed) t.dynamicMissedCount = (t.dynamicMissedCount || 0) + 1;
+        t.dynamicCompletedCount = (t.dynamicCompletedCount || 0) + 1;
+        t.dynamicDeadlineStart = now;
+        t.priority = 1; // Reset to low, escalates over time via normalize
+        t.lastCheckedAt = now;
+        saveTasks(all);
+        const xp = xpReward(t);
+        const leveledUp = addXp(xp);
+        logHistoryEvent({
+          type: "quest_done",
+          taskName: t.name,
+          priority: t.priority,
+          xp,
+          dynamicMissed: wasMissed
+        });
+        if(navigator.vibrate) navigator.vibrate(20);
+        if(!leveledUp) sfx.complete();
+        burstAt(e.clientX, e.clientY, { count: 20, colors: [getPriorityColor(t.priority), getAccentColor()], size: 4 });
+        floatText(e.clientX, e.clientY, `+${xp} XP`, getPriorityColor(t.priority));
+        render();
+        scheduleDoneReposition();
+        popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
       };
     } else if(weekDone){
       // done for the week - tap the box to undo the final completed day
@@ -6310,11 +6629,77 @@ function collapseQuestList(){
 let ntPriority = 3;
 let ntPerDay = 1;
 let ntRepeat = false;
+let ntDurationType = "weekly";
+let ntCustomDurationDays = 7;
+let ntDynamic = false;
+let ntDynamicDeadlineDays = 7;
+let ntPerDurationEnabled = true;
+let ntPerDayEnabled = false;
 
 function setNtRepeat(on){
   ntRepeat = !!on;
   document.getElementById("ntRepeatToggle").checked = ntRepeat;
   document.getElementById("ntSliders").style.display = ntRepeat ? "block" : "none";
+  if(ntRepeat && ntDynamic){
+    ntDynamic = false;
+    document.getElementById("ntDynamicToggle").checked = false;
+    document.getElementById("ntDynamicFields").style.display = "none";
+    document.getElementById("ntPriorityBar").style.opacity = "";
+    document.getElementById("ntPriorityBar").style.pointerEvents = "";
+  }
+}
+
+function setNtDynamic(on){
+  ntDynamic = !!on;
+  document.getElementById("ntDynamicToggle").checked = ntDynamic;
+  document.getElementById("ntDynamicFields").style.display = ntDynamic ? "block" : "none";
+  // Dynamic mode visually locks Repeats on but hides its subsections
+  if(ntDynamic){
+    ntRepeat = true;
+    document.getElementById("ntRepeatToggle").checked = true;
+    document.getElementById("ntRepeatToggle").disabled = true;
+    document.getElementById("ntSliders").style.display = "none";
+    // Hide manual priority selection
+    document.getElementById("ntPriorityBar").style.opacity = "0.3";
+    document.getElementById("ntPriorityBar").style.pointerEvents = "none";
+  } else {
+    document.getElementById("ntRepeatToggle").disabled = false;
+    document.getElementById("ntPriorityBar").style.opacity = "";
+    document.getElementById("ntPriorityBar").style.pointerEvents = "";
+  }
+}
+
+function updateNtDurationTypeUI(){
+  const dt = document.getElementById("ntDurationType").value;
+  ntDurationType = dt;
+  document.getElementById("ntCustomDurationRow").style.display = (dt === "custom") ? "" : "none";
+  updateNtPerDurationSliderMax();
+}
+
+function updateNtPerDurationSliderMax(){
+  const slider = document.getElementById("ntWeekSlider");
+  let max;
+  switch(ntDurationType){
+    case "biweekly": max = 14; break;
+    case "monthly": {
+      const now = new Date();
+      const anchorDay = document.getElementById("ntWeekReset").value;
+      const d = new Date(now.getFullYear(), now.getMonth(), (anchorDay !== "") ? parseInt(anchorDay) + 1 : 1);
+      const nextMonth = new Date(d);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      max = Math.round((nextMonth - d) / 86400000);
+      break;
+    }
+    case "custom": max = ntCustomDurationDays; break;
+    default: max = 7;
+  }
+  slider.max = max;
+  if(parseInt(slider.value, 10) > max){
+    slider.value = max;
+  }
+  // Hide per-duration slider entirely for 1-day durations (not possible here, min is 2 for custom)
+  const group = document.getElementById("ntPerDurationGroup");
+  group.style.display = "";
 }
 
 function resetNewTaskForm(){
@@ -6326,6 +6711,29 @@ function resetNewTaskForm(){
   ntPerDay = 1;
   document.getElementById("ntDayVal").textContent = 1;
   document.getElementById("ntWeekReset").value = "";
+  document.getElementById("ntDurationType").value = "weekly";
+  ntDurationType = "weekly";
+  document.getElementById("ntCustomDurationRow").style.display = "none";
+  document.getElementById("ntCustomDurationSlider").value = 7;
+  document.getElementById("ntCustomDurationVal").textContent = 7;
+  ntCustomDurationDays = 7;
+  document.getElementById("ntPerDurationToggle").checked = true;
+  ntPerDurationEnabled = true;
+  document.getElementById("ntPerDurationGroup").style.display = "";
+  document.getElementById("ntPerDayToggle").checked = false;
+  ntPerDayEnabled = false;
+  document.getElementById("ntPerDaySliderRow").style.display = "none";
+  ntDynamic = false;
+  document.getElementById("ntDynamicToggle").checked = false;
+  document.getElementById("ntDynamicFields").style.display = "none";
+  document.getElementById("ntDynamicDeadlineSlider").value = 7;
+  document.getElementById("ntDynamicDeadlineVal").textContent = 7;
+  ntDynamicDeadlineDays = 7;
+  document.getElementById("ntThresholdP2").value = 50;
+  document.getElementById("ntThresholdP3").value = 80;
+  document.getElementById("ntThresholdP4").value = 90;
+  document.getElementById("ntThresholdP5").value = 100;
+  document.getElementById("ntRepeatToggle").disabled = false;
   setNtRepeat(false);
   document.getElementById("ntNotifyToggle").checked = false;
   document.getElementById("ntNotifyOptions").style.display = "none";
@@ -6521,12 +6929,26 @@ function createNewTask(){
     return;
   }
   const notes = document.getElementById("ntNotes").value;
-  const isOneTime = !ntRepeat;
+  const isOneTime = !ntRepeat && !ntDynamic;
 
-  const perWeek = isOneTime ? 1 : parseInt(document.getElementById("ntWeekSlider").value, 10);
-  const perDay = isOneTime ? 1 : ntPerDay;
+  const perWeek = isOneTime ? 1 : (ntPerDurationEnabled ? parseInt(document.getElementById("ntWeekSlider").value, 10) : 1);
+  const perDay = isOneTime ? 1 : (ntPerDayEnabled ? ntPerDay : 1);
   const wrRaw = document.getElementById("ntWeekReset").value;
   const weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
+
+  // Duration system
+  const durationType = ntDurationType;
+  const customDurationDays = ntCustomDurationDays;
+
+  // Dynamic Reset Time
+  const dynamic = ntDynamic;
+  const dynamicDeadlineDays = ntDynamicDeadlineDays;
+  const dynamicThresholds = {
+    p2: parseInt(document.getElementById("ntThresholdP2").value, 10) || 50,
+    p3: parseInt(document.getElementById("ntThresholdP3").value, 10) || 80,
+    p4: parseInt(document.getElementById("ntThresholdP4").value, 10) || 90,
+    p5: parseInt(document.getElementById("ntThresholdP5").value, 10) || 100
+  };
 
   // notify me
   let notifyEnabled = document.getElementById("ntNotifyToggle").checked;
@@ -6542,20 +6964,21 @@ function createNewTask(){
 
   const tasks = loadTasks();
   const newId = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-  tasks.push({
+  const createdAt = Date.now();
+  const task = {
     id: newId,
     name,
     perWeek,
     perDay,
     priority: ntPriority,
-    order: Date.now(),
-    createdAt: Date.now(),
+    order: createdAt,
+    createdAt,
     dayCount: 0,
     dayDate: todayStr(),
     weekCount: 0,
-    weekKey: weekStrFor(weekResetDay),
+    weekKey: durationKeyFor({ weekResetDay, durationType, customDurationDays, createdAt }),
     weekResetDay,
-    weekResetAt: weekResetDay !== null ? Date.now() : null,
+    weekResetAt: weekResetDay !== null ? createdAt : null,
     notes,
     remindHours: null,
     oneTime: isOneTime,
@@ -6564,8 +6987,19 @@ function createNewTask(){
     notifyHours,
     notifyMinutes,
     notifyMode: notifyEnabled ? notifyMode : null,
-    notifyEventId
-  });
+    notifyEventId,
+    durationType,
+    customDurationDays,
+    dynamic,
+    dynamicDeadlineDays,
+    dynamicDeadlineStart: dynamic ? createdAt : 0,
+    dynamicCompletedCount: 0,
+    dynamicMissedCount: 0,
+    dynamicThresholds
+  };
+  // Dynamic quests are never one-time
+  if(dynamic) task.oneTime = false;
+  tasks.push(task);
   saveTasks(tasks);
   sfx.pop();
   closeNewTaskView();
@@ -6719,6 +7153,52 @@ document.addEventListener("DOMContentLoaded", () => {
   // repeats checkbox
   document.getElementById("ntRepeatToggle").addEventListener("change", (e) => {
     setNtRepeat(e.target.checked);
+  });
+
+  // dynamic reset time checkbox
+  document.getElementById("ntDynamicToggle").addEventListener("change", (e) => {
+    setNtDynamic(e.target.checked);
+  });
+
+  // duration type selector
+  document.getElementById("ntDurationType").addEventListener("change", () => {
+    updateNtDurationTypeUI();
+  });
+
+  // duration resets on day change → update per-duration slider max
+  document.getElementById("ntWeekReset").addEventListener("change", () => {
+    updateNtPerDurationSliderMax();
+  });
+
+  // custom duration slider
+  const customDurSlider = document.getElementById("ntCustomDurationSlider");
+  customDurSlider.addEventListener("input", () => {
+    ntCustomDurationDays = parseInt(customDurSlider.value, 10);
+    document.getElementById("ntCustomDurationVal").textContent = ntCustomDurationDays;
+    updateNtPerDurationSliderMax();
+  });
+
+  // per-duration checkbox
+  document.getElementById("ntPerDurationToggle").addEventListener("change", (e) => {
+    ntPerDurationEnabled = e.target.checked;
+    document.getElementById("ntWeekSlider").style.display = e.target.checked ? "" : "none";
+  });
+
+  // per-day checkbox
+  document.getElementById("ntPerDayToggle").addEventListener("change", (e) => {
+    ntPerDayEnabled = e.target.checked;
+    document.getElementById("ntPerDaySliderRow").style.display = e.target.checked ? "" : "none";
+    if(e.target.checked){
+      document.getElementById("ntDaySlider").value = Math.max(1, ntPerDay);
+      document.getElementById("ntDayVal").textContent = ntPerDay;
+    }
+  });
+
+  // dynamic deadline slider
+  const dynamicDeadlineSlider = document.getElementById("ntDynamicDeadlineSlider");
+  dynamicDeadlineSlider.addEventListener("input", () => {
+    ntDynamicDeadlineDays = parseInt(dynamicDeadlineSlider.value, 10);
+    document.getElementById("ntDynamicDeadlineVal").textContent = ntDynamicDeadlineDays;
   });
 
   // notify me block
@@ -9193,9 +9673,39 @@ syncEventQuests();
     </div>
 
     <div id="editRepeatFields" style="display:none;">
+      <div class="nt-duration-row">
+        <div class="nt-slider-group nt-duration-reset-group">
+          <label class="modal-label">Duration resets on</label>
+          <select id="editWeekReset" class="nt-select">
+            <option value="">Default (Monday)</option>
+            <option value="0">Sunday</option>
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+        </div>
+        <div class="nt-slider-group nt-duration-type-group">
+          <label class="modal-label">Set duration</label>
+          <select id="editDurationType" class="nt-select">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="editCustomDurationRow" class="nt-slider-group" style="display:none;">
+        <label class="modal-label">Custom duration (days)</label>
+        <input type="number" id="editCustomDurationDays" min="2" max="90" value="7">
+      </div>
+
       <div class="modal-row">
         <div class="modal-col">
-          <label class="modal-label">Times per week</label>
+          <label class="modal-label">Days per duration</label>
           <input type="number" id="editPerWeek" min="1" max="7">
         </div>
         <div class="modal-col">
@@ -9203,20 +9713,42 @@ syncEventQuests();
           <input type="number" id="editPerDay" min="1">
         </div>
       </div>
-      <label class="modal-label">Done this week</label>
+
+      <label class="modal-label">Done this period</label>
       <input type="number" id="editWeekCount" min="0">
 
-      <label class="modal-label">Week resets on</label>
-      <select id="editWeekReset">
-        <option value="">Default (Monday)</option>
-        <option value="0">Sunday</option>
-        <option value="1">Monday</option>
-        <option value="2">Tuesday</option>
-        <option value="3">Wednesday</option>
-        <option value="4">Thursday</option>
-        <option value="5">Friday</option>
-        <option value="6">Saturday</option>
-      </select>
+      <div class="edit-dynamic-section" id="editDynamicSection" style="display:none;">
+        <label class="modal-label">Dynamic Reset Time</label>
+        <div class="modal-row">
+          <div class="modal-col">
+            <label class="modal-label">Deadline (days)</label>
+            <input type="number" id="editDynamicDeadline" min="1" max="90">
+          </div>
+        </div>
+        <label class="modal-label">Auto-priority thresholds (%)</label>
+        <div class="nt-threshold-inputs">
+          <div class="nt-threshold-item">
+            <span>P2</span>
+            <input type="number" id="editThresholdP2" min="1" max="99">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P3</span>
+            <input type="number" id="editThresholdP3" min="1" max="99">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P4</span>
+            <input type="number" id="editThresholdP4" min="1" max="99">
+            <span>%</span>
+          </div>
+          <div class="nt-threshold-item">
+            <span>P5</span>
+            <input type="number" id="editThresholdP5" min="1" max="100">
+            <span>%</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="ot-info" id="editOnceInfo">This quest disappears 5 hours after you check it off.</div>
@@ -10259,6 +10791,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.62</div>
+<div class="version-watermark" aria-hidden="true">v1.5.63</div>
 </body>
 </html>
