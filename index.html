@@ -3439,7 +3439,7 @@
     <div id="ntPerDurationGroup" class="nt-slider-group">
       <label class="modal-checkbox-row nt-inline-check">
         <input type="checkbox" id="ntPerDurationToggle" checked>
-        <span>Days per duration</span>
+        <span>Times it should be done in each duration</span>
         <span class="nt-slider-val" id="ntWeekVal">4</span>
       </label>
       <input type="range" id="ntWeekSlider" min="1" max="7" value="4">
@@ -3448,7 +3448,7 @@
     <div class="nt-slider-group">
       <label class="modal-checkbox-row nt-inline-check">
         <input type="checkbox" id="ntPerDayToggle">
-        <span>Times per day</span>
+        <span>Repetitions needed each day for completion</span>
         <span class="nt-slider-val" id="ntDayVal">1</span>
       </label>
       <div id="ntPerDaySliderRow" style="display:none;">
@@ -3460,43 +3460,43 @@
     </div>
 
     <div class="nt-event-note">Want your quest to appear on specific days? <span class="nt-event-link" id="ntCreateEventLink">Create an event instead!</span></div>
+  </div>
 
-    <label class="modal-checkbox-row">
-      <input type="checkbox" id="ntDynamicToggle">
-      <span>Dynamic Reset Time</span>
-    </label>
+  <label class="modal-checkbox-row">
+    <input type="checkbox" id="ntDynamicToggle">
+    <span>Dynamic Reset Time</span>
+  </label>
 
-    <div id="ntDynamicFields" class="nt-dynamic-fields" style="display:none;">
-      <div class="nt-slider-group">
-        <div class="nt-slider-label">
-          <span>Deadline (days)</span>
-          <span class="nt-slider-val" id="ntDynamicDeadlineVal">7</span>
-        </div>
-        <input type="range" id="ntDynamicDeadlineSlider" min="1" max="90" value="7">
+  <div id="ntDynamicFields" class="nt-dynamic-fields" style="display:none;">
+    <div class="nt-slider-group">
+      <div class="nt-slider-label">
+        <span>Deadline (days)</span>
+        <span class="nt-slider-val" id="ntDynamicDeadlineVal">7</span>
       </div>
-      <div class="nt-threshold-row">
-        <span class="nt-threshold-label">Auto-priority thresholds:</span>
-        <div class="nt-threshold-inputs">
-          <div class="nt-threshold-item">
-            <span>P2</span>
-            <input type="number" id="ntThresholdP2" min="1" max="99" value="50">
-            <span>%</span>
-          </div>
-          <div class="nt-threshold-item">
-            <span>P3</span>
-            <input type="number" id="ntThresholdP3" min="1" max="99" value="80">
-            <span>%</span>
-          </div>
-          <div class="nt-threshold-item">
-            <span>P4</span>
-            <input type="number" id="ntThresholdP4" min="1" max="99" value="90">
-            <span>%</span>
-          </div>
-          <div class="nt-threshold-item">
-            <span>P5</span>
-            <input type="number" id="ntThresholdP5" min="1" max="100" value="100">
-            <span>%</span>
-          </div>
+      <input type="range" id="ntDynamicDeadlineSlider" min="1" max="90" value="7">
+    </div>
+    <div class="nt-threshold-row">
+      <span class="nt-threshold-label">Auto-priority thresholds:</span>
+      <div class="nt-threshold-inputs">
+        <div class="nt-threshold-item">
+          <span>P2</span>
+          <input type="number" id="ntThresholdP2" min="1" max="99" value="50">
+          <span>%</span>
+        </div>
+        <div class="nt-threshold-item">
+          <span>P3</span>
+          <input type="number" id="ntThresholdP3" min="1" max="99" value="80">
+          <span>%</span>
+        </div>
+        <div class="nt-threshold-item">
+          <span>P4</span>
+          <input type="number" id="ntThresholdP4" min="1" max="99" value="90">
+          <span>%</span>
+        </div>
+        <div class="nt-threshold-item">
+          <span>P5</span>
+          <input type="number" id="ntThresholdP5" min="1" max="100" value="100">
+          <span>%</span>
         </div>
       </div>
     </div>
@@ -9705,11 +9705,11 @@ syncEventQuests();
 
       <div class="modal-row">
         <div class="modal-col">
-          <label class="modal-label">Days per duration</label>
+          <label class="modal-label">Times per duration</label>
           <input type="number" id="editPerWeek" min="1" max="7">
         </div>
         <div class="modal-col">
-          <label class="modal-label">Times per day</label>
+          <label class="modal-label">Reps per day</label>
           <input type="number" id="editPerDay" min="1">
         </div>
       </div>
@@ -10791,6 +10791,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.63</div>
+<div class="version-watermark" aria-hidden="true">v1.5.64</div>
 </body>
 </html>
