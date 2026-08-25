@@ -3472,7 +3472,7 @@
       <label class="modal-checkbox-row nt-inline-check">
         <input type="checkbox" id="ntPerDayToggle">
         <span>Repetitions needed each day for completion</span>
-        <input type="number" class="nt-slider-val nt-editable-val" id="ntDayVal" min="1" max="5" value="1">
+        <input type="number" class="nt-slider-val nt-editable-val" id="ntDayVal" min="1" max="5" value="1" style="display:none;">
       </label>
       <div id="ntPerDaySliderRow" style="display:none;">
         <div class="nt-day-row">
@@ -6750,6 +6750,7 @@ function resetNewTaskForm(){
   document.getElementById("ntPerDayToggle").checked = false;
   ntPerDayEnabled = false;
   document.getElementById("ntPerDaySliderRow").style.display = "none";
+  document.getElementById("ntDayVal").style.display = "none";
   ntDynamic = false;
   document.getElementById("ntDynamicToggle").checked = false;
   document.getElementById("ntDynamicFields").style.display = "none";
@@ -10837,6 +10838,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.66</div>
+<div class="version-watermark" aria-hidden="true">v1.5.67</div>
 </body>
 </html>
