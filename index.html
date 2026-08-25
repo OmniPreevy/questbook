@@ -5877,18 +5877,20 @@ function previousWeekKey(d = new Date()){
 
 // Called whenever a quest's weekly count may have just reached its target.
 // Records a week_hit keyed to the Monday-week the target was finished in, so
-// quests with a custom reset day appear in the retro of the week they were
-// actually completed. Deduped per reset window so undo/re-check cycles and
-// repeated calls never double-count.
+// quests with a custom reset day or non-weekly duration appear in the retro of
+// the week they were actually completed. Dynamic quests bypass the perWeek
+// target check (they track completion via deadline). Deduped per Monday week
+// so undo/re-check cycles and repeated calls never double-count.
 function logWeekHit(t){
-  if(!t || t.oneTime || !(t.perWeek > 0) || t.weekCount < t.perWeek) return;
+  if(!t || t.oneTime || !(t.perWeek > 0)) return;
+  if(!t.dynamic && t.weekCount < t.perWeek) return;
+  const mondayKey = weekStr();
   const history = loadHistory();
-  if(history.some(e => e.type === "week_hit" && e.taskId === t.id && e.winKey === t.weekKey)) return;
+  if(history.some(e => e.type === "week_hit" && e.taskId === t.id && e.weekKey === mondayKey)) return;
   logHistoryEvent({
     type: "week_hit",
-    weekKey: weekStr(),
+    weekKey: mondayKey,
     taskId: t.id,
-    winKey: t.weekKey,
     taskName: t.name,
     priority: t.priority,
     weekCount: t.weekCount,
@@ -6106,14 +6108,12 @@ function normalize(tasks){
         if(!task.oneTime && task.weekKey && task.weekCount < task.perWeek){
           // Only MISSES are logged here - hits were already recorded the
           // moment the weekly target was reached (week_hit). A miss surfaces
-          // in the first retro AFTER the reset: default Monday-reset quests
-          // keep their own (Monday) week key, custom reset days are
-          // attributed to the Monday-week containing the reset so they land
-          // in the following week's retro instead of never matching one.
-          const customReset = !(task.weekResetDay === null || task.weekResetDay === undefined);
+          // in the first retro AFTER the reset. Always key to the Monday-week
+          // containing the reset so it matches the retro's Monday-based lookup,
+          // regardless of the quest's duration type or custom reset day.
           logHistoryEvent({
             type: "week_result",
-            weekKey: customReset ? weekStr(new Date(tw + "T00:00:00")) : task.weekKey,
+            weekKey: weekStr(new Date(tw + "T00:00:00")),
             taskName: task.name,
             priority: task.priority,
             weekCount: task.weekCount,
@@ -6177,6 +6177,27 @@ function normalize(tasks){
       else if(pct >= th.p3) task.priority = 3;
       else if(pct >= th.p2) task.priority = 2;
       else task.priority = 1;
+
+      // Deadline miss: if the deadline has passed and the quest hasn't been
+      // completed within this window, log a week_result miss so it surfaces
+      // in the weekly retro.
+      if(Date.now() > task.dynamicDeadlineStart + deadlineMs){
+        const mondayKey = weekStr();
+        const hist = loadHistory();
+        if(!hist.some(e => e.type === "week_result" && e.weekKey === mondayKey &&
+                           e.taskId === task.id && !e.hit)){
+          logHistoryEvent({
+            type: "week_result",
+            weekKey: mondayKey,
+            taskId: task.id,
+            taskName: task.name,
+            priority: task.priority,
+            weekCount: 0,
+            perWeek: task.perWeek,
+            hit: false
+          });
+        }
+      }
     }
 
     // Migrate old plain-notes / separate-items model into unified noteBlocks
@@ -6502,6 +6523,7 @@ function render(){
           xp,
           dynamicMissed: wasMissed
         });
+        logWeekHit(t);
         if(navigator.vibrate) navigator.vibrate(20);
         if(!leveledUp) sfx.complete();
         burstAt(e.clientX, e.clientY, { count: 20, colors: [getPriorityColor(t.priority), getAccentColor()], size: 4 });
@@ -10856,6 +10878,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.70</div>
+<div class="version-watermark" aria-hidden="true">v1.5.71</div>
 </body>
 </html>
