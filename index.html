@@ -5586,19 +5586,20 @@ function saveEdit(){
     const wrRaw = document.getElementById("editWeekReset").value;
     const prevResetDay = t.weekResetDay;
     t.weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
-    // Re-anchor the week key to the new reset day WITHOUT wiping this week's
-    // progress - otherwise changing the reset day instantly zeroes the weekly
-    // counter. It now resets at the next actual reset-day boundary instead.
-    t.weekKey = durationKeyFor(t);
     // Remember when the reset day was (re)assigned so the first-window grace in
     // normalize() doesn't wipe the count at the first boundary after the change.
     if(t.weekResetDay !== prevResetDay) t.weekResetAt = Date.now();
 
-    // Duration type
+    // Duration type (must be set BEFORE weekKey so durationKeyFor uses the right type)
     const editDt = document.getElementById("editDurationType").value;
     t.durationType = editDt;
     const editCustomDays = parseInt(document.getElementById("editCustomDurationDays").value, 10);
     if(editDt === "custom" && !isNaN(editCustomDays) && editCustomDays >= 2) t.customDurationDays = editCustomDays;
+
+    // Re-anchor the week key to the new reset day WITHOUT wiping this week's
+    // progress - otherwise changing the reset day instantly zeroes the weekly
+    // counter. It now resets at the next actual reset-day boundary instead.
+    t.weekKey = durationKeyFor(t);
   }
 
   // Dynamic mode
@@ -10838,6 +10839,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.67</div>
+<div class="version-watermark" aria-hidden="true">v1.5.68</div>
 </body>
 </html>
