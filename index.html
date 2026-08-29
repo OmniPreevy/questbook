@@ -3612,7 +3612,34 @@ function initSupabase(){
     currentUser = data.session ? data.session.user : null;
     updateAccountUI();
   });
+  checkAuthHash();
   return sbClient;
+}
+
+// If the browser landed on a Supabase signup/confirm link that already expired
+// or was reused (e.g. clicking the email confirm link twice), the URL carries a
+// #error=... fragment. Show a friendly in-app message and scrub the error from
+// the address bar without forcing a full reload.
+function checkAuthHash(){
+  const h = window.location.hash || "";
+  const m = h.match(/[#&]error[^&]*/);
+  if(!m) return;
+  const desc = (h.match(/error_description=([^&]*)/) || [])[1];
+  const err = errorDescription(desc);
+  if(typeof showToast === "function"){
+    showToast(err.msg);
+  } else {
+    alert(err.msg);
+  }
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+}
+function errorDescription(enc){
+  let d = "";
+  try{ d = decodeURIComponent(enc || ""); }catch(e){ d = enc || ""; }
+  const lower = d.toLowerCase();
+  if(lower.indexOf("expired") !== -1) return { msg: "That confirmation link has expired. Please log in to continue." };
+  if(lower.indexOf("invalid") !== -1) return { msg: "That link is invalid or was already used. Please log in to continue." };
+  return { msg: "That link couldn't be used. Please log in to continue." };
 }
 
 // First sync on login: reconcile local (with offline receipts) vs cloud.
@@ -11355,6 +11382,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.0</div>
+<div class="version-watermark" aria-hidden="true">v1.6.1</div>
 </body>
 </html>
