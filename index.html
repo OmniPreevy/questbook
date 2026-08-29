@@ -3946,24 +3946,27 @@ async function syncFromCloud(){
   if(!cloud) return;
   // No offline receipts: adopt cloud verbatim ONLY if local hasn't changed offline.
   if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
-  lastRemoteApply = Date.now();
   suppressAutoSync = true;
-  applyPayloadToStorage(cloud);
-  suppressAutoSync = false;
-  localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  try {
+    applyPayloadToStorage(cloud);
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  } finally {
+    suppressAutoSync = false;
+  }
   return cloud;
 }
 
 // Auto-sync: push whenever a local change is made while online+logged in.
 // syncNow pushes immediately (fire-and-forget); scheduleAutoSync collapses
-// bursts. Both respect the echo-suppression window so realtime echoes from
-// other open instances never bounce back and overwrite each other.
+// bursts. Suppression happens only while we are re-applying a remote payload
+// (realtime echo / initial pull), so those hence never trigger their own push,
+// which prevents the echo ping-pong.
 let autoSyncTimer = null;
 let suppressAutoSync = false;
-let lastRemoteApply = 0;
 let syncInFlight = false;
 async function syncNow(){
   if(!currentUser || !navigator.onLine || !initialSyncDone) return;
+  if(suppressAutoSync) return;
   if(syncInFlight){ autoSyncTimer = setTimeout(syncNow, 250); return; }
   if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
   syncInFlight = true;
@@ -3972,8 +3975,6 @@ async function syncNow(){
 }
 function scheduleAutoSync(){
   if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
-  // Suppress pushes that are only echoes of a just-applied remote change.
-  if(Date.now() - lastRemoteApply < 2000) return;
   // Flag dirty so we know there are local edits since last sync.
   localStorage.setItem(DIRTY_KEY, "1");
   if(autoSyncTimer) clearTimeout(autoSyncTimer);
@@ -4004,7 +4005,6 @@ function subscribeRealtime(){
       const receipts = loadReceipts();
       if(receipts.length) return;
       suppressAutoSync = true;
-      lastRemoteApply = Date.now();
       try {
         if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
         applyPayloadToStorage(newData);
@@ -11474,6 +11474,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.8</div>
+<div class="version-watermark" aria-hidden="true">v1.6.9</div>
 </body>
 </html>
