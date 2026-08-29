@@ -7844,9 +7844,11 @@ document.addEventListener("DOMContentLoaded", () => {
     catch(e){ acctMsg(e.message || "Reset failed", false); }
   });
   document.getElementById("acctSyncBtn").addEventListener("click", async () => {
-    acctMsg("Syncing...", true);
-    try { await syncToCloud(); acctMsg("Synced!", true); }
-    catch(e){ acctMsg(e.message || "Sync failed", false); }
+    const statusEl = document.getElementById("acctSyncStatus");
+    const syncMsg = (msg) => { if(statusEl) statusEl.textContent = msg; };
+    syncMsg("Syncing...");
+    try { await syncToCloud(); syncMsg("Last sync: just now"); }
+    catch(e){ syncMsg(e.message || "Sync failed"); }
   });
   document.getElementById("acctRow").addEventListener("click", openLogin);
   document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
@@ -11382,6 +11384,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.1</div>
+<div class="version-watermark" aria-hidden="true">v1.6.2</div>
 </body>
 </html>
