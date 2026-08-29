@@ -3603,14 +3603,16 @@ function initSupabase(){
     currentUser = session ? session.user : null;
     const nowLoggedIn = !!currentUser;
     updateAccountUI();
-    if(nowLoggedIn && !wasLoggedIn){
+    if(nowLoggedIn && !wasLoggedIn && !initialSyncDone){
       // Just signed in: pull cloud data and reconcile with any offline receipts
       initializeSync().catch(()=>{});
     }
+    if(!nowLoggedIn) initialSyncDone = false;
   });
   sbClient.auth.getSession().then(({ data }) => {
     currentUser = data.session ? data.session.user : null;
     updateAccountUI();
+    if(currentUser && !initialSyncDone) initializeSync().catch(()=>{});
   });
   checkAuthHash();
   return sbClient;
@@ -3643,6 +3645,7 @@ function errorDescription(enc){
 }
 
 // First sync on login: reconcile local (with offline receipts) vs cloud.
+let initialSyncDone = false;
 async function initializeSync(){
   if(!currentUser) return;
   const receipts = loadReceipts();
@@ -3652,11 +3655,16 @@ async function initializeSync(){
     try { cloud = await cloudRead(); } catch(e){ cloud = null; }
     if(cloud){
       showConflictUI(receipts, cloud);
+    } else {
+      // no cloud data but we have offline edits - push them up
+      try { await cloudWrite(savePayloadData()); } catch(e){}
     }
   } else {
     // No local offline edits: adopt cloud state
     try { await syncFromCloud(); if(typeof render === "function") render(); } catch(e){}
   }
+  initialSyncDone = true;
+  scheduleAutoSync();
 }
 
 // Conflict resolution UI: shows offline (local) changes vs what's on the
@@ -3938,7 +3946,7 @@ async function syncFromCloud(){
 // Auto-sync: debounced push whenever a local change is made while online+logged in.
 let autoSyncTimer = null;
 function scheduleAutoSync(){
-  if(!currentUser || !navigator.onLine) return;
+  if(!currentUser || !navigator.onLine || !initialSyncDone) return;
   // Flag dirty so we know there are local edits since last sync.
   localStorage.setItem(DIRTY_KEY, "1");
   if(autoSyncTimer) clearTimeout(autoSyncTimer);
@@ -7847,8 +7855,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusEl = document.getElementById("acctSyncStatus");
     const syncMsg = (msg) => { if(statusEl) statusEl.textContent = msg; };
     syncMsg("Syncing...");
-    try { await syncToCloud(); syncMsg("Last sync: just now"); }
-    catch(e){ syncMsg(e.message || "Sync failed"); }
+    try {
+      await syncToCloud();
+      await syncFromCloud();
+      initialSyncDone = true;
+      if(typeof render === "function") render();
+      syncMsg("Last sync: just now");
+    } catch(e){ syncMsg(e.message || "Sync failed"); }
   });
   document.getElementById("acctRow").addEventListener("click", openLogin);
   document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
@@ -11384,6 +11397,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.2</div>
+<div class="version-watermark" aria-hidden="true">v1.6.3</div>
 </body>
 </html>
