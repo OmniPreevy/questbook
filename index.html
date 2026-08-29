@@ -3901,6 +3901,7 @@ function applyPayloadToStorage(data){
   if(data.autoHideDone && Date.now() - localPrefOverrideTs > 3000){
     localStorage.setItem(AUTO_HIDE_DONE_KEY, data.autoHideDone);
   }
+  if(Array.isArray(data.trash)) localStorage.setItem(TRASH_KEY, JSON.stringify(data.trash));
 }
 
 async function cloudRead(){
@@ -4014,6 +4015,7 @@ function subscribeRealtime(){
         applyPayloadToStorage(newData);
         localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
         if(typeof render === "function") render();
+        if(document.getElementById("trashOverlay") && document.getElementById("trashOverlay").classList.contains("active")) renderTrashList();
       } finally {
         suppressAutoSync = false;
       }
@@ -6463,6 +6465,7 @@ function loadTrash(){
 function saveTrash(list){
   localStorage.setItem(TRASH_KEY, JSON.stringify(list));
   updateTrashBtn(list);
+  syncNow();
 }
 function pushToTrash(task){
   const list = loadTrash();
@@ -7849,7 +7852,8 @@ function savePayloadData(){
     ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
     customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
     themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}"),
-    autoHideDone: localStorage.getItem(AUTO_HIDE_DONE_KEY) || "0"
+    autoHideDone: localStorage.getItem(AUTO_HIDE_DONE_KEY) || "0",
+    trash: JSON.parse(localStorage.getItem(TRASH_KEY) || "[]")
   };
 }
 
@@ -11480,6 +11484,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.7.0</div>
+<div class="version-watermark" aria-hidden="true">v1.7.1</div>
 </body>
 </html>
