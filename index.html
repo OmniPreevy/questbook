@@ -3963,12 +3963,11 @@ let suppressAutoSync = false;
 let lastRemoteApply = 0;
 let syncInFlight = false;
 async function syncNow(){
-  if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
-  if(Date.now() - lastRemoteApply < 2000) return;
-  if(syncInFlight) return;
+  if(!currentUser || !navigator.onLine || !initialSyncDone) return;
+  if(syncInFlight){ autoSyncTimer = setTimeout(syncNow, 250); return; }
   if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
   syncInFlight = true;
-  try { await syncToCloud(); } catch(e){ /* offline/error - will retry on reconnect */ }
+  try { await Promise.race([syncToCloud(), new Promise(r => setTimeout(r, 8000))]); }
   finally { syncInFlight = false; }
 }
 function scheduleAutoSync(){
@@ -4004,14 +4003,16 @@ function subscribeRealtime(){
       // Don't clobber pending offline edits with the old (empty) local state.
       const receipts = loadReceipts();
       if(receipts.length) return;
-      // Avoid fighting our own echo: if nothing changed locally, applying is a no-op.
       suppressAutoSync = true;
-      if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
       lastRemoteApply = Date.now();
-      applyPayloadToStorage(newData);
-      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-      if(typeof render === "function") render();
-      suppressAutoSync = false;
+      try {
+        if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
+        applyPayloadToStorage(newData);
+        localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+        if(typeof render === "function") render();
+      } finally {
+        suppressAutoSync = false;
+      }
     })
     .subscribe();
 }
@@ -6445,9 +6446,9 @@ function loadTasks(){
 function saveTasks(tasks){
   const prev = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  updateSaveSize();
-  recordChanges("quest", prev, tasks);
   syncNow();
+  updateSaveSize();
+  try { recordChanges("quest", prev, tasks); } catch(e){}
 }
 
 const TRASH_KEY = "qb_recent_deleted";
@@ -11473,6 +11474,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.7</div>
+<div class="version-watermark" aria-hidden="true">v1.6.8</div>
 </body>
 </html>
