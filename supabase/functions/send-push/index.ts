@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch (_) {}
     const userId = body.userId;
     const excludeEndpoint = body.excludeEndpoint || "";
+    const action = body.action || "sync";
     const title = body.title || "Quest Book updated";
     const message = body.body || "Your questbook changed on another device.";
 
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
     for (const sub of targets) {
       try {
         const payload = JSON.stringify({
-          action: "sync",
+          action,
           title,
           body: message,
           url: "/",

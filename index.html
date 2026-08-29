@@ -3582,6 +3582,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="signoutAllOverlay">
+  <div class="modal-card">
+    <div class="modal-title">Verify it's you</div>
+    <div class="settings-row-sub" style="margin-bottom:12px;">We emailed a 6-digit verification code to <b id="signoutAllEmail" style="color:var(--text);word-break:break-all;"></b>. Enter it below. This signs every <b>other</b> device out of your account (this device stays signed in).</div>
+    <input type="text" id="signoutAllCode" class="settings-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code" style="letter-spacing:6px;font-size:18px;text-align:center;width:100%;">
+    <div id="signoutAllMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:10px;min-height:18px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="signoutAllCancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="signoutAllVerify">Verify & log out others</button>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -3602,6 +3615,8 @@ function initSupabase(){
     const wasLoggedIn = !!currentUser;
     currentUser = session ? session.user : null;
     const nowLoggedIn = !!currentUser;
+    // A fresh sign-in (or sign-out) resets any earlier remote-lockout flag.
+    if(_event === "SIGNED_IN" || _event === "SIGNED_OUT") selfRevokeHandled = false;
     updateAccountUI();
     if(nowLoggedIn && !wasLoggedIn && !initialSyncDone){
       // Just signed in: pull cloud data and reconcile with any offline receipts
@@ -3819,6 +3834,143 @@ function updateAccountUI(){
       if(sub) sub.textContent = "Sync your data across devices";
     }
   }
+  updateSignOutAllBtn();
+}
+
+// ── Log out all other devices (email-OTP verified) ──────────────
+// Sends a 6-digit code to the account email. Once verified, revokes every
+// other device's session (scope "others" keeps this one) and removes their
+// push subscriptions so they also stop syncing in the background.
+let signOutAllPendingEmail = "";
+function signOutAllMsgEl(){
+  const el = document.getElementById("signoutAllMsg");
+  return { set:(t,c)=>{ if(el){ el.textContent = t; el.style.color = c || "var(--dim)"; } } };
+}
+async function startSignOutAll(){
+  const m = signOutAllMsgEl();
+  if(!currentUser){ return; }
+  if(!navigator.onLine){ m.set("You're offline. Go online to verify.", "var(--danger)"); return; }
+  const sb = initSupabase();
+  if(!sb){ m.set("Not configured.", "var(--danger)"); return; }
+  const email = currentUser.email;
+  if(!email){ m.set("No email on this account.", "var(--danger)"); return; }
+  signOutAllPendingEmail = email;
+  const emailEl = document.getElementById("signoutAllEmail");
+  if(emailEl) emailEl.textContent = email;
+  const codeEl = document.getElementById("signoutAllCode");
+  if(codeEl) codeEl.value = "";
+  m.set("Sending verification code…", "var(--accent)");
+  try{
+    await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    m.set("Code sent. Check your inbox.", "var(--accent)");
+    const overlay = document.getElementById("signoutAllOverlay");
+    if(overlay) overlay.classList.add("active");
+    if(codeEl) setTimeout(() => codeEl.focus(), 100);
+  }catch(e){
+    m.set(e.message || "Couldn't send code. Is Email OTP enabled in Supabase Auth?", "var(--danger)");
+  }
+}
+async function verifySignOutAll(){
+  const m = signOutAllMsgEl();
+  const codeEl = document.getElementById("signoutAllCode");
+  const code = (codeEl ? codeEl.value : "").trim();
+  if(!signOutAllPendingEmail || !code){ m.set("Enter the code from your email.", "var(--danger)"); return; }
+  const sb = initSupabase();
+  if(!sb) return;
+  m.set("Verifying…", "var(--accent)");
+  let oc;
+  try{
+    const res = await sb.auth.verifyOtp({ email: signOutAllPendingEmail, token: code, type: "email" });
+    oc = res;
+  }catch(e){ m.set(e.message || "Verification failed.", "var(--danger)"); return; }
+  if(oc.error){ m.set(oc.error.message || "Verification failed.", "var(--danger)"); return; }
+
+  m.set("Verification successful. Signing out other devices…", "var(--accent)");
+  try{
+    // Revoke every other session for this user except the current one.
+    const so = await sb.auth.signOut({ scope: "others" });
+    if(so && so.error) throw so.error;
+    // Mark other devices revoked, send them a "signout" push, and remove
+    // their subscriptions so they immediately stop sending and receiving.
+    await revokeOtherDevices(sb, currentUser.id, getMyPushEndpoint());
+    // Keep this device's own subscription (and SW background auth) intact.
+    if(typeof pushSyncSubscribe === "function") pushSyncSubscribe().catch(()=>{});
+    if(typeof updateAccountUI === "function") updateAccountUI();
+    const overlay = document.getElementById("signoutAllOverlay");
+    if(overlay) overlay.classList.remove("active");
+    if(typeof showToast === "function") showToast("Signed out all other devices.");
+  }catch(e){
+    m.set(e.message || "Sign-out failed.", "var(--danger)");
+  }
+}
+// Revoke every OTHER device for the account:
+//  - sends each an immediate "signout" push FIRST (their SW wipes local
+//    auth + stops receiving), while their subscriptions still exist,
+//  - then deletes their push_subscriptions rows,
+//  - and writes their device ids into the account's revokedDevices list so
+//    the client-side sync gate also stops them from sending/receiving.
+async function revokeOtherDevices(sb, userId, keepEndpoint){
+  const otherIds = [];
+  let otherEndpoints = [];
+  try{
+    const { data } = await sb.from("push_subscriptions").select("id, endpoint, device_id").eq("user_id", userId);
+    (data || []).forEach((row) => {
+      if(row.endpoint === keepEndpoint) return;
+      if(row.device_id) otherIds.push(row.device_id);
+      otherEndpoints.push(row.endpoint);
+    });
+  }catch(e){ /* best-effort */ }
+
+  // Persist the revocation list so revoked devices stop syncing via the gate.
+  try{
+    let cloud = null;
+    try{ cloud = await cloudRead(); }catch(e){}
+    const payload = (cloud && typeof cloud === "object") ? Object.assign({}, cloud) : savePayloadData();
+    const existing = Array.isArray(payload.revokedDevices) ? payload.revokedDevices : [];
+    payload.revokedDevices = Array.from(new Set(existing.concat(otherIds)));
+    // Don't let cloudWrite's own sync-push fire; we send the signout push
+    // explicitly below instead.
+    suppressPushNotify = true;
+    try { await cloudWrite(payload); } finally { suppressPushNotify = false; }
+    // Also remember locally on this kept device.
+    otherIds.forEach(addRevokedDevice);
+  }catch(e){ /* non-fatal */ }
+
+  // Send the immediate "signout" push to the other devices (this device's
+  // endpoint is excluded) BEFORE removing their subscriptions.
+  if(otherEndpoints.length && navigator.onLine){
+    try{
+      await fetch(SUPABASE_URL + "/functions/v1/send-push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + SUPABASE_ANON,
+          "apikey": SUPABASE_ANON
+        },
+        body: JSON.stringify({
+          userId,
+          excludeEndpoint: keepEndpoint,
+          action: "signout",
+          title: "Signed out on this device",
+          body: "You signed out on another device. This device is now logged out."
+        })
+      });
+    }catch(e){}
+  }
+
+  // Now remove their subscriptions so they stop being reached at all.
+  try{
+    const { data } = await sb.from("push_subscriptions").select("id, endpoint").eq("user_id", userId);
+    (data || []).forEach(async (row) => {
+      if(row.endpoint !== keepEndpoint){
+        await sb.from("push_subscriptions").delete().eq("id", row.id);
+      }
+    });
+  }catch(e){ /* best-effort */ }
+}
+function updateSignOutAllBtn(){
+  const btn = document.getElementById("acctSignOutAllBtn");
+  if(btn) btn.style.display = currentUser ? "" : "none";
 }
 
 // ── Cloud Sync & Offline Receipts ───────────────────────────────────
@@ -3918,6 +4070,7 @@ function applyPayloadToStorage(data){
     localStorage.setItem(AUTO_HIDE_DONE_KEY, data.autoHideDone);
   }
   if(Array.isArray(data.trash)) localStorage.setItem(TRASH_KEY, JSON.stringify(data.trash));
+  if(Array.isArray(data.revokedDevices)) setRevokedDevices(data.revokedDevices);
 }
 
 async function cloudRead(){
@@ -3949,6 +4102,8 @@ async function syncToCloud(){
   payload.syncedAt = new Date().toISOString();
   let cloud = null;
   try { cloud = await cloudRead(); } catch(e) { /* if read fails, just write */ }
+  // If this device was revoked (signed out elsewhere), stop sending now.
+  if(cloud && checkDeviceRevoked(cloud)) return false;
   // If pending local receipts exist, run conflict resolution first.
   const receipts = loadReceipts();
   if(receipts.length && cloud){
@@ -3968,6 +4123,8 @@ async function syncToCloud(){
 async function syncFromCloud(){
   const cloud = await cloudRead();
   if(!cloud) return;
+  // If this device was revoked (signed out elsewhere), stop receiving now.
+  if(checkDeviceRevoked(cloud)) return false;
   // No offline receipts: adopt cloud verbatim ONLY if local hasn't changed offline.
   if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
   suppressAutoSync = true;
@@ -4025,6 +4182,8 @@ function subscribeRealtime(){
     }, (payload) => {
       const newData = payload.new && payload.new.data;
       if(!newData) return;
+      // If this device was revoked, stop applying incoming data entirely.
+      if(checkDeviceRevoked(newData)) return;
       // Don't clobber pending offline edits with the old (empty) local state.
       const receipts = loadReceipts();
       if(receipts.length) return;
@@ -4070,6 +4229,72 @@ const PUSH_ENABLED_KEY = "qb_push_enabled";
 function getMyPushEndpoint(){ try{ return localStorage.getItem(MY_PUSH_ENDPOINT_KEY) || ""; }catch(e){ return ""; } }
 function setMyPushEndpoint(ep){ try{ localStorage.setItem(MY_PUSH_ENDPOINT_KEY, ep || ""); }catch(e){} }
 function isPushEnabled(){ try{ return localStorage.getItem(PUSH_ENABLED_KEY) === "1"; }catch(e){ return false; } }
+
+// ── Device identity + remote lockout ────────────────────────────────
+// Each device gets a stable device id (kept in localStorage). It is
+// recorded in the push_subscriptions row. When the account owner signs
+// every OTHER device out, those device ids are added to the `revokedDevices`
+// list inside the account data, and each revoked device is sent a push that
+// wipes its local auth + subscription so it stops sending and receiving.
+const DEVICE_ID_KEY = "qb_device_id";
+const REVOKED_DEVICES_KEY = "qb_revoked_devices";
+function getOrCreateDeviceId(){
+  let id = "";
+  try{ id = localStorage.getItem(DEVICE_ID_KEY) || ""; }catch(e){}
+  if(!id){
+    id = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+    try{ localStorage.setItem(DEVICE_ID_KEY, id); }catch(e){}
+  }
+  return id;
+}
+function getRevokedDevices(){ try{ return JSON.parse(localStorage.getItem(REVOKED_DEVICES_KEY)) || []; }catch(e){ return []; } }
+function setRevokedDevices(list){ try{ localStorage.setItem(REVOKED_DEVICES_KEY, JSON.stringify(list || [])); }catch(e){} }
+function addRevokedDevice(id){
+  if(!id) return;
+  const list = getRevokedDevices();
+  if(list.indexOf(id) === -1){ list.push(id); setRevokedDevices(list); }
+}
+
+// True if THIS device is in the account's revoked list (client-side gate;
+// the authoritative stop comes from the "signout" push + refresh-token
+// revocation on the server).
+function isThisDeviceRevoked(payload){
+  if(payload && Array.isArray(payload.revokedDevices) && payload.revokedDevices.indexOf(getOrCreateDeviceId()) !== -1) return true;
+  return getRevokedDevices().indexOf(getOrCreateDeviceId()) !== -1;
+}
+
+// Gate invoked at sync boundaries (before send and before applying remote
+// data). If this device has been revoked by the account owner, stop all
+// syncing and sign out locally so it neither sends nor receives.
+let selfRevokeHandled = false;
+function checkDeviceRevoked(payload){
+  if(!currentUser || selfRevokeHandled) return false;
+  if(isThisDeviceRevoked(payload)){
+    selfRevokeHandled = true;
+    unsubscribeRealtime();
+    clearReceipts();
+    try{ localStorage.removeItem(DIRTY_KEY); }catch(e){}
+    // Sign out locally (scope local: just this device).
+    const sb = initSupabase();
+    if(sb){
+      sb.auth.signOut({ scope: "local" }).catch(()=>{});
+      pullLocalPushSubscription().catch(()=>{});
+    }
+    if(typeof showToast === "function") showToast("Signed out on this device.");
+    return true;
+  }
+  return false;
+}
+// Remove this device's own subscription row but keep the local browser push
+// subscription so the user can re-enable later if they log back in.
+async function pullLocalPushSubscription(){
+  const endpoint = getMyPushEndpoint();
+  if(!endpoint) return;
+  const sb = initSupabase();
+  if(!sb) return;
+  try{ await sb.from("push_subscriptions").delete().eq("endpoint", endpoint); }catch(e){}
+}
+
 
 // Put the auth session where the service worker can read it, so that a
 // background push can fetch the latest payload even with the page closed.
@@ -4140,7 +4365,8 @@ async function pushSyncSubscribe(){
         endpoint,
         p256dh: b64ToB64Url(sub.getKey("p256dh")),
         auth: b64ToB64Url(sub.getKey("auth")),
-        device_name: deviceLabel()
+        device_name: deviceLabel(),
+        device_id: getOrCreateDeviceId()
       }, { onConflict: "endpoint" });
     }
     // Hand the SW the session so it can background-fetch fresh data.
@@ -4170,8 +4396,9 @@ async function pushSyncUnsubscribe(){
 
 // Called after any cloud write: ask the Edge Function to immediately ping
 // the user's other devices (excluding this one). Fire-and-forget.
+let suppressPushNotify = false;
 async function notifyDevicesOfChange(){
-  if(!currentUser || !navigator.onLine) return;
+  if(!currentUser || !navigator.onLine || suppressPushNotify) return;
   const sb = initSupabase();
   if(!sb) return;
   try{
@@ -8062,7 +8289,8 @@ function savePayloadData(){
     customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
     themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}"),
     autoHideDone: localStorage.getItem(AUTO_HIDE_DONE_KEY) || "0",
-    trash: JSON.parse(localStorage.getItem(TRASH_KEY) || "[]")
+    trash: JSON.parse(localStorage.getItem(TRASH_KEY) || "[]"),
+    revokedDevices: getRevokedDevices()
   };
 }
 
@@ -8150,6 +8378,24 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("acctRow").addEventListener("click", openLogin);
   document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
+
+  // Sign out all other devices (email-OTP verified)
+  const soAllBtn = document.getElementById("acctSignOutAllBtn");
+  if(soAllBtn){
+    soAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // don't open the login view
+      if(!currentUser) return;
+      startSignOutAll();
+    });
+  }
+  document.getElementById("signoutAllVerify").addEventListener("click", verifySignOutAll);
+  const soCode = document.getElementById("signoutAllCode");
+  if(soCode){
+    soCode.addEventListener("keydown", (e) => { if(e.key === "Enter") verifySignOutAll(); });
+  }
+  document.getElementById("signoutAllCancel").addEventListener("click", () => {
+    document.getElementById("signoutAllOverlay").classList.remove("active");
+  });
 
   // Conflict resolution overlay wiring
   document.getElementById("syncConflictList").addEventListener("click", (e) => {
@@ -10746,13 +10992,14 @@ syncEventQuests();
       <div class="settings-section">
         <div class="settings-section-title">Account</div>
         <div class="settings-row" id="acctRow" style="cursor:pointer;">
-          <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <div>
               <div class="settings-row-title" id="acctLabel">Log in</div>
               <div class="settings-row-sub" id="acctSub"></div>
             </div>
           </div>
+          <button type="button" class="settings-action" id="acctSignOutAllBtn" style="display:none;border-color:var(--danger);padding:6px 10px;font-size:11px;margin-left:auto;">Log out other devices</button>
         </div>
       </div>
 

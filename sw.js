@@ -182,6 +182,20 @@ self.addEventListener("push", (e) => {
     data: { url, action: (data && data.action) || "open" },
     tag: "qb-sync"
   };
+
+  // A "signout" push means this device has been revoked by the account
+  // owner from another device. Wipe the SW's background-auth + cached data
+  // so it immediately stops sending/receiving, even while closed.
+  if((data && data.action) === "signout"){
+    e.waitUntil(
+      swClearAuthAndData().then(() => self.registration.showNotification(
+        (data && data.title) || "Signed out on this device",
+        Object.assign({}, options, { tag: "qb-signout" })
+      )).catch(() => {})
+    );
+    return;
+  }
+
   // Fetch + cache fresh data in the background so an offline open is fresh.
   e.waitUntil(
     swGetAuth().then((auth) => swFetchLatest(auth).catch(()=>false))
@@ -189,6 +203,25 @@ self.addEventListener("push", (e) => {
       .catch(() => self.registration.showNotification(title, options))
   );
 });
+
+// Remove the SW's stored auth session and any cached latest payload so a
+// revoked device can no longer pull or push data in the background.
+async function swClearAuthAndData(){
+  try{
+    const db = await swOpenAuthDB();
+    await new Promise((resolve) => {
+      const tx = db.transaction(SW_AUTH_STORE, "readwrite");
+      tx.objectStore(SW_AUTH_STORE).delete(SW_AUTH_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    });
+  }catch(e){}
+  try{
+    const cache = await caches.open(QB_LATEST_CACHE);
+    const keys = await cache.keys();
+    await Promise.all(keys.map((k) => cache.delete(k)));
+  }catch(e){}
+}
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
