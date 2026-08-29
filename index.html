@@ -3953,10 +3953,23 @@ async function syncFromCloud(){
   return cloud;
 }
 
-// Auto-sync: debounced push whenever a local change is made while online+logged in.
+// Auto-sync: push whenever a local change is made while online+logged in.
+// syncNow pushes immediately (fire-and-forget); scheduleAutoSync collapses
+// bursts. Both respect the echo-suppression window so realtime echoes from
+// other open instances never bounce back and overwrite each other.
 let autoSyncTimer = null;
 let suppressAutoSync = false;
 let lastRemoteApply = 0;
+let syncInFlight = false;
+async function syncNow(){
+  if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
+  if(Date.now() - lastRemoteApply < 2000) return;
+  if(syncInFlight) return;
+  if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
+  syncInFlight = true;
+  try { await syncToCloud(); } catch(e){ /* offline/error - will retry on reconnect */ }
+  finally { syncInFlight = false; }
+}
 function scheduleAutoSync(){
   if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
   // Suppress pushes that are only echoes of a just-applied remote change.
@@ -3964,11 +3977,7 @@ function scheduleAutoSync(){
   // Flag dirty so we know there are local edits since last sync.
   localStorage.setItem(DIRTY_KEY, "1");
   if(autoSyncTimer) clearTimeout(autoSyncTimer);
-  autoSyncTimer = setTimeout(async () => {
-    if(!currentUser || !navigator.onLine) return;
-    try { await syncToCloud(); } catch(e){ /* silent - will retry on reconnect */ }
-    if(typeof render === "function") render();
-  }, 800);
+  autoSyncTimer = setTimeout(syncNow, 800);
 }
 window.addEventListener("online", () => {
   if(currentUser) { syncFromCloud().then(() => { if(typeof render === "function") render(); }).catch(()=>{}); }
@@ -4309,6 +4318,7 @@ function loadState(){
 function saveState(state){
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
   updateSaveSize();
+  syncNow();
 }
 
 // Given total accumulated xp, derive level + progress within that level
@@ -6295,7 +6305,7 @@ function saveHistory(h){
   // cap growth - keep the most recent ~1000 entries, plenty for many weeks
   if(h.length > 1000) h = h.slice(h.length - 1000);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
-  scheduleAutoSync();
+  syncNow();
 }
 function logHistoryEvent(entry){
   const h = loadHistory();
@@ -6436,7 +6446,7 @@ function saveTasks(tasks){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   updateSaveSize();
   recordChanges("quest", prev, tasks);
-  scheduleAutoSync();
+  syncNow();
 }
 
 const TRASH_KEY = "qb_recent_deleted";
@@ -8064,6 +8074,11 @@ function loadEvents(){
 function saveEvents(events){
   localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
   updateSaveSize();
+  recordChanges("event", loadEventsRaw(), events);
+  syncNow();
+}
+function loadEventsRaw(){
+  try{ const e = JSON.parse(localStorage.getItem(EVENTS_KEY)); return Array.isArray(e) ? e : []; }catch(err){ return []; }
 }
 
 // The effective last day of a repeating series: repeatUntil snapped back to
@@ -9499,6 +9514,7 @@ function loadOwnedThemes(){
 function saveOwnedThemes(arr){
   localStorage.setItem(OWNED_KEY, JSON.stringify(arr));
   updateSaveSize();
+  syncNow();
 }
 function loadCustomThemes(){
   try{
@@ -9510,6 +9526,7 @@ function loadCustomThemes(){
 function saveCustomThemes(arr){
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(arr));
   updateSaveSize();
+  syncNow();
 }
 // Ordered log of paid purchases so de-levels can walk back the most recent
 // purchase when the credit balance can't cover the refund on its own.
@@ -9523,6 +9540,7 @@ function loadPurchases(){
 }
 function savePurchases(arr){
   localStorage.setItem(PURCHASES_KEY, JSON.stringify(arr));
+  syncNow();
 }
 function logPurchase(p){
   const arr = loadPurchases();
@@ -9655,6 +9673,7 @@ function renderThemeSwatches(){
       localStorage.setItem(THEME_KEY, a.id);
       applyTheme(a);
       renderThemeSwatches();
+      syncNow();
       sfx.click();
     });
     box.appendChild(sw);
@@ -9683,6 +9702,7 @@ function renderThemeSwatches(){
       localStorage.setItem(THEME_KEY, ot.id);
       applyTheme(currentTheme);
       renderThemeSwatches();
+      syncNow();
       sfx.click();
     });
     box.appendChild(sw);
@@ -9854,6 +9874,7 @@ function renderShop(){
         localStorage.setItem(THEME_KEY, t.id);
         applyTheme(currentTheme);
         renderShop();
+        syncNow();
         sfx.click();
       };
     } else {
@@ -11449,6 +11470,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.5</div>
+<div class="version-watermark" aria-hidden="true">v1.6.6</div>
 </body>
 </html>
