@@ -3599,14 +3599,112 @@ function initSupabase(){
   if(sbClient || !SUPABASE_URL || !SUPABASE_ANON || !window.supabase) return sbClient;
   sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
   sbClient.auth.onAuthStateChange((_event, session) => {
+    const wasLoggedIn = !!currentUser;
     currentUser = session ? session.user : null;
+    const nowLoggedIn = !!currentUser;
     updateAccountUI();
+    if(nowLoggedIn && !wasLoggedIn){
+      // Just signed in: pull cloud data and reconcile with any offline receipts
+      initializeSync().catch(()=>{});
+    }
   });
   sbClient.auth.getSession().then(({ data }) => {
     currentUser = data.session ? data.session.user : null;
     updateAccountUI();
   });
   return sbClient;
+}
+
+// First sync on login: reconcile local (with offline receipts) vs cloud.
+async function initializeSync(){
+  if(!currentUser) return;
+  const receipts = loadReceipts();
+  if(receipts.length){
+    // We have offline edits - run conflict resolution against cloud
+    let cloud = null;
+    try { cloud = await cloudRead(); } catch(e){ cloud = null; }
+    if(cloud){
+      showConflictUI(receipts, cloud);
+    }
+  } else {
+    // No local offline edits: adopt cloud state
+    try { await syncFromCloud(); if(typeof render === "function") render(); } catch(e){}
+  }
+}
+
+// Conflict resolution UI: shows offline (local) changes vs what's on the
+// other device (cloud) and lets the user pick which to keep per item.
+let pendingConflict = null;
+function showConflictUI(receipts, cloud){
+  const local = savePayloadData();
+  const summary = diffSummary(local, cloud);
+  pendingConflict = { receipts, cloud, local, summary };
+  const container = document.getElementById("syncConflictList");
+  container.innerHTML = "";
+  const changesEl = document.getElementById("syncConflictChanges");
+  if(!summary.length){
+    changesEl.textContent = "No overlapping changes to review - merged automatically.";
+  } else {
+    changesEl.textContent = "Choose which changes to keep for each item:";
+  }
+  const byId = {};
+  summary.forEach(c => { if(!byId[c.id]) byId[c.id] = c; });
+  Object.keys(byId).forEach(id => {
+    const c = byId[id];
+    const row = document.createElement("div");
+    row.className = "settings-row";
+    row.style.flexWrap = "wrap";
+    row.innerHTML = `
+      <div class="settings-row-text" style="flex:1;min-width:150px;">
+        <div class="settings-row-title">${escapeHtml(c.name)}</div>
+        <div class="settings-row-sub">${c.action === "both-edited" ? "Edited on both sides" : (c.action === "local-created" ? "Created on this device" : "Created on another device")}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button type="button" class="settings-action" data-id="${c.id}" data-keep="local" data-chosen="1" style="font-size:11px;padding:5px 9px;background:var(--accent);color:#fff;">Keep mine</button>
+        <button type="button" class="settings-action" data-id="${c.id}" data-keep="cloud" style="font-size:11px;padding:5px 9px;">Keep theirs</button>
+      </div>`;
+    container.appendChild(row);
+  });
+  const overlay = document.getElementById("syncConflictView");
+  overlay.classList.add("active");
+}
+function finalizeConflict(){
+  // Default: keep the user's local (offline) version unless they chose otherwise.
+  const chooseCloud = new Set();
+  document.querySelectorAll("#syncConflictList button[data-keep][data-chosen]").forEach(b => {
+    if(b.dataset.keep === "cloud") chooseCloud.add(b.dataset.id);
+  });
+  const local = pendingConflict.local;
+  const cloud = pendingConflict.cloud;
+  const choose = (id) => chooseCloud.has(id) ? "cloud" : "local";
+  const mergedTasks = mergeTasksWithChoices(local.tasks, cloud.tasks, choose);
+  const mergedEvents = mergeTasksWithChoices(local.events, cloud.events, choose);
+  const merged = mergePayloads(local, cloud);
+  merged.tasks = mergedTasks;
+  merged.events = mergedEvents;
+  applyPayloadToStorage(merged);
+  clearReceipts();
+  const overlay = document.getElementById("syncConflictView");
+  overlay.classList.remove("active");
+  cloudWrite(merged).then(() => {
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+    if(typeof render === "function") render();
+  }).catch(()=>{});
+}
+function mergeTasksWithChoices(a, b, choose){
+  const out = [];
+  const allIds = new Set([...(a||[]).map(x=>x&&x.id), ...(b||[]).map(x=>x&&x.id)]);
+  allIds.forEach(id => {
+    const x = (a||[]).find(y => y && y.id === id);
+    const y = (b||[]).find(z => z && z.id === id);
+    if(!y){ out.push(x); return; }
+    if(!x){ out.push(y); return; }
+    out.push(choose(id) === "local" ? x : y);
+  });
+  return out;
+}
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
 async function sbSignUp(email, password){
   const sb = initSupabase();
@@ -3666,9 +3764,10 @@ function updateAccountUI(){
   }
 }
 
-// ── Cloud Sync ──────────────────────────────────────────────────────
+// ── Cloud Sync & Offline Receipts ───────────────────────────────────
 const RECEPTS_KEY = "qb_sync_receipts";
 const LAST_SYNC_KEY = "qb_last_sync_at";
+const DIRTY_KEY = "qb_sync_dirty";
 function loadReceipts(){ try{ return JSON.parse(localStorage.getItem(RECEPTS_KEY)) || []; }catch(e){ return []; }}
 function saveReceipts(r){ localStorage.setItem(RECEPTS_KEY, JSON.stringify(r)); }
 function queueReceipt(entry){
@@ -3677,6 +3776,75 @@ function queueReceipt(entry){
   r.push(entry);
   saveReceipts(r);
 }
+
+// Record what changed during a save so we can show a rollback/resolution UI
+// later. Only meaningful while offline; when online we rely on auto-sync.
+function recordChanges(kind, prevArr, nextArr, extra){
+  if(currentUser && navigator.onLine) return; // online: no receipts needed
+  const prevMap = new Map((prevArr||[]).filter(x=>x&&x.id).map(x => [x.id, x]));
+  const nextMap = new Map((nextArr||[]).filter(x=>x&&x.id).map(x => [x.id, x]));
+  nextMap.forEach((val, id) => {
+    if(!prevMap.has(id)){
+      queueReceipt(Object.assign({ kind, op: "create", id, name: val.name || "", before: null, after: val }, extra||{}));
+    } else if(JSON.stringify(prevMap.get(id)) !== JSON.stringify(val)){
+      queueReceipt(Object.assign({ kind, op: "edit", id, name: val.name || "", before: prevMap.get(id), after: val }, extra||{}));
+    }
+  });
+  prevMap.forEach((val, id) => {
+    if(!nextMap.has(id)){
+      queueReceipt(Object.assign({ kind, op: "delete", id, name: val.name || "", before: val, after: null }, extra||{}));
+    }
+  });
+}
+function clearReceipts(){ saveReceipts([]); }
+
+// Detect whether a quest/event was created while this device was offline.
+function idHashes(arr){ const s = new Set(); (arr||[]).forEach(x => { if(x && x.id) s.add(x.id); }); return s; }
+
+// Merge helper: union two arrays by id (prefer the `prefer` copy on tie).
+function mergeByIdArray(a, b, prefer){
+  const map = new Map();
+  (b||[]).forEach(x => { if(x && x.id) map.set(x.id, { cloud: x, local: a ? a.find(y => y && y.id === x.id) : undefined }); });
+  (a||[]).forEach(x => { if(x && x.id && !map.has(x.id)) map.set(x.id, { cloud: undefined, local: x }); });
+  const out = [];
+  map.forEach(({cloud, local}) => {
+    if(local === undefined) out.push(cloud);
+    else if(cloud === undefined) out.push(local);
+    else out.push(prefer === "local" ? local : cloud);
+  });
+  return out;
+}
+function mergePayloads(local, cloud){
+  return {
+    tasks: mergeByIdArray(local.tasks, cloud.tasks, "local"),
+    events: mergeByIdArray(local.events, cloud.events, "local"),
+    history: (local.history||[]).concat(cloud.history||[]),
+    // settings / xp / state: last-write-wins by syncedAt timestamp
+    state: (cloud.syncedAt||"") > (local.syncedAt||"") ? cloud.state : (local.state || {}),
+    currentTheme: (cloud.syncedAt||"") > (local.syncedAt||"") ? cloud.currentTheme : local.currentTheme,
+    // store purchases: union, dedupe
+    ownedThemes: Array.from(new Set([...(local.ownedThemes||[]), ...(cloud.ownedThemes||[])])),
+    customThemes: mergeByIdArray(local.customThemes, cloud.customThemes, "local"),
+    themeOverrides: Object.assign({}, cloud.themeOverrides||{}, local.themeOverrides||{})
+  };
+}
+
+// Build a human friendly list of diff for the resolution UI.
+function diffSummary(local, cloud){
+  const changes = [];
+  const seen = new Set();
+  function addArray(label, a, b){
+    const bId = idHashes(b);
+    const aId = idHashes(a);
+    (a||[]).forEach(x => { if(x && x.id && !bId.has(x.id)) changes.push({ type: label, action: "local-created", name: x.name || x.id, id: x.id }); });
+    (b||[]).forEach(x => { if(x && x.id && !aId.has(x.id)) changes.push({ type: label, action: "device-created", name: x.name || x.id, id: x.id }); });
+    (a||[]).forEach(x => { if(x && x.id && bId.has(x.id)){ const y = (b||[]).find(z => z && z.id === x.id); if(JSON.stringify(x) !== JSON.stringify(y)) changes.push({ type: label, action: "both-edited", name: x.name || x.id, id: x.id }); } });
+  }
+  addArray("quest", local.tasks, cloud.tasks);
+  addArray("event", local.events, cloud.events);
+  return changes;
+}
+
 function applyPayloadToStorage(data){
   if(!data) return;
   if(data.tasks) localStorage.setItem(STORAGE_KEY, JSON.stringify(data.tasks));
@@ -3688,10 +3856,17 @@ function applyPayloadToStorage(data){
   if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
   if(data.themeOverrides) localStorage.setItem("qb-admin-overrides", JSON.stringify(data.themeOverrides));
 }
-async function syncToCloud(){
+
+async function cloudRead(){
   const sb = initSupabase();
   if(!sb || !currentUser) throw new Error("Not signed in");
-  const payload = savePayloadData();
+  const { data, error } = await sb.from("user_data").select("data, updated_at").eq("user_id", currentUser.id).maybeSingle();
+  if(error) throw error;
+  return data ? data.data : null;
+}
+async function cloudWrite(payload){
+  const sb = initSupabase();
+  if(!sb || !currentUser) throw new Error("Not signed in");
   payload.syncedAt = new Date().toISOString();
   const { error } = await sb.from("user_data").upsert({
     user_id: currentUser.id,
@@ -3699,19 +3874,56 @@ async function syncToCloud(){
     updated_at: new Date().toISOString()
   }, { onConflict: "user_id" });
   if(error) throw error;
+  return payload;
+}
+
+// Online, signed in: push local payload to cloud (with conflict handling).
+async function syncToCloud(){
+  const payload = savePayloadData();
+  payload.syncedAt = new Date().toISOString();
+  let cloud = null;
+  try { cloud = await cloudRead(); } catch(e) { /* if read fails, just write */ }
+  // If pending local receipts exist, run conflict resolution first.
+  const receipts = loadReceipts();
+  if(receipts.length && cloud){
+    const local = savePayloadData();
+    const merged = mergePayloads(local, cloud);
+    applyPayloadToStorage(merged);
+    await cloudWrite(merged);
+  } else {
+    await cloudWrite(payload);
+  }
+  localStorage.removeItem(DIRTY_KEY);
   localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
   const statusEl = document.getElementById("acctSyncStatus");
   if(statusEl) statusEl.textContent = "Last sync: just now";
+  return true;
 }
 async function syncFromCloud(){
-  const sb = initSupabase();
-  if(!sb || !currentUser) throw new Error("Not signed in");
-  const { data, error } = await sb.from("user_data").select("data, updated_at").eq("user_id", currentUser.id).single();
-  if(error) throw error;
-  if(data && data.data) applyPayloadToStorage(data.data);
-  localStorage.setItem(LAST_SYNC_KEY, data.updated_at || new Date().toISOString());
-  return data;
+  const cloud = await cloudRead();
+  if(!cloud) return;
+  // No offline receipts: adopt cloud verbatim ONLY if local hasn't changed offline.
+  applyPayloadToStorage(cloud);
+  localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  return cloud;
 }
+
+// Auto-sync: debounced push whenever a local change is made while online+logged in.
+let autoSyncTimer = null;
+function scheduleAutoSync(){
+  if(!currentUser || !navigator.onLine) return;
+  // Flag dirty so we know there are local edits since last sync.
+  localStorage.setItem(DIRTY_KEY, "1");
+  if(autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(async () => {
+    if(!currentUser || !navigator.onLine) return;
+    try { await syncToCloud(); } catch(e){ /* silent - will retry on reconnect */ }
+    if(typeof render === "function") render();
+  }, 800);
+}
+window.addEventListener("online", () => {
+  if(currentUser) { syncFromCloud().then(() => { if(typeof render === "function") render(); }).catch(()=>{}); }
+});
 
 // Manual name tables - avoids relying on toLocaleDateString/Intl, which can
 // be unreliable or missing full locale data on some Android WebViews and
@@ -5996,6 +6208,7 @@ function saveHistory(h){
   // cap growth - keep the most recent ~1000 entries, plenty for many weeks
   if(h.length > 1000) h = h.slice(h.length - 1000);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+  scheduleAutoSync();
 }
 function logHistoryEvent(entry){
   const h = loadHistory();
@@ -6132,8 +6345,11 @@ function loadTasks(){
   }catch(e){ return []; }
 }
 function saveTasks(tasks){
+  const prev = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   updateSaveSize();
+  recordChanges("quest", prev, tasks);
+  scheduleAutoSync();
 }
 
 const TRASH_KEY = "qb_recent_deleted";
@@ -7607,6 +7823,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("acctRow").addEventListener("click", openLogin);
   document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
+
+  // Conflict resolution overlay wiring
+  document.getElementById("syncConflictList").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-keep]");
+    if(!btn) return;
+    const row = btn.closest(".settings-row");
+    const buttons = row.querySelectorAll("button[data-keep]");
+    buttons.forEach(b => { b.removeAttribute("data-chosen"); b.style.background = ""; b.style.color = ""; });
+    btn.dataset.chosen = "1";
+    btn.style.background = "var(--accent)";
+    btn.style.color = "#fff";
+  });
+  document.getElementById("syncConflictDone").addEventListener("click", finalizeConflict);
 
   // Init supabase on load
   initSupabase();
@@ -10196,6 +10425,20 @@ syncEventQuests();
   </div>
 </div>
 
+<div class="settings-overlay" id="syncConflictView">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <div class="settings-title">Sync Review</div>
+    </div>
+    <div class="settings-scroll" style="padding:16px;">
+      <div class="settings-sub" style="margin-bottom:12px;">You made changes offline while another device also changed your questbook. Review what to keep below.</div>
+      <div id="syncConflictChanges" style="font-size:12.5px;color:var(--dim);margin-bottom:12px;"></div>
+      <div id="syncConflictList"></div>
+      <button type="button" class="settings-action" id="syncConflictDone" style="width:100%;border-color:var(--accent);margin-top:18px;padding:12px;">Apply selections & sync</button>
+    </div>
+  </div>
+</div>
+
 <div class="shop-overlay" id="shopView">
   <div class="shop-panel">
     <div class="shop-header">
@@ -11112,6 +11355,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.5.75</div>
+<div class="version-watermark" aria-hidden="true">v1.6.0</div>
 </body>
 </html>
