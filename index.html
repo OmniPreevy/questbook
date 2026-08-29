@@ -3896,7 +3896,11 @@ function applyPayloadToStorage(data){
   if(data.ownedThemes) localStorage.setItem(OWNED_KEY, JSON.stringify(data.ownedThemes));
   if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
   if(data.themeOverrides) localStorage.setItem("qb-admin-overrides", JSON.stringify(data.themeOverrides));
-  if(data.autoHideDone) localStorage.setItem(AUTO_HIDE_DONE_KEY, data.autoHideDone);
+  // Don't let a remote payload stomp on a preference the user just toggled
+  // locally a moment ago (avoids the realtime echo undoing the selection).
+  if(data.autoHideDone && Date.now() - localPrefOverrideTs > 3000){
+    localStorage.setItem(AUTO_HIDE_DONE_KEY, data.autoHideDone);
+  }
 }
 
 async function cloudRead(){
@@ -6739,8 +6743,10 @@ function scheduleDoneReposition(){
 function autoHideDoneEnabled(){
   return localStorage.getItem(AUTO_HIDE_DONE_KEY) === "1";
 }
+let localPrefOverrideTs = 0;
 function toggleAutoHideDone(){
   localStorage.setItem(AUTO_HIDE_DONE_KEY, autoHideDoneEnabled() ? "0" : "1");
+  localPrefOverrideTs = Date.now();
   updateAutoHideBtn();
   render();
   if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
@@ -11474,6 +11480,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.9</div>
+<div class="version-watermark" aria-hidden="true">v1.7.0</div>
 </body>
 </html>
