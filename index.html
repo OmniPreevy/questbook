@@ -3607,7 +3607,12 @@ function initSupabase(){
       // Just signed in: pull cloud data and reconcile with any offline receipts
       initializeSync().catch(()=>{});
     }
-    if(!nowLoggedIn) initialSyncDone = false;
+    if(!nowLoggedIn){
+      initialSyncDone = false;
+      unsubscribeRealtime();
+    } else if(nowLoggedIn && initialSyncDone){
+      subscribeRealtime();
+    }
   });
   sbClient.auth.getSession().then(({ data }) => {
     currentUser = data.session ? data.session.user : null;
@@ -3664,6 +3669,7 @@ async function initializeSync(){
     try { await syncFromCloud(); if(typeof render === "function") render(); } catch(e){}
   }
   initialSyncDone = true;
+  subscribeRealtime();
   scheduleAutoSync();
 }
 
@@ -3938,15 +3944,18 @@ async function syncFromCloud(){
   const cloud = await cloudRead();
   if(!cloud) return;
   // No offline receipts: adopt cloud verbatim ONLY if local hasn't changed offline.
+  suppressAutoSync = true;
   applyPayloadToStorage(cloud);
+  suppressAutoSync = false;
   localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
   return cloud;
 }
 
 // Auto-sync: debounced push whenever a local change is made while online+logged in.
 let autoSyncTimer = null;
+let suppressAutoSync = false;
 function scheduleAutoSync(){
-  if(!currentUser || !navigator.onLine || !initialSyncDone) return;
+  if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
   // Flag dirty so we know there are local edits since last sync.
   localStorage.setItem(DIRTY_KEY, "1");
   if(autoSyncTimer) clearTimeout(autoSyncTimer);
@@ -3959,6 +3968,42 @@ function scheduleAutoSync(){
 window.addEventListener("online", () => {
   if(currentUser) { syncFromCloud().then(() => { if(typeof render === "function") render(); }).catch(()=>{}); }
 });
+
+// ── Realtime cross-instance sync ───────────────────────────────────
+// Whenever the user's row changes in Supabase (i.e. another open app
+// instance pushed), apply the freshest payload locally so all instances
+// stay in lockstep without a save/reload.
+let rtChannel = null;
+function subscribeRealtime(){
+  const sb = initSupabase();
+  if(rtChannel || !sb || !currentUser) return;
+  rtChannel = sb.channel("user_data_changes_" + currentUser.id)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "user_data",
+      filter: "user_id=eq." + currentUser.id
+    }, (payload) => {
+      const newData = payload.new && payload.new.data;
+      if(!newData) return;
+      // Don't clobber pending offline edits with the old (empty) local state.
+      const receipts = loadReceipts();
+      if(receipts.length) return;
+      // Avoid fighting our own echo: if nothing changed locally, applying is a no-op.
+      suppressAutoSync = true;
+      applyPayloadToStorage(newData);
+      suppressAutoSync = false;
+      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      if(typeof render === "function") render();
+    })
+    .subscribe();
+}
+function unsubscribeRealtime(){
+  if(rtChannel){
+    sbClient.removeChannel(rtChannel);
+    rtChannel = null;
+  }
+}
 
 // Manual name tables - avoids relying on toLocaleDateString/Intl, which can
 // be unreliable or missing full locale data on some Android WebViews and
@@ -11397,6 +11442,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.3</div>
+<div class="version-watermark" aria-hidden="true">v1.6.4</div>
 </body>
 </html>
