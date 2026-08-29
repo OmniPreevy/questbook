@@ -1,0 +1,9 @@
+# Supabase CLI local runtime artifacts
+# (this .gitignore lives inside supabase/, so patterns are relative to it)
+.temp/
+.branches/
+.env
+.env.local
+.env.*
+functions/.env
+*.supabase.local

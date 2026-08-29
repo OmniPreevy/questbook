@@ -3607,6 +3607,14 @@ function initSupabase(){
       // Just signed in: pull cloud data and reconcile with any offline receipts
       initializeSync().catch(()=>{});
     }
+    if(nowLoggedIn && session && _event === "TOKEN_REFRESHED") setSWAuth(session).catch(()=>{});
+    // Keep the push subscription (and the SW's background-fetch session)
+    // in lockstep with the auth state.
+    if(nowLoggedIn){
+      pushSyncSubscribe().then(updateNotifyHint).catch(()=>{});
+    } else if(!nowLoggedIn && wasLoggedIn){
+      pushSyncUnsubscribe().then(updateNotifyHint).catch(()=>{});
+    }
     if(!nowLoggedIn){
       initialSyncDone = false;
       unsubscribeRealtime();
@@ -3617,7 +3625,15 @@ function initSupabase(){
   sbClient.auth.getSession().then(({ data }) => {
     currentUser = data.session ? data.session.user : null;
     updateAccountUI();
-    if(currentUser && !initialSyncDone) initializeSync().catch(()=>{});
+    if(currentUser){
+      pushSyncSubscribe().then(updateNotifyHint).catch(()=>{});
+      if(data.session) setSWAuth(data.session).catch(()=>{});
+      // Offline: hydrate from whatever the service worker cached most recently.
+      applyCachedLatest().catch(()=>{});
+      if(!initialSyncDone) initializeSync().catch(()=>{});
+    } else {
+      clearSWAuth().catch(()=>{});
+    }
   });
   checkAuthHash();
   return sbClient;
@@ -3921,6 +3937,9 @@ async function cloudWrite(payload){
     updated_at: new Date().toISOString()
   }, { onConflict: "user_id" });
   if(error) throw error;
+  // Data changed elsewhere in the account: immediately ping the user's
+  // other devices so a closed app can wake, fetch and cache fresh data.
+  notifyDevicesOfChange().catch(()=>{});
   return payload;
 }
 
@@ -4027,6 +4046,196 @@ function unsubscribeRealtime(){
     sbClient.removeChannel(rtChannel);
     rtChannel = null;
   }
+}
+
+// ── Web Push: keep closed devices in sync ───────────────────────────
+// When device A writes data to the cloud it calls notifyDevicesOfChange(),
+// which POSTs to the send-push Edge Function. That immediately pings every
+// other device that has a Web Push subscription for the account. Each
+// woken service worker shows a notification and fetches + caches the
+// freshest payload so the next (even offline) open has the latest data.
+//
+// The "permanent link" is the push subscription endpoint the browser gives
+// us on login. We store it in the push_subscriptions table. While signed
+// in we also hand the service worker a copy of the auth session (in an
+// IndexedDB store) so it can fetch fresh data in the background even when
+// the page is closed.
+const VAPID_PUBLIC_KEY = "BLOStmXjUfC9glTvCde1Pg1bTVKvziCAitT7MT9iJ8gcxH3rjsSLIz7-b4Y_joWMXfJlEJm-GS4Mg2SQLQmlCHw";
+const SW_AUTH_DB = "qb-sw-auth";
+const SW_AUTH_STORE = "auth";
+const SW_AUTH_KEY = "session";
+const MY_PUSH_ENDPOINT_KEY = "qb_my_push_endpoint";
+const PUSH_ENABLED_KEY = "qb_push_enabled";
+
+function getMyPushEndpoint(){ try{ return localStorage.getItem(MY_PUSH_ENDPOINT_KEY) || ""; }catch(e){ return ""; } }
+function setMyPushEndpoint(ep){ try{ localStorage.setItem(MY_PUSH_ENDPOINT_KEY, ep || ""); }catch(e){} }
+function isPushEnabled(){ try{ return localStorage.getItem(PUSH_ENABLED_KEY) === "1"; }catch(e){ return false; } }
+
+// Put the auth session where the service worker can read it, so that a
+// background push can fetch the latest payload even with the page closed.
+async function setSWAuth(session){
+  if(!("indexedDB" in self)) return;
+  try{
+    const db = await new Promise((res, rej) => {
+      const rq = indexedDB.open(SW_AUTH_DB, 1);
+      rq.onupgradeneeded = () => { if(!rq.result.objectStoreNames.contains(SW_AUTH_STORE)) rq.result.createObjectStore(SW_AUTH_STORE); };
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+    await new Promise((res, rej) => {
+      const tx = db.transaction(SW_AUTH_STORE, "readwrite");
+      tx.objectStore(SW_AUTH_STORE).put({
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        userId: session.user.id,
+        url: SUPABASE_URL,
+        anon: SUPABASE_ANON,
+        updatedAt: Date.now()
+      }, SW_AUTH_KEY);
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+  }catch(e){ /* non-fatal */ }
+}
+async function clearSWAuth(){
+  if(!("indexedDB" in self)) return;
+  try{
+    const db = await new Promise((res, rej) => {
+      const rq = indexedDB.open(SW_AUTH_DB, 1);
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+    await new Promise((res, rej) => {
+      const tx = db.transaction(SW_AUTH_STORE, "readwrite");
+      tx.objectStore(SW_AUTH_STORE).delete(SW_AUTH_KEY);
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+  }catch(e){}
+}
+
+// (Re)activate the push subscription for the signed-in user. Safe to call
+// on every login/token-refresh; it is idempotent.
+async function pushSyncSubscribe(){
+  if(!currentUser || !("serviceWorker" in navigator)) return false;
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    if(!reg.pushManager) { setMyPushEndpoint(""); return false; }
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      try{ sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+      }); }catch(e){ return false; }
+    }
+    if(!sub) return false;
+    const endpoint = sub.endpoint;
+    setMyPushEndpoint(endpoint);
+    localStorage.setItem(PUSH_ENABLED_KEY, "1");
+    // Persist the subscription so the Edge Function can reach this device.
+    const sb = initSupabase();
+    if(sb){
+      await sb.from("push_subscriptions").upsert({
+        user_id: currentUser.id,
+        endpoint,
+        p256dh: b64ToB64Url(sub.getKey("p256dh")),
+        auth: b64ToB64Url(sub.getKey("auth")),
+        device_name: deviceLabel()
+      }, { onConflict: "endpoint" });
+    }
+    // Hand the SW the session so it can background-fetch fresh data.
+    const { data } = await sb.auth.getSession();
+    if(data && data.session) await setSWAuth(data.session);
+    return true;
+  }catch(e){ return false; }
+}
+async function pushSyncUnsubscribe(){
+  localStorage.setItem(PUSH_ENABLED_KEY, "0");
+  const endpoint = getMyPushEndpoint();
+  setMyPushEndpoint("");
+  // Remove our subscription row so we stop getting pings.
+  const sb = initSupabase();
+  if(sb && endpoint){
+    try{ await sb.from("push_subscriptions").delete().eq("endpoint", endpoint); }catch(e){}
+  }
+  await clearSWAuth();
+  if("serviceWorker" in navigator){
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub) await sub.unsubscribe();
+    }catch(e){}
+  }
+}
+
+// Called after any cloud write: ask the Edge Function to immediately ping
+// the user's other devices (excluding this one). Fire-and-forget.
+async function notifyDevicesOfChange(){
+  if(!currentUser || !navigator.onLine) return;
+  const sb = initSupabase();
+  if(!sb) return;
+  try{
+    await fetch(SUPABASE_URL + "/functions/v1/send-push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + SUPABASE_ANON,
+        "apikey": SUPABASE_ANON
+      },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        excludeEndpoint: getMyPushEndpoint()
+      })
+    });
+  }catch(e){ /* offline / transient - a later sync will retry */ }
+}
+
+function deviceLabel(){
+  const nav = navigator;
+  const ua = nav.userAgent || "";
+  let os = "device";
+  if(/iPhone|iPad|iPod|Mac/.test(ua)) os = /iPhone|iPad|iPod/.test(ua) ? "iOS" : "macOS";
+  else if(/Android/.test(ua)) os = "Android";
+  else if(/Windows/.test(ua)) os = "Windows";
+  else if(/Linux/.test(ua)) os = "Linux";
+  return (os + " · " + (navigator.platform || "")).replace(/ +/g," ").trim();
+}
+
+// Offline open: if the service worker cached a fresh payload from a recent
+// push, hydrate localStorage from it so the offline view is as recent as
+// possible. No-op when online (a cloud pull is authoritative).
+const QB_LATEST_CACHE = "qb-latest-v1";
+async function applyCachedLatest(){
+  if(!currentUser || navigator.onLine) return false;
+  if(!("caches" in window)) return false;
+  try{
+    const cache = await caches.open(QB_LATEST_CACHE);
+    const res = await cache.match("/qb-latest/" + currentUser.id);
+    if(!res) return false;
+    const payload = await res.json();
+    if(payload && typeof payload === "object"){
+      applyPayloadToStorage(payload);
+      if(typeof render === "function") render();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+
+function urlB64ToUint8Array(base64String){
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for(let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+function b64ToB64Url(b64){
+  if(!b64) return "";
+  let s = b64;
+  try{ s = btoa(String.fromCharCode.apply(null, new Uint8Array(b64))); }catch(e){ s = b64; }
+  return s.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 // Manual name tables - avoids relying on toLocaleDateString/Intl, which can
@@ -8438,9 +8647,7 @@ function updateNotifyHint(){
   if(typeof Notification === "undefined"){
     btn.style.display = "none";
     hint.textContent = "Notifications aren't supported in this browser.";
-    return;
-  }
-  if(Notification.permission === "granted"){
+  } else if(Notification.permission === "granted"){
     btn.style.display = "none";
     hint.textContent = "Notifications on - only while this app is open in your browser.";
   } else if(Notification.permission === "denied"){
@@ -8450,6 +8657,30 @@ function updateNotifyHint(){
     btn.style.display = "";
     hint.textContent = "Notifications only fire while this app is open.";
   }
+  updatePushSyncHint();
+}
+function updatePushSyncHint(){
+  const pbtn = document.getElementById("pushSyncBtn");
+  const phint = document.getElementById("pushSyncHint");
+  if(!pbtn || !phint) return;
+  const canPush = typeof Notification !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+  const on = canPush && currentUser && isPushEnabled() && Notification.permission === "granted";
+  if(!canPush){
+    pbtn.style.display = "none";
+    phint.textContent = "Push sync isn't supported on this device/browser.";
+  } else if(!currentUser){
+    pbtn.style.display = "";
+    pbtn.textContent = "Enable";
+    phint.textContent = "Log in to sync this device even when the app is closed.";
+  } else if(on){
+    pbtn.style.display = "";
+    pbtn.textContent = "Disable";
+    phint.textContent = "On - this device gets changes immediately, even when closed.";
+  } else {
+    pbtn.style.display = "";
+    pbtn.textContent = "Enable";
+    phint.textContent = "Turn this on to receive changes even when the app is closed.";
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -8458,6 +8689,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if(typeof Notification === "undefined") return;
     Notification.requestPermission().then(updateNotifyHint);
   });
+  const pushBtn = document.getElementById("pushSyncBtn");
+  if(pushBtn){
+    pushBtn.addEventListener("click", () => {
+      if(!currentUser){ openLogin(); return; }
+      const turningOn = !(isPushEnabled() && Notification.permission === "granted");
+      (async () => {
+        if(turningOn){
+          if(typeof Notification !== "undefined" && Notification.permission !== "granted"){
+            const p = await Notification.requestPermission();
+            if(p !== "granted"){ updatePushSyncHint(); return; }
+          }
+          const ok = await pushSyncSubscribe();
+          if(ok && typeof updateNotifyHint === "function") updateNotifyHint();
+        } else {
+          await pushSyncUnsubscribe();
+          if(typeof updateNotifyHint === "function") updateNotifyHint();
+        }
+      })();
+    });
+  }
   updateNotifyHint();
 });
 
@@ -10464,6 +10715,13 @@ syncEventQuests();
             <div class="settings-row-sub" id="notifyHint">Notifications only fire while this app is open.</div>
           </div>
           <button type="button" class="settings-action" id="notifyPermBtn">Enable</button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-text">
+            <div class="settings-row-title">Sync when closed</div>
+            <div class="settings-row-sub" id="pushSyncHint">Keep this device up to date even when the app is closed.</div>
+          </div>
+          <button type="button" class="settings-action" id="pushSyncBtn">Enable</button>
         </div>
       </div>
 

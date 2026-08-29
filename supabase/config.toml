@@ -1,0 +1,39 @@
+# Supabase project configuration (generated to enable `supabase` CLI
+# migrations + Edge Functions for the Quest Book push pipeline).
+project_id = "mqngospkwckguveypnju"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "https://omnipreevy.github.io/questbook/"
+additional_redirect_urls = ["https://mqngospkwckguveypnju.supabase.co/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_sign_up = true
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+import_map_path = "./functions/import_map.json"
+
+[functions.send-push]
+verify_jwt = false
