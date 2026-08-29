@@ -3896,6 +3896,7 @@ function applyPayloadToStorage(data){
   if(data.ownedThemes) localStorage.setItem(OWNED_KEY, JSON.stringify(data.ownedThemes));
   if(data.customThemes) localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.customThemes));
   if(data.themeOverrides) localStorage.setItem("qb-admin-overrides", JSON.stringify(data.themeOverrides));
+  if(data.autoHideDone) localStorage.setItem(AUTO_HIDE_DONE_KEY, data.autoHideDone);
 }
 
 async function cloudRead(){
@@ -6742,6 +6743,7 @@ function toggleAutoHideDone(){
   updateAutoHideBtn();
   render();
   if(document.getElementById("hiddenView").classList.contains("active")) renderHiddenList();
+  syncNow();
   sfx.pop();
 }
 function updateAutoHideBtn(){
@@ -7839,7 +7841,8 @@ function savePayloadData(){
     currentTheme: localStorage.getItem(THEME_KEY) || null,
     ownedThemes: JSON.parse(localStorage.getItem(OWNED_KEY) || "[]"),
     customThemes: JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]"),
-    themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}")
+    themeOverrides: JSON.parse(localStorage.getItem("qb-admin-overrides") || "{}"),
+    autoHideDone: localStorage.getItem(AUTO_HIDE_DONE_KEY) || "0"
   };
 }
 
@@ -10939,7 +10942,7 @@ syncEventQuests();
     try{ const v = JSON.parse(localStorage.getItem(KEY)); if(v && typeof v === "object") return v; }catch(e){}
     return {};
   }
-  function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} updateSaveSize(); }
+  function save(store){ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} updateSaveSize(); syncNow(); }
   let imageObjectUrl = null;
   function revokeImageUrl(){
     if(imageObjectUrl){ try{ URL.revokeObjectURL(imageObjectUrl); }catch(e){} imageObjectUrl = null; }
@@ -11470,6 +11473,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.6</div>
+<div class="version-watermark" aria-hidden="true">v1.6.7</div>
 </body>
 </html>
