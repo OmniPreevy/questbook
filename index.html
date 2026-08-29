@@ -6399,9 +6399,29 @@ function openEdit(taskId){
       document.getElementById("editThresholdP3").value = t.dynamicThresholds?.p3 ?? 80;
       document.getElementById("editThresholdP4").value = t.dynamicThresholds?.p4 ?? 90;
       document.getElementById("editThresholdP5").value = t.dynamicThresholds?.p5 ?? 100;
-      document.getElementById("editPriority").disabled = true;
+      // Priority is auto-computed from thresholds, and a dynamic quest is a
+      // single timer that resets - duration/weekly counts don't apply. Hide the
+      // irrelevant options.
+      ["editPriority", "editPriorityLabel", "editDurationRow", "editCustomDurationRow",
+       "editPerRow", "editWeekCount", "editWeekCountLabel"].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = "none";
+      });
+      // Next deadline: absolute datetime (one-cycle only). Show time left.
+      const atEl = document.getElementById("editDynamicDeadlineAt");
+      if(t.dynamicDeadline > 0){
+        atEl.value = toDatetimeLocal(t.dynamicDeadline);
+      } else {
+        atEl.value = "";
+      }
+      updateEditDynamicTimeLeft();
     } else {
       dynSec.style.display = "none";
+      ["editPriority", "editPriorityLabel", "editDurationRow", "editCustomDurationRow",
+       "editPerRow", "editWeekCount", "editWeekCountLabel"].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.display = "";
+      });
       document.getElementById("editPriority").disabled = false;
     }
 
@@ -6414,6 +6434,30 @@ function openEdit(taskId){
 function closeEdit(){
   document.getElementById("editOverlay").classList.remove("active");
   editingTaskId = null;
+}
+
+// Convert a JS timestamp into the value format a datetime-local input expects.
+function toDatetimeLocal(ts){
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Show how much time remains until the currently-set "next deadline" in the
+// edit modal. Hides itself when no absolute deadline is set.
+function updateEditDynamicTimeLeft(){
+  const el = document.getElementById("editDynamicDeadlineTimeLeft");
+  if(!el) return;
+  const at = document.getElementById("editDynamicDeadlineAt");
+  const raw = at && at.value;
+  if(!raw){ el.style.display = "none"; return; }
+  const ts = new Date(raw).getTime();
+  if(isNaN(ts)){ el.style.display = "none"; return; }
+  const remaining = ts - Date.now();
+  el.textContent = remaining >= 0
+    ? "Time left: " + formatDurationMs(remaining)
+    : "Time left: " + formatDurationMs(-remaining) + " overdue";
+  el.style.display = "block";
 }
 
 function saveEdit(){
@@ -6510,6 +6554,14 @@ function saveEdit(){
       t.dynamicCompletedCount = 0;
       t.dynamicMissedCount = 0;
     }
+    // Optional explicit "next deadline" - one cycle only (cleared on check-off).
+    const atRaw = document.getElementById("editDynamicDeadlineAt").value;
+    if(atRaw){
+      const atTs = new Date(atRaw).getTime();
+      t.dynamicDeadline = isNaN(atTs) ? 0 : atTs;
+    } else {
+      t.dynamicDeadline = 0;
+    }
     t.oneTime = false;
   } else if(wasDynamic){
     // Turning off dynamic mode
@@ -6589,6 +6641,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("editDurationType").addEventListener("change", (e) => {
     document.getElementById("editCustomDurationRow").style.display = (e.target.value === "custom") ? "" : "none";
   });
+
+  // Edit form: next-deadline datetime → refresh time-left live
+  document.getElementById("editDynamicDeadlineAt").addEventListener("input", updateEditDynamicTimeLeft);
+  document.getElementById("editDynamicDeadlineAt").addEventListener("change", updateEditDynamicTimeLeft);
 
   const overlay = document.getElementById("editOverlay");
   overlay.addEventListener("click", (e) => {
@@ -7049,6 +7105,7 @@ function normalize(tasks){
     if(typeof task.dynamic !== "boolean") task.dynamic = false;
     if(typeof task.dynamicDeadlineDays !== "number" || task.dynamicDeadlineDays < 1) task.dynamicDeadlineDays = 7;
     if(typeof task.dynamicDeadlineStart !== "number") task.dynamicDeadlineStart = 0;
+    if(typeof task.dynamicDeadline !== "number" || !isFinite(task.dynamicDeadline)) task.dynamicDeadline = 0;
     if(typeof task.dynamicCompletedCount !== "number") task.dynamicCompletedCount = 0;
     if(typeof task.dynamicMissedCount !== "number") task.dynamicMissedCount = 0;
     if(!task.dynamicThresholds || typeof task.dynamicThresholds !== "object"){
@@ -7062,9 +7119,13 @@ function normalize(tasks){
 
     // Dynamic priority auto-escalation: priority is driven by deadline progress
     if(task.dynamic && task.dynamicDeadlineStart > 0){
-      const elapsed = Date.now() - task.dynamicDeadlineStart;
       const deadlineMs = task.dynamicDeadlineDays * 86400000;
-      const pct = (elapsed / deadlineMs) * 100;
+      // The effective deadline is the explicit "next deadline" if set,
+      // otherwise "start + days". Likewise the window anchors accordingly.
+      const bound = (task.dynamicDeadline > 0) ? task.dynamicDeadline : (task.dynamicDeadlineStart + deadlineMs);
+      const startMs = (task.dynamicDeadline > 0) ? (task.dynamicDeadline - deadlineMs) : task.dynamicDeadlineStart;
+      const elapsed = Math.max(0, Date.now() - startMs);
+      const pct = ((bound - startMs) > 0) ? (elapsed / (bound - startMs)) * 100 : 100;
       const th = task.dynamicThresholds;
       if(pct >= th.p5) task.priority = 5;
       else if(pct >= th.p4) task.priority = 4;
@@ -7075,7 +7136,7 @@ function normalize(tasks){
       // Deadline miss: if the deadline has passed and the quest hasn't been
       // completed within this window, log a week_result miss so it surfaces
       // in the weekly retro.
-      if(Date.now() > task.dynamicDeadlineStart + deadlineMs){
+      if(Date.now() > bound){
         const mondayKey = weekStr();
         const hist = loadHistory();
         if(!hist.some(e => e.type === "week_result" && e.weekKey === mondayKey &&
@@ -7306,9 +7367,9 @@ function render(){
     const meta = document.createElement("div");
     meta.className = "meta";
     if(task.dynamic && task.dynamicDeadlineStart > 0){
-      const elapsed = Date.now() - task.dynamicDeadlineStart;
       const deadlineMs = task.dynamicDeadlineDays * 86400000;
-      const remaining = deadlineMs - elapsed;
+      const bound = (task.dynamicDeadline > 0) ? task.dynamicDeadline : (task.dynamicDeadlineStart + deadlineMs);
+      const remaining = bound - Date.now();
       if(remaining >= 0){
         meta.textContent = formatDurationMs(remaining) + " remaining";
       } else {
@@ -7404,10 +7465,14 @@ function render(){
         const t = all.find(x => x.id === task.id);
         if(!t) return;
         const now = Date.now();
-        const wasMissed = t.dynamicDeadlineStart > 0 && now > t.dynamicDeadlineStart + (t.dynamicDeadlineDays * 86400000);
+        const dynBound = (t.dynamicDeadline > 0) ? t.dynamicDeadline : (t.dynamicDeadlineStart + (t.dynamicDeadlineDays * 86400000));
+        const wasMissed = t.dynamicDeadlineStart > 0 && now > dynBound;
         if(wasMissed) t.dynamicMissedCount = (t.dynamicMissedCount || 0) + 1;
         t.dynamicCompletedCount = (t.dynamicCompletedCount || 0) + 1;
         t.dynamicDeadlineStart = now;
+        // An explicit "next deadline" applies to one cycle only; checking off
+        // reverts to the relative duration-from-now model.
+        t.dynamicDeadline = 0;
         t.priority = 1; // Reset to low, escalates over time via normalize
         t.lastCheckedAt = now;
         saveTasks(all);
@@ -10756,7 +10821,7 @@ syncEventQuests();
     <label class="modal-label">Name</label>
     <input type="text" id="editName">
 
-    <label class="modal-label">Priority</label>
+    <label class="modal-label" id="editPriorityLabel">Priority</label>
     <select id="editPriority">
       <option value="1">P1 · low</option>
       <option value="2">P2</option>
@@ -10792,7 +10857,7 @@ syncEventQuests();
     </div>
 
     <div id="editRepeatFields" style="display:none;">
-      <div class="nt-duration-row">
+      <div class="nt-duration-row" id="editDurationRow">
         <div class="nt-slider-group nt-duration-reset-group">
           <label class="modal-label">Duration resets on</label>
           <select id="editWeekReset" class="nt-select">
@@ -10822,7 +10887,7 @@ syncEventQuests();
         <input type="number" id="editCustomDurationDays" min="2" max="90" value="7">
       </div>
 
-      <div class="modal-row">
+      <div class="modal-row" id="editPerRow">
         <div class="modal-col">
           <label class="modal-label">Times per duration</label>
           <input type="number" id="editPerWeek" min="1" max="7">
@@ -10833,15 +10898,22 @@ syncEventQuests();
         </div>
       </div>
 
-      <label class="modal-label">Done this period</label>
+      <label class="modal-label" id="editWeekCountLabel">Done this period</label>
       <input type="number" id="editWeekCount" min="0">
 
       <div class="edit-dynamic-section" id="editDynamicSection" style="display:none;">
         <label class="modal-label">Dynamic Reset Time</label>
         <div class="modal-row">
           <div class="modal-col">
-            <label class="modal-label">Deadline (days)</label>
+            <label class="modal-label">Deadline (days after last check)</label>
             <input type="number" id="editDynamicDeadline" min="1" max="365">
+          </div>
+        </div>
+        <div class="modal-row">
+          <div class="modal-col">
+            <label class="modal-label">Next deadline (optional)</label>
+            <input type="datetime-local" id="editDynamicDeadlineAt">
+            <div class="modal-label" id="editDynamicDeadlineTimeLeft" style="display:none;"></div>
           </div>
         </div>
         <label class="modal-label">Auto-priority thresholds (%)</label>
