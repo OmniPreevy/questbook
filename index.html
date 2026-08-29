@@ -3944,6 +3944,8 @@ async function syncFromCloud(){
   const cloud = await cloudRead();
   if(!cloud) return;
   // No offline receipts: adopt cloud verbatim ONLY if local hasn't changed offline.
+  if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
+  lastRemoteApply = Date.now();
   suppressAutoSync = true;
   applyPayloadToStorage(cloud);
   suppressAutoSync = false;
@@ -3954,8 +3956,11 @@ async function syncFromCloud(){
 // Auto-sync: debounced push whenever a local change is made while online+logged in.
 let autoSyncTimer = null;
 let suppressAutoSync = false;
+let lastRemoteApply = 0;
 function scheduleAutoSync(){
   if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
+  // Suppress pushes that are only echoes of a just-applied remote change.
+  if(Date.now() - lastRemoteApply < 2000) return;
   // Flag dirty so we know there are local edits since last sync.
   localStorage.setItem(DIRTY_KEY, "1");
   if(autoSyncTimer) clearTimeout(autoSyncTimer);
@@ -3991,10 +3996,12 @@ function subscribeRealtime(){
       if(receipts.length) return;
       // Avoid fighting our own echo: if nothing changed locally, applying is a no-op.
       suppressAutoSync = true;
+      if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
+      lastRemoteApply = Date.now();
       applyPayloadToStorage(newData);
-      suppressAutoSync = false;
       localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
       if(typeof render === "function") render();
+      suppressAutoSync = false;
     })
     .subscribe();
 }
@@ -11442,6 +11449,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.6.4</div>
+<div class="version-watermark" aria-hidden="true">v1.6.5</div>
 </body>
 </html>
