@@ -4024,17 +4024,39 @@ function mergeByIdArray(a, b, prefer){
   return out;
 }
 function mergePayloads(local, cloud){
+  // Dedupe history by id (both sides generate their own unique ids), keeping
+  // whichever copy exists. Naive concat would duplicate every overlapping entry.
+  const seenHistory = new Set();
+  const history = [];
+  (local.history||[]).concat(cloud.history||[]).forEach(e => {
+    if(!e || seenHistory.has(e.id)) return;
+    seenHistory.add(e.id);
+    history.push(e);
+  });
+  // autoHideDone / trash / revokedDevices: union so neither side loses them.
+  const mergedTrash = [];
+  const seenTrash = new Set();
+  (local.trash||[]).concat(cloud.trash||[]).forEach(item => {
+    if(!item) return;
+    const key = (item.task && item.task.id) || item.taskName || item;
+    if(typeof key === "string" && seenTrash.has(key)) return;
+    if(typeof key === "string") seenTrash.add(key);
+    mergedTrash.push(item);
+  });
   return {
     tasks: mergeByIdArray(local.tasks, cloud.tasks, "local"),
     events: mergeByIdArray(local.events, cloud.events, "local"),
-    history: (local.history||[]).concat(cloud.history||[]),
+    history,
     // settings / xp / state: last-write-wins by syncedAt timestamp
     state: (cloud.syncedAt||"") > (local.syncedAt||"") ? cloud.state : (local.state || {}),
     currentTheme: (cloud.syncedAt||"") > (local.syncedAt||"") ? cloud.currentTheme : local.currentTheme,
     // store purchases: union, dedupe
     ownedThemes: Array.from(new Set([...(local.ownedThemes||[]), ...(cloud.ownedThemes||[])])),
     customThemes: mergeByIdArray(local.customThemes, cloud.customThemes, "local"),
-    themeOverrides: Object.assign({}, cloud.themeOverrides||{}, local.themeOverrides||{})
+    themeOverrides: Object.assign({}, cloud.themeOverrides||{}, local.themeOverrides||{}),
+    autoHideDone: (cloud.syncedAt||"") > (local.syncedAt||"") ? cloud.autoHideDone : local.autoHideDone,
+    trash: mergedTrash,
+    revokedDevices: Array.from(new Set([...(local.revokedDevices||[]), ...(cloud.revokedDevices||[])]))
   };
 }
 
@@ -4108,7 +4130,21 @@ async function syncToCloud(){
   const receipts = loadReceipts();
   if(receipts.length && cloud){
     const local = savePayloadData();
+    // Local edits (incl. offline-earned XP) win the state field - the other
+    // device has no unsynced edits to protect here.
+    local.syncedAt = new Date().toISOString();
     const merged = mergePayloads(local, cloud);
+    applyPayloadToStorage(merged);
+    await cloudWrite(merged);
+    // The offline edits have now been merged into the cloud copy - clear the
+    // receipts so future pulls/realtime events no longer block this device
+    // from accepting remote changes.
+    clearReceipts();
+  } else if(cloud && Date.parse(cloud.syncedAt || "") > Date.parse(payload.syncedAt || "")){
+    // Cloud has a NEWER full payload than this device's last write but we
+    // have no offline edits - reconcile rather than overwrite, so a newer
+    // change made on another device isn't clobbered by this device's write.
+    const merged = mergePayloads(payload, cloud);
     applyPayloadToStorage(merged);
     await cloudWrite(merged);
   } else {
@@ -4145,14 +4181,26 @@ async function syncFromCloud(){
 let autoSyncTimer = null;
 let suppressAutoSync = false;
 let syncInFlight = false;
+let syncQueued = false;
+let rtReconcilePending = false;
 async function syncNow(){
   if(!currentUser || !navigator.onLine || !initialSyncDone) return;
   if(suppressAutoSync) return;
-  if(syncInFlight){ autoSyncTimer = setTimeout(syncNow, 250); return; }
-  if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
+  // Flag dirty so a reconcile never treats an in-flight local edit as synced.
+  localStorage.setItem(DIRTY_KEY, "1");
+  // If a write is in flight, queue one more pass instead of racing a second
+  // write that could finish out of order and clobber a newer payload.
+  if(syncInFlight){ if(!syncQueued) { syncQueued = true; } return; }
   syncInFlight = true;
-  try { await Promise.race([syncToCloud(), new Promise(r => setTimeout(r, 8000))]); }
-  finally { syncInFlight = false; }
+  try {
+    // Give slow networks more headroom than 8s; keep the syncInFlight flag
+    // set until the write actually settles so no interleaved stale write can
+    // overtake it.
+    await Promise.race([syncToCloud(), new Promise(r => setTimeout(r, 20000))]);
+  } finally {
+    syncInFlight = false;
+    if(syncQueued){ syncQueued = false; setTimeout(syncNow, 250); }
+  }
 }
 function scheduleAutoSync(){
   if(!currentUser || !navigator.onLine || !initialSyncDone || suppressAutoSync) return;
@@ -4162,7 +4210,15 @@ function scheduleAutoSync(){
   autoSyncTimer = setTimeout(syncNow, 800);
 }
 window.addEventListener("online", () => {
-  if(currentUser) { syncFromCloud().then(() => { if(typeof render === "function") render(); }).catch(()=>{}); }
+  if(!currentUser) return;
+  const receipts = loadReceipts();
+  if(receipts.length || localStorage.getItem(DIRTY_KEY) === "1"){
+    // We made local edits while offline (or before the network dropped) -
+    // reconcile them against the cloud instead of discarding them.
+    syncNow().then(() => { if(typeof render === "function") render(); }).catch(()=>{});
+  } else {
+    syncFromCloud().then(() => { if(typeof render === "function") render(); }).catch(()=>{});
+  }
 });
 
 // ── Realtime cross-instance sync ───────────────────────────────────
@@ -4184,18 +4240,40 @@ function subscribeRealtime(){
       if(!newData) return;
       // If this device was revoked, stop applying incoming data entirely.
       if(checkDeviceRevoked(newData)) return;
-      // Don't clobber pending offline edits with the old (empty) local state.
-      const receipts = loadReceipts();
-      if(receipts.length) return;
       suppressAutoSync = true;
       try {
         if(autoSyncTimer){ clearTimeout(autoSyncTimer); autoSyncTimer = null; }
-        applyPayloadToStorage(newData);
-        localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+        // If this device has local edits that haven't reached the cloud yet
+        // (recently saved but not yet synced), a blind overwrite would wipe
+        // them. Reconcile instead so the remote change and the local change
+        // are both preserved, then push the merged result.
+        const dirty = localStorage.getItem(DIRTY_KEY) === "1";
+        const receipts = loadReceipts();
+        if(dirty || receipts.length){
+          const local = savePayloadData();
+          // Our unsynced edits (incl. local XP) are newest - keep the state
+          // field on the local copy so the merge doesn't roll them back.
+          local.syncedAt = new Date().toISOString();
+          const merged = mergePayloads(local, newData);
+          applyPayloadToStorage(merged);
+          if(receipts.length) clearReceipts();
+          // Only push the merge back if it actually differs from what arrived
+          // (an echo of this device's own write needs no reply - this stops
+          // an echo ping-pong between two instances).
+          if(JSON.stringify(merged) !== JSON.stringify(newData)){
+            // Push the merge once the suppress block ends (through the
+            // serialized syncNow path, never a side-channel write).
+            rtReconcilePending = true;
+          }
+        } else {
+          applyPayloadToStorage(newData);
+          localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+        }
         if(typeof render === "function") render();
         if(document.getElementById("trashOverlay") && document.getElementById("trashOverlay").classList.contains("active")) renderTrashList();
       } finally {
         suppressAutoSync = false;
+        if(rtReconcilePending){ rtReconcilePending = false; syncNow(); }
       }
     })
     .subscribe();
@@ -6541,6 +6619,11 @@ function saveEdit(){
   const editDynSection = document.getElementById("editDynamicSection");
   t.dynamic = (editMode === "repeat") && (editDynSection.style.display !== "none");
   if(t.dynamic){
+    // Force the weekly/daily targets to 1 - a dynamic quest is a single timer.
+    t.perWeek = 1;
+    t.perDay = 1;
+    t.dayCount = 0;
+    t.weekCount = 0;
     const newDynDeadline = parseInt(document.getElementById("editDynamicDeadline").value, 10);
     if(!isNaN(newDynDeadline) && newDynDeadline >= 1) t.dynamicDeadlineDays = newDynDeadline;
     t.dynamicThresholds = {
@@ -6829,7 +6912,10 @@ function previousWeekKey(d = new Date()){
 // so undo/re-check cycles and repeated calls never double-count.
 function logWeekHit(t){
   if(!t || t.oneTime || !(t.perWeek > 0)) return;
-  if(!t.dynamic && t.weekCount < t.perWeek) return;
+  // Dynamic quests track completion via their own timer; they don't use
+  // weekly targets and should never record a week_hit.
+  if(t.dynamic) return;
+  if(t.weekCount < t.perWeek) return;
   const mondayKey = weekStr();
   const history = loadHistory();
   if(history.some(e => e.type === "week_hit" && e.taskId === t.id && e.weekKey === mondayKey)) return;
@@ -6991,11 +7077,29 @@ function ensureOneTimeCountdownTimer(){
   if(otCountdownTimer) return;
   otCountdownTimer = setInterval(() => {
     const labels = document.querySelectorAll(".ot-countdown");
-    if(labels.length === 0) return;
     let expired = false;
     labels.forEach(el => { if(refreshOneTimeCountdown(el)) expired = true; });
-    if(expired) render();
+    // Refresh live dynamic/deadline meta labels too (they go stale otherwise).
+    const dynLabels = document.querySelectorAll(".dyn-meta-live");
+    if(dynLabels.length) dynLabels.forEach(el => refreshDynamicMeta(el));
+    if(labels.length && expired) render();
   }, 30000);
+}
+// Re-compute a dynamic quest's "remaining / overdue" label in place.
+function refreshDynamicMeta(el){
+  const id = el && el.dataset.taskId;
+  if(!id) return;
+  const t = loadTasks().find(x => x.id === id);
+  if(!t || !(t.dynamic && t.dynamicDeadlineStart > 0)){ el.textContent = ""; return; }
+  const deadlineMs = t.dynamicDeadlineDays * 86400000;
+  const bound = (t.dynamicDeadline > 0) ? t.dynamicDeadline : (t.dynamicDeadlineStart + deadlineMs);
+  const remaining = bound - Date.now();
+  el.textContent = remaining >= 0
+    ? formatDurationMs(remaining) + " remaining"
+    : formatDurationMs(-remaining) + " overdue";
+  // Keep the missed/active color in sync with the current state.
+  el.classList.toggle("dynamic-missed", t.dynamicMissedCount > 0);
+  el.classList.toggle("dynamic-active", !(t.dynamicMissedCount > 0));
 }
 
 // While a checked-off one-time quest is on screen, re-render once a minute so
@@ -7055,7 +7159,9 @@ function normalize(tasks){
         grace = (anchorDay > anchorWin && t <= addDaysStr(anchorWin, durationDays(task)));
       }
       if(!grace){
-        if(!task.oneTime && task.weekKey && task.weekCount < task.perWeek){
+        // Dynamic quests don't use weekly target counts at all; don't log a
+        // false week_result miss for them when the duration window rolls over.
+        if(!task.oneTime && !task.dynamic && task.weekKey && task.weekCount < task.perWeek){
           // Only MISSES are logged here - hits were already recorded the
           // moment the weekly target was reached (week_hit). A miss surfaces
           // in the first retro AFTER the reset. Always key to the Monday-week
@@ -7108,6 +7214,16 @@ function normalize(tasks){
     if(typeof task.dynamicDeadline !== "number" || !isFinite(task.dynamicDeadline)) task.dynamicDeadline = 0;
     if(typeof task.dynamicCompletedCount !== "number") task.dynamicCompletedCount = 0;
     if(typeof task.dynamicMissedCount !== "number") task.dynamicMissedCount = 0;
+    // A dynamic quest is a single timer that resets - weekly/daily target
+    // counts are meaningless for it. Lock them to 1 so legacy quests that
+    // were created with leaked slider values (perWeek > 1) don't show
+    // phantom weekly-misses or bogus progress counters.
+    if(task.dynamic){
+      task.perWeek = 1;
+      task.perDay = 1;
+      task.dayCount = 0;
+      task.weekCount = 0;
+    }
     if(!task.dynamicThresholds || typeof task.dynamicThresholds !== "object"){
       task.dynamicThresholds = { p2: 50, p3: 80, p4: 90, p5: 100 };
     } else {
@@ -7376,6 +7492,9 @@ function render(){
         meta.textContent = formatDurationMs(-remaining) + " overdue";
       }
       meta.classList.add(task.dynamic && task.dynamicMissedCount > 0 ? "dynamic-missed" : "dynamic-active");
+      // Tag it so the live countdown ticker can refresh it without a full re-render.
+      meta.classList.add("dyn-meta-live");
+      meta.dataset.taskId = task.id;
     } else if(task.oneTime){
       if(oneTimeDone){
         meta.classList.add("ot-countdown");
@@ -7485,7 +7604,6 @@ function render(){
           xp,
           dynamicMissed: wasMissed
         });
-        logWeekHit(t);
         if(navigator.vibrate) navigator.vibrate(20);
         if(!leveledUp) sfx.complete();
         burstAt(e.clientX, e.clientY, { count: 20, colors: [getPriorityColor(t.priority), getAccentColor()], size: 4 });
@@ -7945,8 +8063,10 @@ function createNewTask(){
   const notes = document.getElementById("ntNotes").value;
   const isOneTime = !ntRepeat && !ntDynamic;
 
-  const perWeek = isOneTime ? 1 : (ntPerDurationEnabled ? parseInt(document.getElementById("ntWeekSlider").value, 10) : 1);
-  const perDay = isOneTime ? 1 : (ntPerDayEnabled ? ntPerDay : 1);
+  // Dynamic quests are a single timer that resets - weekly/daily target counts
+  // don't apply to them, so force both to 1 regardless of stale slider state.
+  const perWeek = (isOneTime || ntDynamic) ? 1 : (ntPerDurationEnabled ? parseInt(document.getElementById("ntWeekSlider").value, 10) : 1);
+  const perDay = (isOneTime || ntDynamic) ? 1 : (ntPerDayEnabled ? ntPerDay : 1);
   const wrRaw = document.getElementById("ntWeekReset").value;
   const weekResetDay = (wrRaw === "") ? null : parseInt(wrRaw, 10);
 
@@ -12061,6 +12181,6 @@ syncEventQuests();
 })();
 </script>
 
-<div class="version-watermark" aria-hidden="true">v1.7.1</div>
+<div class="version-watermark" aria-hidden="true">v1.8.4</div>
 </body>
 </html>
