@@ -225,6 +225,9 @@
   }
   body::after{
     z-index:1;
+    background: var(--bg-decor);
+  }
+  html.has-bg-image body::after{
     background:
       var(--bg-decor),
       linear-gradient(var(--bg-image-scrim), var(--bg-image-scrim));
@@ -9269,6 +9272,7 @@ function setBackgroundImage(url, opts = {}){
   root.style.setProperty("--bg-image-position", opts.position || "center");
   root.style.setProperty("--bg-image-size", opts.size || "cover");
   root.style.setProperty("--bg-image-scrim", opts.scrim || "rgba(0,0,0,.42)");
+  root.classList.add("has-bg-image");
 }
 function clearBackgroundImage(){
   const root = document.documentElement;
@@ -9279,6 +9283,7 @@ function clearBackgroundImage(){
   root.style.setProperty("--bg-image-position", "center");
   root.style.setProperty("--bg-image-size", "cover");
   root.style.setProperty("--bg-image-scrim", "rgba(0,0,0,0)");
+  document.documentElement.classList.remove("has-bg-image");
 }
 function hexToRgb(hex){
   const h = String(hex || "").trim();
@@ -10628,13 +10633,21 @@ syncEventQuests();
   }
   function resolveStoredImage(bgValue){
     const m = bgValue && String(bgValue).match(/qbimg:\/\/([\w\-:.]+)/);
-    if(!m){ revokeImageUrl(); return; }
+    if(!m){
+      revokeImageUrl();
+      if(!bgValue || bgValue === "none"){
+        document.documentElement.classList.remove("has-bg-image");
+      }
+      return;
+    }
+    document.documentElement.classList.add("has-bg-image");
     dbGetImage(m[1]).then(blob => {
       if(!blob) return;
       revokeImageUrl();
       const url = URL.createObjectURL(blob);
       imageObjectUrl = url;
       document.documentElement.style.setProperty("--bg-image", `url("${url}")`);
+      document.documentElement.classList.add("has-bg-image");
     }).catch(() => {});
   }
   function clearStoredUploads(key){
@@ -10677,7 +10690,14 @@ syncEventQuests();
     }
   }
   function setVal(prop, value){
-    if(prop === "--bg-image" && String(value).indexOf("qbimg://") === -1) revokeImageUrl();
+    if(prop === "--bg-image"){
+      if(String(value).indexOf("qbimg://") === -1) revokeImageUrl();
+      if(String(value) === "none"){
+        document.documentElement.classList.remove("has-bg-image");
+      }else{
+        document.documentElement.classList.add("has-bg-image");
+      }
+    }
     const store = load();
     const key = themeKey();
     if(!store[key]) store[key] = {};
