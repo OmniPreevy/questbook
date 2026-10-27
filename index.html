@@ -225,12 +225,12 @@
   }
   body::after{
     z-index:1;
-    background: var(--bg-decor);
-  }
-  html.has-bg-image body::after{
     background:
       var(--bg-decor),
       linear-gradient(var(--bg-image-scrim), var(--bg-image-scrim));
+  }
+  html:not(.has-bg-image) body::after{
+    background: var(--bg-decor);
   }
   body > *{
     position:relative;
@@ -9256,7 +9256,12 @@ function applyTheme(t){
     root.style.removeProperty("--border");
   }
   clearBackgroundImage();
-  if(t.bgImage) setBackgroundImage(t.bgImage, t.bgImageOptions || {});
+  if(t.bgImage){
+    setBackgroundImage(t.bgImage, t.bgImageOptions || {});
+    root.classList.add("has-bg-image");
+  }else{
+    root.classList.remove("has-bg-image");
+  }
   if(typeof applyAdminOverrides === "function") applyAdminOverrides();
 }
 
