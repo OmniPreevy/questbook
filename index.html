@@ -10982,6 +10982,7 @@ syncEventQuests();
       saveCustomThemes(loadCustomThemes().filter(c => c.id !== id));
       saveOwnedThemes(loadOwnedThemes().filter(o => o !== id));
       clearStoredUploads(id);
+      document.documentElement.classList.remove("has-bg-image");
       try{
         const store = load();
         if(store && store[id]) delete store[id];
@@ -11002,7 +11003,8 @@ syncEventQuests();
       showToast("Theme creation cancelled");
       return;
     }
-    applyOverrides();
+    document.documentElement.classList.remove("has-bg-image");
+    applyTheme(currentTheme);
     closePanel();
     sfx.click();
     if(reverted) showToast("Changes cancelled");
@@ -11036,6 +11038,7 @@ syncEventQuests();
       save(store);
     }
     clearStoredUploads(key);
+    document.documentElement.classList.remove("has-bg-image");
     applyTheme(currentTheme);
     captureSessionColors();
     repopulate();
@@ -11065,6 +11068,14 @@ syncEventQuests();
     }
     for(const p of Object.keys(o)) root.style.setProperty(p, o[p]);
     resolveStoredImage(o["--bg-image"]);
+    const bgImg = root.style.getPropertyValue("--bg-image").trim();
+    if(!bgImg || bgImg === "none"){
+      root.classList.remove("has-bg-image");
+    }else if(bgImg.indexOf("url(") !== -1 || bgImg.indexOf("qbimg://") !== -1){
+      root.classList.add("has-bg-image");
+    }else{
+      root.classList.remove("has-bg-image");
+    }
     if(open) repopulate();
   }
 
