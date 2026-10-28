@@ -10818,6 +10818,7 @@ syncEventQuests();
     if(!rec["--bg-image-opacity"] || rec["--bg-image-opacity"] === "0") setVal("--bg-image-opacity", "0.34");
     if(!rec["--bg-image-blur"]) setVal("--bg-image-blur", "0px");
     if(!rec["--bg-image-scrim"] || rec["--bg-image-scrim"] === "rgba(0,0,0,0)") setVal("--bg-image-scrim", "rgba(0,0,0,0.42)");
+    document.documentElement.classList.add("has-bg-image");
   }
   function repopulatePage3(){
     const cs = getComputedStyle(document.documentElement);
