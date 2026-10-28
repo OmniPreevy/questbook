@@ -225,12 +225,12 @@
   }
   body::after{
     z-index:1;
+    background: var(--bg-decor);
+  }
+  html.has-bg-image:not(.no-scrim) body::after{
     background:
       var(--bg-decor),
       linear-gradient(var(--bg-image-scrim), var(--bg-image-scrim));
-  }
-  html:not(.has-bg-image) body::after{
-    background: var(--bg-decor);
   }
   body > *{
     position:relative;
@@ -9261,6 +9261,7 @@ function applyTheme(t){
     root.classList.add("has-bg-image");
   }else{
     root.classList.remove("has-bg-image");
+    root.classList.remove("no-scrim");
   }
   if(typeof applyAdminOverrides === "function") applyAdminOverrides();
 }
@@ -9276,8 +9277,14 @@ function setBackgroundImage(url, opts = {}){
   root.style.setProperty("--bg-image-scale", String(opts.scale ?? 1.03));
   root.style.setProperty("--bg-image-position", opts.position || "center");
   root.style.setProperty("--bg-image-size", opts.size || "cover");
-  root.style.setProperty("--bg-image-scrim", opts.scrim || "rgba(0,0,0,.42)");
+  const scrim = opts.scrim || "rgba(0,0,0,.42)";
+  root.style.setProperty("--bg-image-scrim", scrim);
   root.classList.add("has-bg-image");
+  if(scrim === "rgba(0,0,0,0)"){
+    root.classList.add("no-scrim");
+  }else{
+    root.classList.remove("no-scrim");
+  }
 }
 function clearBackgroundImage(){
   const root = document.documentElement;
@@ -9289,6 +9296,7 @@ function clearBackgroundImage(){
   root.style.setProperty("--bg-image-size", "cover");
   root.style.setProperty("--bg-image-scrim", "rgba(0,0,0,0)");
   document.documentElement.classList.remove("has-bg-image");
+  document.documentElement.classList.remove("no-scrim");
 }
 function hexToRgb(hex){
   const h = String(hex || "").trim();
@@ -10642,6 +10650,7 @@ syncEventQuests();
       revokeImageUrl();
       if(!bgValue || bgValue === "none"){
         document.documentElement.classList.remove("has-bg-image");
+        document.documentElement.classList.remove("no-scrim");
       }
       return;
     }
@@ -10653,6 +10662,7 @@ syncEventQuests();
       imageObjectUrl = url;
       document.documentElement.style.setProperty("--bg-image", `url("${url}")`);
       document.documentElement.classList.add("has-bg-image");
+      document.documentElement.classList.remove("no-scrim");
     }).catch(() => {});
   }
   function clearStoredUploads(key){
@@ -10819,6 +10829,7 @@ syncEventQuests();
     if(!rec["--bg-image-blur"]) setVal("--bg-image-blur", "0px");
     if(!rec["--bg-image-scrim"] || rec["--bg-image-scrim"] === "rgba(0,0,0,0)") setVal("--bg-image-scrim", "rgba(0,0,0,0.42)");
     document.documentElement.classList.add("has-bg-image");
+    document.documentElement.classList.remove("no-scrim");
   }
   function repopulatePage3(){
     const cs = getComputedStyle(document.documentElement);
@@ -11070,12 +11081,16 @@ syncEventQuests();
     for(const p of Object.keys(o)) root.style.setProperty(p, o[p]);
     resolveStoredImage(o["--bg-image"]);
     const bgImg = root.style.getPropertyValue("--bg-image").trim();
+    const scrim = root.style.getPropertyValue("--bg-image-scrim").trim();
     if(!bgImg || bgImg === "none"){
       root.classList.remove("has-bg-image");
+      root.classList.remove("no-scrim");
     }else if(bgImg.indexOf("url(") !== -1 || bgImg.indexOf("qbimg://") !== -1){
       root.classList.add("has-bg-image");
+      if(scrim === "rgba(0,0,0,0)") root.classList.add("no-scrim"); else root.classList.remove("no-scrim");
     }else{
       root.classList.remove("has-bg-image");
+      root.classList.remove("no-scrim");
     }
     if(open) repopulate();
   }
@@ -11115,7 +11130,15 @@ syncEventQuests();
   });
   imgOpacity.addEventListener("input", () => { setVal("--bg-image-opacity", String(imgOpacity.value)); imgOpacityVal.textContent = pct(imgOpacity.value); });
   imgBlur.addEventListener("input", () => { setVal("--bg-image-blur", imgBlur.value + "px"); imgBlurVal.textContent = imgBlur.value + "px"; });
-  imgScrim.addEventListener("input", () => { setVal("--bg-image-scrim", `rgba(0,0,0,${imgScrim.value})`); imgScrimVal.textContent = pct(imgScrim.value); });
+  imgScrim.addEventListener("input", () => {
+    const s = `rgba(0,0,0,${imgScrim.value})`;
+    setVal("--bg-image-scrim", s);
+    imgScrimVal.textContent = pct(imgScrim.value);
+    if(document.documentElement.classList.contains("has-bg-image")){
+      if(parseFloat(imgScrim.value) === 0) document.documentElement.classList.add("no-scrim");
+      else document.documentElement.classList.remove("no-scrim");
+    }
+  });
   alphaBg.addEventListener("input", () => { setVal("--alpha-bg", String(alphaBg.value)); alphaBgVal.textContent = pct(alphaBg.value); });
   alphaCard.addEventListener("input", () => { setVal("--alpha-card", String(alphaCard.value)); alphaCardVal.textContent = pct(alphaCard.value); });
   alphaPanel.addEventListener("input", () => { setVal("--alpha-panel", String(alphaPanel.value)); alphaPanelVal.textContent = pct(alphaPanel.value); });
