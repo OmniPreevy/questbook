@@ -3600,9 +3600,14 @@ let sbClient = null;
 let currentUser = null;
 function initSupabase(){
   if(sbClient || !SUPABASE_URL || !SUPABASE_ANON || !window.supabase) return sbClient;
-  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  sbClient.auth.onAuthStateChange((_event, session) => {
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true }
+  });
+  sbClient.auth.onAuthStateChange((event, session) => {
     currentUser = session ? session.user : null;
+    // A recovery link signs the user in. Show the set-password panel instead
+    // of dropping them into the app still using their old password.
+    if(event === "PASSWORD_RECOVERY") showPasswordReset();
     updateAccountUI();
   });
   sbClient.auth.getSession().then(({ data }) => {
@@ -3666,6 +3671,71 @@ function updateAccountUI(){
       if(label) label.textContent = "Log in";
       if(sub) sub.textContent = "Sync your data across devices";
     }
+  }
+}
+
+/* ---- Auth feedback helpers ----
+   Supabase redirects confirmation / recovery links back with their result in
+   the URL hash (#error=... or #type=recovery). Without handling that hash the
+   app just lands on the normal screen and the user has no idea why login
+   fails - an expired confirmation link looks exactly like a wrong password. */
+function setAuthMsg(msg, ok){
+  const el = document.getElementById("acctAuthMsg");
+  if(!el) return;
+  el.textContent = msg || "";
+  el.style.color = ok ? "var(--accent)" : "var(--danger)";
+}
+function setResetMsg(msg, ok){
+  const el = document.getElementById("acctResetMsg");
+  if(!el) return;
+  el.textContent = msg || "";
+  el.style.color = ok ? "var(--accent)" : "var(--danger)";
+}
+function showResendRow(on){
+  const row = document.getElementById("acctResendRow");
+  if(row) row.style.display = on ? "" : "none";
+}
+function showPasswordReset(){
+  const out = document.getElementById("loginLoggedOut");
+  const inn = document.getElementById("loginLoggedIn");
+  const reset = document.getElementById("loginResetPanel");
+  if(out) out.style.display = "none";
+  if(inn) inn.style.display = "none";
+  if(reset) reset.style.display = "";
+  const view = document.getElementById("loginView");
+  if(view) view.classList.add("active");
+  setResetMsg("", true);
+}
+function hidePasswordReset(){
+  const reset = document.getElementById("loginResetPanel");
+  if(reset) reset.style.display = "none";
+  updateAccountUI();
+}
+function clearAuthHash(){
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+}
+function checkAuthHash(){
+  const raw = location.hash || "";
+  if(raw.length < 2) return;
+  const params = new URLSearchParams(raw.slice(1));
+  const type = params.get("type");
+  const err = params.get("error_description") || params.get("error");
+  if(err){
+    // URLSearchParams has already percent-decoded the value; decoding again
+    // would throw on messages containing a literal "%" and abort app init.
+    const msg = err;
+    clearAuthHash();
+    openLogin();
+    setAuthMsg(msg, false);
+    // Most link failures are an expired/used confirmation link - offer a fresh one.
+    if(/confirm|verif|expired|invalid|token/i.test(msg)) showResendRow(true);
+    return;
+  }
+  if(type === "signup" || type === "email_change" || type === "recovery"){
+    // Leave the hash alone: supabase-js consumes the token itself, signs the
+    // user in, and (for recovery) emits PASSWORD_RECOVERY which opens the
+    // set-password panel. Clearing it here would break that hand-off.
+    return;
   }
 }
 
@@ -5675,6 +5745,14 @@ function saveEdit(){
   const name = document.getElementById("editName").value.trim();
   if(name) t.name = name;
 
+  // Snapshot the reward-relevant values BEFORE the editor mutates them. A manual
+  // weekly-count change is progress the user is recording, so it must be priced
+  // with what the quest was worth at that point - not with the values they just
+  // typed. Otherwise: raise per-day/priority, bump the count, save, lower them
+  // again -> free XP every time.
+  const xpPriorityBefore = t.priority || 3;
+  const xpPerDayBefore = Math.max(1, t.perDay || 1);
+
   t.priority = parseInt(document.getElementById("editPriority").value, 10);
 
   if(editingEventQuest && t.broughtFromEventId){
@@ -5696,11 +5774,18 @@ function saveEdit(){
       t.dayCount = 0;
       t.weekCount = 0;
       t.checkedAt = null;
+      t.lastCheckedAt = null;
+      t.dayXp = 0;
+      t.lastDayXp = 0;
+      t.oneTimeXp = 0;
       if(typeof t.createdAt !== "number") t.createdAt = Date.now();
     }
   } else {
     if(switchingMode){
       t.checkedAt = null;
+      // The one-time completion (and its XP) is being abandoned, so it must
+      // not be refundable afterwards.
+      t.oneTimeXp = 0;
     }
     const newPerWeek = parseInt(document.getElementById("editPerWeek").value, 10);
     if(!isNaN(newPerWeek) && newPerWeek >= 1) t.perWeek = newPerWeek;
@@ -5718,8 +5803,15 @@ function saveEdit(){
     // Keep total XP in step with the manual weekly count: each completed day
     // is worth (per-day target x quest reward) XP, same as ticking the box.
     const weekDelta = t.weekCount - prevWeekCount;
-    if(weekDelta !== 0){
-      addXp(weekDelta * t.perDay * xpReward(t));
+    // Only award XP for a genuine progress change on an existing quest. Mode
+    // switches reset/repurpose the counters, so paying out there would let the
+    // same completion be rewarded twice (once on check, once on the switch).
+    if(weekDelta !== 0 && !switchingMode){
+      const xpPerDayAward = xpPerDayBefore * xpPriorityBefore * XP_PER_PRIORITY_LEVEL;
+      addXp(weekDelta * xpPerDayAward);
+      // Keep the undo refund in sync with what was just paid for the final
+      // recorded day, so tapping the box afterwards refunds the right amount.
+      if(weekDelta > 0) t.lastDayXp = xpPerDayAward;
     }
     logWeekHit(t);
 
@@ -6210,6 +6302,8 @@ function normalize(tasks){
     if(task.dayDate !== t && !(task.scheduledDay && task.scheduledDay > t)){
       task.dayDate = t;
       task.dayCount = 0;
+      // XP awarded for the previous day's taps is no longer refundable.
+      task.dayXp = 0;
       task.lastCheckedAt = null;
     }
     const tw = durationKeyFor(task);
@@ -6274,6 +6368,12 @@ function normalize(tasks){
     if(typeof task.createdAt !== "number") task.createdAt = task.order || Date.now();
     if(typeof task.timerElapsedMs !== "number") task.timerElapsedMs = 0;
     if(typeof task.timerRunningSince !== "number") task.timerRunningSince = null;
+    // XP actually paid out for the current day / last completed day / one-time
+    // completion. Undo refunds this instead of re-pricing with the current
+    // priority, which let a priority edit inflate the refund.
+    if(typeof task.dayXp !== "number") task.dayXp = 0;
+    if(typeof task.lastDayXp !== "number") task.lastDayXp = 0;
+    if(typeof task.oneTimeXp !== "number") task.oneTimeXp = 0;
     if(task.hiddenUntil && !task.locked && task.hiddenUntil < t && !task.autoQuest) delete task.hiddenUntil; // reappears the next day unless locked or event-backed
     if(typeof task.hiddenUntil !== "string") task.hiddenUntil = null;
     if(typeof task.locked !== "boolean") task.locked = false;
@@ -6618,8 +6718,11 @@ function render(){
         if(!t.checkedAt){
           t.checkedAt = Date.now();
           t.lastCheckedAt = t.checkedAt;
-          saveTasks(all);
           const xp = xpReward(t);
+          // Remember exactly what was paid so undo can't refund more than that
+          // after the quest's priority is edited.
+          t.oneTimeXp = xp;
+          saveTasks(all);
           const leveledUp = addXp(xp);
           logHistoryEvent({ type: "quest_done", taskName: t.name, priority: t.priority, xp });
           if(navigator.vibrate) navigator.vibrate(20);
@@ -6632,8 +6735,10 @@ function render(){
         } else {
           t.checkedAt = null;
           t.lastCheckedAt = null;
+          const refund = (typeof t.oneTimeXp === "number" && t.oneTimeXp > 0) ? t.oneTimeXp : xpReward(t);
+          t.oneTimeXp = 0;
           saveTasks(all);
-          addXp(-xpReward(t));
+          addXp(-refund);
           sfx.undo();
           render();
         }
@@ -6680,9 +6785,16 @@ function render(){
         if(!t) return;
         t.weekCount = Math.max(0, t.weekCount - 1);
         t.dayCount = 0;
+        // Refund what the last completed day actually paid out, not the current
+        // (possibly raised) priority's rate.
+        const refund = (typeof t.lastDayXp === "number" && t.lastDayXp > 0)
+          ? t.lastDayXp
+          : (t.perDay * xpReward(t));
+        t.dayXp = 0;
+        t.lastDayXp = 0;
         t.lastCheckedAt = null;
         saveTasks(all);
-        addXp(-(t.perDay * xpReward(t)));
+        addXp(-refund);
         sfx.undo();
         render();
       };
@@ -6700,9 +6812,13 @@ function render(){
             t.weekCount++;
             t.lastCheckedAt = Date.now();
           }
+          const xp = xpReward(t);
+          // Track what this day has actually paid out so undo refunds exactly
+          // that amount even if priority changes part-way through the day.
+          t.dayXp = (t.dayXp || 0) + xp;
+          if(dayFullyDone) t.lastDayXp = t.dayXp;
           saveTasks(all);
           if(dayFullyDone) logWeekHit(t);
-          const xp = xpReward(t);
           const leveledUp = addXp(xp);
           if(dayFullyDone){
             logHistoryEvent({ type: "quest_done", taskName: t.name, priority: t.priority, xp });
@@ -6721,12 +6837,15 @@ function render(){
           popEl(document.querySelector(`.box[data-task-id="${t.id}"]`));
         } else {
           // today's target was already fully met - tap again to undo the whole day
-          const earnedToday = t.dayCount * xpReward(t);
+          const refund = (typeof t.dayXp === "number" && t.dayXp > 0)
+            ? t.dayXp
+            : (t.dayCount * xpReward(t));
           t.weekCount = Math.max(0, t.weekCount - 1);
           t.dayCount = 0;
+          t.dayXp = 0;
           t.lastCheckedAt = null;
           saveTasks(all);
-          addXp(-earnedToday);
+          addXp(-refund);
           sfx.undo();
           render();
         }
@@ -7576,7 +7695,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Account auth buttons
-  const acctMsg = (msg, ok) => { const el = document.getElementById("acctAuthMsg"); if(el){ el.textContent = msg; el.style.color = ok ? "var(--accent)" : "var(--danger)"; } };
+  const acctMsg = setAuthMsg;
   document.getElementById("acctSignUpBtn").addEventListener("click", async () => {
     const email = document.getElementById("acctEmailIn").value.trim();
     const pass = document.getElementById("acctPassIn").value;
@@ -7590,8 +7709,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const pass = document.getElementById("acctPassIn").value;
     if(!email || !pass){ acctMsg("Enter email and password", false); return; }
     acctMsg("Logging in...", true);
-    try { await sbSignIn(email, pass); acctMsg("", true); }
-    catch(e){ acctMsg(e.message || "Log in failed", false); }
+    try { await sbSignIn(email, pass); acctMsg("", true); showResendRow(false); }
+    catch(e){
+      const m = (e && (e.message || e.error_description)) || "Log in failed";
+      acctMsg(m, false);
+      if(/confirm/i.test(m)) showResendRow(true);
+    }
   });
   document.getElementById("acctSignOutBtn").addEventListener("click", async () => {
     try { await sbSignOut(); } catch(e){ console.error(e); }
@@ -7603,6 +7726,36 @@ document.addEventListener("DOMContentLoaded", () => {
     try { await sbResetPassword(email); acctMsg("Check your inbox for a reset link.", true); }
     catch(e){ acctMsg(e.message || "Reset failed", false); }
   });
+  document.getElementById("acctResendBtn").addEventListener("click", async () => {
+    const email = document.getElementById("acctEmailIn").value.trim();
+    if(!email){ acctMsg("Enter your email first", false); return; }
+    acctMsg("Sending confirmation email...", true);
+    try{
+      const sb = initSupabase();
+      if(!sb) throw new Error("Supabase not configured");
+      const { error } = await sb.auth.resend({ type: "signup", email });
+      if(error) throw error;
+      acctMsg("Confirmation email sent - check your inbox and spam folder.", true);
+    }catch(e){
+      acctMsg(e.message || "Could not send the email", false);
+    }
+  });
+  document.getElementById("acctSavePassBtn").addEventListener("click", async () => {
+    const p = document.getElementById("acctNewPassIn").value;
+    if(!p || p.length < 6){ setResetMsg("Password must be at least 6 characters", false); return; }
+    setResetMsg("Saving...", true);
+    try{
+      const sb = initSupabase();
+      if(!sb) throw new Error("Supabase not configured");
+      const { error } = await sb.auth.updateUser({ password: p });
+      if(error) throw error;
+      document.getElementById("acctNewPassIn").value = "";
+      setResetMsg("Password updated - you're signed in.", true);
+      hidePasswordReset();
+    }catch(e){
+      setResetMsg(e.message || "Could not update the password", false);
+    }
+  });
   document.getElementById("acctSyncBtn").addEventListener("click", async () => {
     acctMsg("Syncing...", true);
     try { await syncToCloud(); acctMsg("Synced!", true); }
@@ -7611,7 +7764,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("acctRow").addEventListener("click", openLogin);
   document.getElementById("loginBackBtn").addEventListener("click", () => { closeLogin(); updateAccountUI(); });
 
-  // Init supabase on load
+  // Surface the result of a confirmation / recovery link before the Supabase
+  // client consumes the URL hash, then boot the client.
+  checkAuthHash();
   initSupabase();
 });
 /* --------------------------------------------------- */
@@ -10193,7 +10348,18 @@ syncEventQuests();
         <div style="text-align:center;margin-top:12px;">
           <button type="button" id="acctForgotBtn" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password?</button>
         </div>
+        <div id="acctResendRow" style="text-align:center;margin-top:8px;display:none;">
+          <button type="button" id="acctResendBtn" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline;">Resend confirmation email</button>
+        </div>
         <div id="acctAuthMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:10px;min-height:18px;"></div>
+      </div>
+      <div id="loginResetPanel" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <div class="settings-row-title" style="margin-bottom:6px;">Set a new password</div>
+          <input type="password" id="acctNewPassIn" class="settings-input" style="width:100%;" placeholder="New password (min 6 characters)" autocomplete="new-password">
+        </div>
+        <button type="button" class="settings-action" id="acctSavePassBtn" style="width:100%;border-color:var(--accent);padding:12px;">Save new password</button>
+        <div id="acctResetMsg" style="text-align:center;font-size:12px;color:var(--dim);margin-top:10px;min-height:18px;"></div>
       </div>
       <div id="loginLoggedIn" style="display:none;">
         <div style="text-align:center;margin-bottom:20px;">
